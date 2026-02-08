@@ -543,12 +543,59 @@ serve(async (req) => {
         continue;
       }
 
-      // Check for navigation links [Navegar com Waze...]
-      const navMatch = cleanLine.match(/^\[Navegar com (Waze|Google Maps|Maps)[^\]]*\]/i);
+      // Check for navigation links [Navegar com Waze...](url) or [Navegar com Google Maps...](url)
+      const navMatch = cleanLine.match(/^\[([^\]]+)\]\(([^)]+)\)/i);
       if (navMatch) {
         checkPageBreak(lineHeight);
         
+        const linkText = navMatch[1];
+        const linkUrl = navMatch[2];
+        
         // Draw as a styled link
+        page.drawText(linkText, {
+          x: margin + 20,
+          y: yPosition,
+          size: fontSize - 1,
+          font: font,
+          color: linkColor,
+        });
+        
+        // Underline
+        const linkWidth = font.widthOfTextAtSize(linkText, fontSize - 1);
+        page.drawLine({
+          start: { x: margin + 20, y: yPosition - 2 },
+          end: { x: margin + 20 + linkWidth, y: yPosition - 2 },
+          thickness: 0.5,
+          color: linkColor,
+        });
+        
+        // Add clickable link annotation
+        if (linkUrl) {
+          page.node.addAnnot(
+            pdfDoc.context.obj({
+              Type: 'Annot',
+              Subtype: 'Link',
+              Rect: [margin + 20, yPosition - 4, margin + 20 + linkWidth, yPosition + 10],
+              Border: [0, 0, 0],
+              A: {
+                Type: 'Action',
+                S: 'URI',
+                URI: pdfDoc.context.obj(linkUrl),
+              },
+            })
+          );
+        }
+        
+        yPosition -= lineHeight + 4;
+        continue;
+      }
+      
+      // Also handle simple navigation text without markdown format
+      const simpleNavMatch = cleanLine.match(/^\[Navegar com (Waze|Google Maps|Maps)[^\]]*\]/i);
+      if (simpleNavMatch) {
+        checkPageBreak(lineHeight);
+        
+        // Draw as a styled link (text only, no URL)
         const linkText = cleanLine.replace(/[\[\]]/g, '');
         page.drawText(linkText, {
           x: margin + 20,
