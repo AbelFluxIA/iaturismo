@@ -692,6 +692,23 @@ serve(async (req) => {
       .from('travel-pdfs')
       .getPublicUrl(fileName);
 
+    // Save metadata to database for dashboard
+    const { error: insertError } = await supabase
+      .from('generated_itineraries')
+      .insert({
+        title: title,
+        destination: destination,
+        traveler_name: traveler_name,
+        pdf_url: publicUrlData.publicUrl,
+        file_name: fileName,
+        text_length: text.length
+      });
+
+    if (insertError) {
+      console.error('Error saving itinerary metadata:', insertError);
+      // Don't fail the request, just log the error
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

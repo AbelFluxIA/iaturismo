@@ -6,6 +6,7 @@ import { RouterProvider, createBrowserRouter, ScrollRestoration, Outlet } from "
 import Index from "./pages/Index";
 import Article from "./pages/Article";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
       {
         path: "/article/:slug",
         element: <Article />,
+      },
+      {
+        path: "/admin",
+        element: <AdminDashboard />,
       },
       {
         path: "*",

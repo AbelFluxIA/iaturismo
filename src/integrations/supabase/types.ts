@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      generated_itineraries: {
+        Row: {
+          created_at: string
+          destination: string | null
+          file_name: string
+          id: string
+          pdf_url: string
+          text_length: number
+          title: string | null
+          traveler_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          destination?: string | null
+          file_name: string
+          id?: string
+          pdf_url: string
+          text_length?: number
+          title?: string | null
+          traveler_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          destination?: string | null
+          file_name?: string
+          id?: string
+          pdf_url?: string
+          text_length?: number
+          title?: string | null
+          traveler_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
