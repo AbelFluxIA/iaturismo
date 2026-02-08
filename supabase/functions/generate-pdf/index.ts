@@ -14,6 +14,106 @@ interface TravelItinerary {
   traveler_name?: string;
 }
 
+// Remove emojis and special unicode characters that PDF fonts can't render
+function cleanTextForPDF(text: string): string {
+  // Remove emojis and special unicode symbols
+  return text
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Emojis
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Misc symbols
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Dingbats
+    .replace(/[\u{1F000}-\u{1F02F}]/gu, '') // Mahjong
+    .replace(/[\u{1F0A0}-\u{1F0FF}]/gu, '') // Playing cards
+    .replace(/[\u{FE00}-\u{FE0F}]/gu, '')   // Variation selectors
+    .replace(/[\u{200D}]/gu, '')            // Zero width joiner
+    .replace(/[\u{20E3}]/gu, '')            // Combining enclosing keycap
+    .replace(/[\u{E0020}-\u{E007F}]/gu, '') // Tags
+    .replace(/\s+/g, ' ')                    // Normalize whitespace
+    .trim();
+}
+
+// Parse WhatsApp-style formatting and extract text segments
+interface TextSegment {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+  isLink: boolean;
+  linkUrl?: string;
+}
+
+function parseWhatsAppFormatting(text: string): TextSegment[] {
+  const segments: TextSegment[] = [];
+  const cleanText = cleanTextForPDF(text);
+  
+  // Pattern for **bold**, *italic*, and [link text](url) or [text]
+  let remaining = cleanText;
+  
+  while (remaining.length > 0) {
+    // Check for bold **text**
+    const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
+    if (boldMatch) {
+      segments.push({ text: boldMatch[1], bold: true, italic: false, isLink: false });
+      remaining = remaining.substring(boldMatch[0].length);
+      continue;
+    }
+    
+    // Check for italic *text* (single asterisk, not double)
+    const italicMatch = remaining.match(/^\*([^*]+)\*/);
+    if (italicMatch && !remaining.startsWith('**')) {
+      segments.push({ text: italicMatch[1], bold: false, italic: true, isLink: false });
+      remaining = remaining.substring(italicMatch[0].length);
+      continue;
+    }
+    
+    // Check for links [text](url) or just [text]
+    const linkMatch = remaining.match(/^\[([^\]]+)\](?:\(([^)]+)\))?/);
+    if (linkMatch) {
+      segments.push({ 
+        text: linkMatch[1], 
+        bold: false, 
+        italic: false, 
+        isLink: true,
+        linkUrl: linkMatch[2] || ''
+      });
+      remaining = remaining.substring(linkMatch[0].length);
+      continue;
+    }
+    
+    // Find next special character
+    const nextSpecial = remaining.search(/\*|\[/);
+    if (nextSpecial === -1) {
+      // No more special chars, add rest as plain text
+      if (remaining.trim()) {
+        segments.push({ text: remaining, bold: false, italic: false, isLink: false });
+      }
+      break;
+    } else if (nextSpecial === 0) {
+      // Special char at start but didn't match patterns, treat as regular char
+      segments.push({ text: remaining[0], bold: false, italic: false, isLink: false });
+      remaining = remaining.substring(1);
+    } else {
+      // Add text before special char
+      const plainText = remaining.substring(0, nextSpecial);
+      if (plainText.trim()) {
+        segments.push({ text: plainText, bold: false, italic: false, isLink: false });
+      }
+      remaining = remaining.substring(nextSpecial);
+    }
+  }
+  
+  // Merge adjacent segments with same formatting
+  const merged: TextSegment[] = [];
+  for (const seg of segments) {
+    const last = merged[merged.length - 1];
+    if (last && last.bold === seg.bold && last.italic === seg.italic && last.isLink === seg.isLink && !seg.isLink) {
+      last.text += seg.text;
+    } else {
+      merged.push({ ...seg });
+    }
+  }
+  
+  return merged;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -47,17 +147,22 @@ serve(async (req) => {
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+    const fontBoldItalic = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
     
-    // Colors
-    const primaryColor = rgb(0.2, 0.4, 0.6);      // Deep blue
-    const secondaryColor = rgb(0.95, 0.95, 0.98); // Light gray background
-    const accentColor = rgb(0.9, 0.5, 0.2);       // Orange accent
-    const textColor = rgb(0.2, 0.2, 0.2);         // Dark gray text
+    // Colors - Modern travel theme
+    const primaryColor = rgb(0.08, 0.32, 0.52);     // Deep ocean blue
+    const secondaryColor = rgb(0.96, 0.97, 0.98);  // Light gray background
+    const accentColor = rgb(0.96, 0.55, 0.15);     // Sunset orange
+    const textColor = rgb(0.15, 0.15, 0.15);       // Dark gray text
+    const linkColor = rgb(0.12, 0.47, 0.71);       // Link blue
+    const successColor = rgb(0.18, 0.55, 0.34);    // Green for highlights
+    const warningColor = rgb(0.85, 0.45, 0.12);    // Warning orange
 
     // Page settings
     const pageWidth = 595.28;  // A4 width
     const pageHeight = 841.89; // A4 height
-    const margin = 50;
+    const margin = 45;
     const contentWidth = pageWidth - (margin * 2);
     
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -66,39 +171,75 @@ serve(async (req) => {
     // Helper function to add new page
     const addNewPage = () => {
       page = pdfDoc.addPage([pageWidth, pageHeight]);
-      yPosition = pageHeight - margin;
+      yPosition = pageHeight - margin - 20;
     };
 
     // Helper function to check if we need a new page
     const checkPageBreak = (requiredHeight: number) => {
-      if (yPosition - requiredHeight < margin) {
+      if (yPosition - requiredHeight < margin + 30) {
         addNewPage();
         return true;
       }
       return false;
     };
 
-    // Draw header background
+    // Get font for segment
+    const getFontForSegment = (seg: TextSegment) => {
+      if (seg.bold && seg.italic) return fontBoldItalic;
+      if (seg.bold) return fontBold;
+      if (seg.italic) return fontItalic;
+      return font;
+    };
+
+    // Draw header background with gradient effect (multiple rectangles)
+    for (let i = 0; i < 5; i++) {
+      page.drawRectangle({
+        x: 0,
+        y: pageHeight - 140 + (i * 5),
+        width: pageWidth,
+        height: 30,
+        color: rgb(0.08 + (i * 0.02), 0.32 + (i * 0.03), 0.52 + (i * 0.04)),
+      });
+    }
+    
+    // Main header rectangle
     page.drawRectangle({
       x: 0,
-      y: pageHeight - 120,
+      y: pageHeight - 140,
       width: pageWidth,
-      height: 120,
+      height: 140,
       color: primaryColor,
     });
 
-    // Draw accent line
+    // Draw accent stripe
     page.drawRectangle({
       x: 0,
-      y: pageHeight - 125,
+      y: pageHeight - 145,
       width: pageWidth,
       height: 5,
       color: accentColor,
     });
 
+    // Decorative circles
+    page.drawCircle({
+      x: pageWidth - 80,
+      y: pageHeight - 50,
+      size: 40,
+      color: rgb(0.12, 0.38, 0.58),
+      opacity: 0.3,
+    });
+    page.drawCircle({
+      x: pageWidth - 60,
+      y: pageHeight - 90,
+      size: 25,
+      color: rgb(0.15, 0.42, 0.62),
+      opacity: 0.2,
+    });
+
     // Title
-    const titleFontSize = 28;
-    page.drawText(title.toUpperCase(), {
+    const cleanTitle = cleanTextForPDF(title);
+    const titleFontSize = 26;
+    page.drawText(cleanTitle.toUpperCase(), {
       x: margin,
       y: pageHeight - 55,
       size: titleFontSize,
@@ -106,32 +247,40 @@ serve(async (req) => {
       color: rgb(1, 1, 1),
     });
 
-    // Destination subtitle
+    // Destination subtitle with pin icon
     if (destination) {
-      // Draw location pin icon as a small circle
+      const cleanDest = cleanTextForPDF(destination);
+      // Draw location pin
       page.drawCircle({
-        x: margin + 5,
+        x: margin + 6,
         y: pageHeight - 81,
-        size: 4,
+        size: 5,
         color: accentColor,
       });
-      page.drawText(destination, {
-        x: margin + 15,
+      page.drawCircle({
+        x: margin + 6,
+        y: pageHeight - 81,
+        size: 2,
+        color: rgb(1, 1, 1),
+      });
+      page.drawText(cleanDest, {
+        x: margin + 18,
         y: pageHeight - 85,
         size: 14,
         font: font,
-        color: rgb(0.9, 0.9, 0.95),
+        color: rgb(0.9, 0.92, 0.95),
       });
     }
 
     // Traveler name
     if (traveler_name) {
-      page.drawText(`Viajante: ${traveler_name}`, {
+      const cleanName = cleanTextForPDF(traveler_name);
+      page.drawText(`Viajante: ${cleanName}`, {
         x: margin,
-        y: pageHeight - 105,
-        size: 12,
+        y: pageHeight - 110,
+        size: 11,
         font: font,
-        color: rgb(0.8, 0.85, 0.9),
+        color: rgb(0.75, 0.8, 0.85),
       });
     }
 
@@ -144,20 +293,20 @@ serve(async (req) => {
     const dateWidth = font.widthOfTextAtSize(today, 10);
     page.drawText(today, {
       x: pageWidth - margin - dateWidth,
-      y: pageHeight - 105,
+      y: pageHeight - 110,
       size: 10,
       font: font,
-      color: rgb(0.8, 0.85, 0.9),
+      color: rgb(0.75, 0.8, 0.85),
     });
 
-    yPosition = pageHeight - 160;
+    yPosition = pageHeight - 175;
 
     // Process text content
     const lines = text.split('\n');
-    const fontSize = 11;
-    const lineHeight = 18;
-    const headerFontSize = 14;
-    const subHeaderFontSize = 12;
+    const fontSize = 10;
+    const lineHeight = 16;
+    const headerFontSize = 13;
+    const subHeaderFontSize = 11;
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -167,93 +316,210 @@ serve(async (req) => {
         continue;
       }
 
-      // Check for day headers (e.g., "Dia 1:", "DIA 1 -", etc.)
-      const dayMatch = trimmedLine.match(/^(dia\s*\d+|day\s*\d+)/i);
+      const cleanLine = cleanTextForPDF(trimmedLine);
+      if (!cleanLine) continue;
+
+      // Check for DAY headers (e.g., "DIA 1", "*DIA 1*")
+      const dayMatch = cleanLine.match(/^\*?(DIA\s*\d+|DAY\s*\d+)/i);
       if (dayMatch) {
-        checkPageBreak(50);
+        checkPageBreak(55);
         
-        // Draw day header with background
+        yPosition -= 10; // Extra spacing before day
+        
+        // Draw day header with styled background
         page.drawRectangle({
-          x: margin - 10,
-          y: yPosition - 5,
-          width: contentWidth + 20,
-          height: 28,
-          color: secondaryColor,
-          borderColor: primaryColor,
-          borderWidth: 1,
+          x: margin - 5,
+          y: yPosition - 8,
+          width: contentWidth + 10,
+          height: 32,
+          color: primaryColor,
+          borderRadius: 4,
         });
         
-        page.drawText(trimmedLine, {
-          x: margin,
-          y: yPosition + 5,
+        // Accent bar on left
+        page.drawRectangle({
+          x: margin - 5,
+          y: yPosition - 8,
+          width: 5,
+          height: 32,
+          color: accentColor,
+        });
+        
+        page.drawText(cleanLine.replace(/^\*|\*$/g, '').toUpperCase(), {
+          x: margin + 8,
+          y: yPosition + 3,
           size: headerFontSize,
+          font: fontBold,
+          color: rgb(1, 1, 1),
+        });
+        
+        yPosition -= 48;
+        continue;
+      }
+
+      // Check for time/period entries (e.g., "Manha (09:00):", "Tarde (14:30):", "Por do Sol", "Noite")
+      const timeMatch = cleanLine.match(/^(\*?\*?)?(Manha|Tarde|Noite|Por do Sol|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*(\*?\*?)?/i);
+      if (timeMatch) {
+        checkPageBreak(40);
+        
+        yPosition -= 5;
+        
+        // Draw time block background
+        page.drawRectangle({
+          x: margin,
+          y: yPosition - 5,
+          width: contentWidth,
+          height: 24,
+          color: secondaryColor,
+        });
+        
+        // Accent dot
+        page.drawCircle({
+          x: margin + 10,
+          y: yPosition + 5,
+          size: 4,
+          color: accentColor,
+        });
+        
+        page.drawText(cleanLine.replace(/\*\*/g, '').replace(/^\*|\*$/g, ''), {
+          x: margin + 22,
+          y: yPosition + 1,
+          size: subHeaderFontSize,
           font: fontBold,
           color: primaryColor,
         });
         
-        yPosition -= 40;
+        yPosition -= 32;
         continue;
       }
 
-      // Check for time entries (e.g., "08:00", "8h", "Manhã:", etc.)
-      const timeMatch = trimmedLine.match(/^(\d{1,2}[h:]\d{0,2}|manhã|tarde|noite)/i);
-      if (timeMatch) {
-        checkPageBreak(35);
+      // Check for attention/warning blocks
+      const warningMatch = cleanLine.match(/^(Atencao|Aviso|Importante|Warning|Note):/i);
+      if (warningMatch) {
+        checkPageBreak(50);
         
-        // Draw time with accent
+        // Warning background
         page.drawRectangle({
-          x: margin - 5,
-          y: yPosition - 2,
-          width: 4,
-          height: 16,
-          color: accentColor,
+          x: margin,
+          y: yPosition - 25,
+          width: contentWidth,
+          height: 40,
+          color: rgb(1, 0.95, 0.9),
+          borderColor: warningColor,
+          borderWidth: 1,
         });
         
-        page.drawText(trimmedLine, {
-          x: margin + 5,
-          y: yPosition,
-          size: subHeaderFontSize,
+        // Warning icon (triangle shape with lines)
+        page.drawCircle({
+          x: margin + 15,
+          y: yPosition - 5,
+          size: 8,
+          color: warningColor,
+        });
+        
+        const warningText = cleanLine;
+        page.drawText(warningText, {
+          x: margin + 30,
+          y: yPosition - 5,
+          size: fontSize,
           font: fontBold,
-          color: textColor,
+          color: warningColor,
         });
         
-        yPosition -= 25;
+        yPosition -= 50;
         continue;
       }
 
-      // Check for bullet points
-      const bulletMatch = trimmedLine.match(/^[-•*]\s*/);
+      // Check for bullet points with content
+      const bulletMatch = trimmedLine.match(/^[-•]\s*/);
       if (bulletMatch) {
-        checkPageBreak(lineHeight);
+        checkPageBreak(lineHeight * 3);
         
-        const bulletText = trimmedLine.replace(/^[-•*]\s*/, '');
+        const bulletContent = cleanTextForPDF(trimmedLine.replace(/^[-•]\s*/, ''));
+        const segments = parseWhatsAppFormatting(bulletContent);
         
-        page.drawText("•", {
-          x: margin + 10,
-          y: yPosition,
-          size: fontSize,
-          font: font,
+        // Draw bullet point
+        page.drawCircle({
+          x: margin + 12,
+          y: yPosition - 1,
+          size: 3,
           color: accentColor,
         });
         
-        // Word wrap for bullet content
-        const words = bulletText.split(' ');
+        // Render segments with word wrap
+        let xPos = margin + 25;
+        const bulletContentWidth = contentWidth - 30;
+        let lineText = '';
+        
+        for (const seg of segments) {
+          if (!seg.text.trim()) continue;
+          
+          const segFont = getFontForSegment(seg);
+          const words = seg.text.split(' ');
+          
+          for (const word of words) {
+            if (!word) continue;
+            
+            const testText = lineText ? lineText + ' ' + word : word;
+            const testWidth = font.widthOfTextAtSize(testText, fontSize);
+            
+            if (testWidth > bulletContentWidth && lineText) {
+              // Draw current line and start new one
+              checkPageBreak(lineHeight);
+              page.drawText(lineText, {
+                x: margin + 25,
+                y: yPosition,
+                size: fontSize,
+                font: segFont,
+                color: seg.isLink ? linkColor : textColor,
+              });
+              yPosition -= lineHeight;
+              lineText = word;
+            } else {
+              lineText = testText;
+            }
+          }
+        }
+        
+        // Draw remaining text
+        if (lineText) {
+          const lastSeg = segments[segments.length - 1] || { bold: false, italic: false, isLink: false };
+          page.drawText(lineText, {
+            x: margin + 25,
+            y: yPosition,
+            size: fontSize,
+            font: getFontForSegment(lastSeg),
+            color: lastSeg.isLink ? linkColor : textColor,
+          });
+          yPosition -= lineHeight;
+        }
+        
+        yPosition -= 4; // Extra spacing after bullet
+        continue;
+      }
+
+      // Check for "Por que escolhi" or similar explanatory text
+      const explanationMatch = cleanLine.match(/^(Por que escolhi|Why I chose|Dica|Tip):/i);
+      if (explanationMatch) {
+        checkPageBreak(lineHeight * 2);
+        
+        // Italicized explanation with special color
+        const explanationText = cleanLine;
+        const words = explanationText.split(' ');
         let currentLine = '';
-        const bulletIndent = margin + 25;
-        const bulletContentWidth = contentWidth - 25;
         
         for (const word of words) {
           const testLine = currentLine ? `${currentLine} ${word}` : word;
-          const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+          const textWidth = fontItalic.widthOfTextAtSize(testLine, fontSize - 1);
           
-          if (textWidth > bulletContentWidth) {
+          if (textWidth > contentWidth - 20) {
             checkPageBreak(lineHeight);
             page.drawText(currentLine, {
-              x: bulletIndent,
+              x: margin + 20,
               y: yPosition,
-              size: fontSize,
-              font: font,
-              color: textColor,
+              size: fontSize - 1,
+              font: fontItalic,
+              color: rgb(0.35, 0.35, 0.35),
             });
             yPosition -= lineHeight;
             currentLine = word;
@@ -265,11 +531,11 @@ serve(async (req) => {
         if (currentLine) {
           checkPageBreak(lineHeight);
           page.drawText(currentLine, {
-            x: bulletIndent,
+            x: margin + 20,
             y: yPosition,
-            size: fontSize,
-            font: font,
-            color: textColor,
+            size: fontSize - 1,
+            font: fontItalic,
+            color: rgb(0.35, 0.35, 0.35),
           });
           yPosition -= lineHeight;
         }
@@ -277,38 +543,77 @@ serve(async (req) => {
         continue;
       }
 
-      // Regular paragraph with word wrap
-      const words = trimmedLine.split(' ');
-      let currentLine = '';
-      
-      for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+      // Check for navigation links [Navegar com Waze...]
+      const navMatch = cleanLine.match(/^\[Navegar com (Waze|Google Maps|Maps)[^\]]*\]/i);
+      if (navMatch) {
+        checkPageBreak(lineHeight);
         
-        if (textWidth > contentWidth) {
-          checkPageBreak(lineHeight);
-          page.drawText(currentLine, {
-            x: margin,
-            y: yPosition,
-            size: fontSize,
-            font: font,
-            color: textColor,
-          });
-          yPosition -= lineHeight;
-          currentLine = word;
-        } else {
-          currentLine = testLine;
+        // Draw as a styled link
+        const linkText = cleanLine.replace(/[\[\]]/g, '');
+        page.drawText(linkText, {
+          x: margin + 20,
+          y: yPosition,
+          size: fontSize - 1,
+          font: font,
+          color: linkColor,
+        });
+        
+        // Underline
+        const linkWidth = font.widthOfTextAtSize(linkText, fontSize - 1);
+        page.drawLine({
+          start: { x: margin + 20, y: yPosition - 2 },
+          end: { x: margin + 20 + linkWidth, y: yPosition - 2 },
+          thickness: 0.5,
+          color: linkColor,
+        });
+        
+        yPosition -= lineHeight + 4;
+        continue;
+      }
+
+      // Regular paragraph with word wrap and formatting
+      const segments = parseWhatsAppFormatting(cleanLine);
+      let xPos = margin;
+      let lineText = '';
+      
+      for (const seg of segments) {
+        if (!seg.text.trim()) continue;
+        
+        const segFont = getFontForSegment(seg);
+        const words = seg.text.split(' ');
+        
+        for (const word of words) {
+          if (!word) continue;
+          
+          const testText = lineText ? lineText + ' ' + word : word;
+          const testWidth = font.widthOfTextAtSize(testText, fontSize);
+          
+          if (testWidth > contentWidth && lineText) {
+            checkPageBreak(lineHeight);
+            page.drawText(lineText, {
+              x: margin,
+              y: yPosition,
+              size: fontSize,
+              font: segFont,
+              color: seg.isLink ? linkColor : textColor,
+            });
+            yPosition -= lineHeight;
+            lineText = word;
+          } else {
+            lineText = testText;
+          }
         }
       }
       
-      if (currentLine) {
+      if (lineText) {
         checkPageBreak(lineHeight);
-        page.drawText(currentLine, {
+        const lastSeg = segments[segments.length - 1] || { bold: false, italic: false, isLink: false };
+        page.drawText(lineText, {
           x: margin,
           y: yPosition,
           size: fontSize,
-          font: font,
-          color: textColor,
+          font: getFontForSegment(lastSeg),
+          color: lastSeg.isLink ? linkColor : textColor,
         });
         yPosition -= lineHeight;
       }
@@ -317,33 +622,44 @@ serve(async (req) => {
     // Add footer to all pages
     const pages = pdfDoc.getPages();
     pages.forEach((p, index) => {
-      // Footer line
+      // Footer separator line
       p.drawRectangle({
         x: margin,
-        y: 35,
+        y: 40,
         width: contentWidth,
         height: 1,
-        color: secondaryColor,
+        color: rgb(0.85, 0.85, 0.85),
       });
       
-      // Page number
-      const pageText = `Página ${index + 1} de ${pages.length}`;
+      // Page number centered
+      const pageText = `${index + 1} / ${pages.length}`;
       const pageTextWidth = font.widthOfTextAtSize(pageText, 9);
       p.drawText(pageText, {
         x: (pageWidth - pageTextWidth) / 2,
-        y: 20,
+        y: 25,
         size: 9,
         font: font,
         color: rgb(0.5, 0.5, 0.5),
       });
 
-      // Generated text
-      p.drawText("Gerado por IA de Turismo", {
+      // Brand text on left
+      p.drawText("IA de Turismo", {
         x: margin,
-        y: 20,
+        y: 25,
+        size: 8,
+        font: fontBold,
+        color: primaryColor,
+      });
+
+      // Date on right
+      const footerDate = new Date().toLocaleDateString('pt-BR');
+      const footerDateWidth = font.widthOfTextAtSize(footerDate, 8);
+      p.drawText(footerDate, {
+        x: pageWidth - margin - footerDateWidth,
+        y: 25,
         size: 8,
         font: font,
-        color: rgb(0.6, 0.6, 0.6),
+        color: rgb(0.5, 0.5, 0.5),
       });
     });
 
