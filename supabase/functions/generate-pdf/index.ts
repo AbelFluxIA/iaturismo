@@ -155,7 +155,7 @@ serve(async (req) => {
     const secondaryColor = rgb(0.96, 0.97, 0.98);  // Light gray background
     const accentColor = rgb(0.96, 0.55, 0.15);     // Sunset orange
     const textColor = rgb(0.15, 0.15, 0.15);       // Dark gray text
-    const linkColor = rgb(0.12, 0.47, 0.71);       // Link blue
+    const linkColor = rgb(0.85, 0.12, 0.12);       // Red for links - more visible
     const successColor = rgb(0.18, 0.55, 0.34);    // Green for highlights
     const warningColor = rgb(0.85, 0.45, 0.12);    // Warning orange
 
@@ -303,8 +303,8 @@ serve(async (req) => {
 
     // Process text content
     const lines = text.split('\n');
-    const fontSize = 10;
-    const lineHeight = 16;
+    const fontSize = 11;
+    const lineHeight = 18;
     const headerFontSize = 13;
     const subHeaderFontSize = 11;
 
@@ -322,7 +322,10 @@ serve(async (req) => {
       // Check for DAY headers (e.g., "DIA 1", "*DIA 1*")
       const dayMatch = cleanLine.match(/^\*?(DIA\s*\d+|DAY\s*\d+)/i);
       if (dayMatch) {
-        checkPageBreak(55);
+        // Each day starts on a new page (except if we're near the top of a fresh page)
+        if (yPosition < pageHeight - 200) {
+          addNewPage();
+        }
         
         yPosition -= 10; // Extra spacing before day
         
@@ -357,8 +360,8 @@ serve(async (req) => {
         continue;
       }
 
-      // Check for time/period entries (e.g., "Manha (09:00):", "Tarde (14:30):", "Por do Sol", "Noite")
-      const timeMatch = cleanLine.match(/^(\*?\*?)?(Manha|Tarde|Noite|Por do Sol|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*(\*?\*?)?/i);
+      // Check for time/period entries (e.g., "Manha (09:00):", "Tarde (14:30):", "Por do Sol", "Noite", "Manha")
+      const timeMatch = cleanLine.match(/^(\*?\*?)?(Manha|Manha|Tarde|Noite|Por do Sol|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*(\*?\*?)?/i);
       if (timeMatch) {
         checkPageBreak(40);
         
