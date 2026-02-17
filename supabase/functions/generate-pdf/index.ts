@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, rgb, StandardFonts, PDFName, PDFArray } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -160,6 +160,32 @@ serve(async (req) => {
     
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
     let yPosition = pageHeight - margin;
+
+    // Helper to add clickable link annotation to current page
+    const addLinkAnnotation = (url: string, x: number, y: number, w: number, h: number) => {
+      const linkAnnotation = pdfDoc.context.register(
+        pdfDoc.context.obj({
+          Type: 'Annot',
+          Subtype: 'Link',
+          Rect: [x, y, x + w, y + h],
+          Border: [0, 0, 0],
+          C: [0, 0, 1],
+          A: {
+            Type: 'Action',
+            S: 'URI',
+            URI: url,
+          },
+        })
+      );
+      
+      // Get existing Annots array or create new one
+      const existingAnnots = page.node.lookup(PDFName.of('Annots'));
+      if (existingAnnots instanceof PDFArray) {
+        existingAnnots.push(linkAnnotation);
+      } else {
+        page.node.set(PDFName.of('Annots'), pdfDoc.context.obj([linkAnnotation]));
+      }
+    };
 
     const addNewPage = () => {
       page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -465,14 +491,7 @@ serve(async (req) => {
         });
         
         if (linkUrl) {
-          page.node.addAnnot(
-            pdfDoc.context.obj({
-              Type: 'Annot', Subtype: 'Link',
-              Rect: [margin, yPosition - 6, margin + contentWidth, yPosition + 20],
-              Border: [0, 0, 0],
-              A: { Type: 'Action', S: 'URI', URI: pdfDoc.context.obj(linkUrl) },
-            })
-          );
+          addLinkAnnotation(linkUrl, margin, yPosition - 8, contentWidth, 30);
         }
         
         yPosition -= lineHeight + 10;
@@ -510,14 +529,7 @@ serve(async (req) => {
         });
         
         if (mapUrl) {
-          page.node.addAnnot(
-            pdfDoc.context.obj({
-              Type: 'Annot', Subtype: 'Link',
-              Rect: [margin, yPosition - 6, margin + contentWidth, yPosition + 20],
-              Border: [0, 0, 0],
-              A: { Type: 'Action', S: 'URI', URI: pdfDoc.context.obj(mapUrl) },
-            })
-          );
+          addLinkAnnotation(mapUrl, margin, yPosition - 8, contentWidth, 30);
         }
         
         yPosition -= lineHeight + 10;
@@ -552,14 +564,7 @@ serve(async (req) => {
           thickness: 1, color: linkColor,
         });
         
-        page.node.addAnnot(
-          pdfDoc.context.obj({
-            Type: 'Annot', Subtype: 'Link',
-            Rect: [margin, yPosition - 6, margin + contentWidth, yPosition + 20],
-            Border: [0, 0, 0],
-            A: { Type: 'Action', S: 'URI', URI: pdfDoc.context.obj(linkUrl) },
-          })
-        );
+        addLinkAnnotation(linkUrl, margin, yPosition - 8, contentWidth, 30);
         
         yPosition -= lineHeight + 10;
         continue;
