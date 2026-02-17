@@ -303,8 +303,8 @@ serve(async (req) => {
         continue;
       }
 
-      // Check for time/period - handles Manhã, Manha, Tarde, Noite, Pôr do Sol with accents
-      const timeMatch = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*\*{0,2}/i);
+      // Check for time/period - handles Manhã, Manha, Tarde, Noite, Pôr do Sol, Dia Inteiro with accents
+      const timeMatch = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*\*{0,2}/i);
       if (timeMatch) {
         checkPageBreak(40);
         
@@ -443,15 +443,15 @@ serve(async (req) => {
         const linkText = navMatch[1];
         const linkUrl = navMatch[2];
         
-        // Red background highlight
+        // Bold red background highlight
         page.drawRectangle({
-          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
-          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
+          x: margin, y: yPosition - 8, width: contentWidth, height: 30,
+          color: rgb(1, 0.90, 0.90), borderColor: linkColor, borderWidth: 1.5,
         });
         
-        // Map pin icon
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        // Map pin icon (larger)
+        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 7, color: linkColor });
+        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 3, color: rgb(1, 1, 1) });
         
         page.drawText(linkText, {
           x: margin + 24, y: yPosition + 1, size: fontSize, font: fontBold, color: linkColor,
@@ -480,22 +480,22 @@ serve(async (req) => {
       }
       
       // "Ver no mapa" or similar with optional URL
-      const verMapaMatch = cleanLine.match(/^(Ver no mapa|Ver mapa|Google Maps|Waze|Navegar com[^:]*)[:\s]*(https?:\/\/[^\s]*)?/i);
+      const verMapaMatch = cleanLine.match(/^(Ver no [Mm]apa|Ver [Mm]apa|Google Maps|Waze|Navegar com[^:]*)[:\s]*(https?:\/\/[^\s]*)?/i);
       if (verMapaMatch) {
-        checkPageBreak(lineHeight + 10);
+        checkPageBreak(lineHeight + 14);
         
         const labelText = verMapaMatch[1];
         const mapUrl = verMapaMatch[2] || '';
         
-        // Red background highlight
+        // Bold red background highlight
         page.drawRectangle({
-          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
-          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
+          x: margin, y: yPosition - 8, width: contentWidth, height: 30,
+          color: rgb(1, 0.90, 0.90), borderColor: linkColor, borderWidth: 1.5,
         });
         
-        // Map pin icon
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        // Map pin icon (larger)
+        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 7, color: linkColor });
+        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 3, color: rgb(1, 1, 1) });
         
         const fullText = mapUrl ? `${labelText}: ${mapUrl.length > 40 ? mapUrl.substring(0, 37) + '...' : mapUrl}` : labelText;
         page.drawText(fullText, {
@@ -527,19 +527,19 @@ serve(async (req) => {
       // Raw URLs (https://...)
       const rawUrlMatch = cleanLine.match(/^(https?:\/\/[^\s]+)/i);
       if (rawUrlMatch) {
-        checkPageBreak(lineHeight + 10);
+        checkPageBreak(lineHeight + 14);
         
         const linkUrl = rawUrlMatch[1];
         const displayText = linkUrl.length > 55 ? linkUrl.substring(0, 52) + '...' : linkUrl;
         
-        // Red background highlight  
+        // Bold red background highlight  
         page.drawRectangle({
-          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
-          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
+          x: margin, y: yPosition - 8, width: contentWidth, height: 30,
+          color: rgb(1, 0.90, 0.90), borderColor: linkColor, borderWidth: 1.5,
         });
         
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 7, color: linkColor });
+        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 3, color: rgb(1, 1, 1) });
         
         page.drawText(displayText, {
           x: margin + 24, y: yPosition + 1, size: fontSize - 1, font: font, color: linkColor,
