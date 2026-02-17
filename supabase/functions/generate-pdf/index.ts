@@ -115,7 +115,6 @@ function parseWhatsAppFormatting(text: string): TextSegment[] {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -123,10 +122,8 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body
     const body: TravelItinerary = await req.json();
     
     if (!body.text) {
@@ -143,38 +140,32 @@ serve(async (req) => {
       traveler_name = ""
     } = body;
 
-    // Create PDF
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
     const fontBoldItalic = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
     
-    // Colors - Modern travel theme
-    const primaryColor = rgb(0.08, 0.32, 0.52);     // Deep ocean blue
-    const secondaryColor = rgb(0.96, 0.97, 0.98);  // Light gray background
-    const accentColor = rgb(0.96, 0.55, 0.15);     // Sunset orange
-    const textColor = rgb(0.15, 0.15, 0.15);       // Dark gray text
-    const linkColor = rgb(0.85, 0.12, 0.12);       // Red for links - more visible
-    const successColor = rgb(0.18, 0.55, 0.34);    // Green for highlights
-    const warningColor = rgb(0.85, 0.45, 0.12);    // Warning orange
+    const primaryColor = rgb(0.08, 0.32, 0.52);
+    const secondaryColor = rgb(0.96, 0.97, 0.98);
+    const accentColor = rgb(0.96, 0.55, 0.15);
+    const textColor = rgb(0.15, 0.15, 0.15);
+    const linkColor = rgb(0.85, 0.12, 0.12);
+    const warningColor = rgb(0.85, 0.45, 0.12);
 
-    // Page settings
-    const pageWidth = 595.28;  // A4 width
-    const pageHeight = 841.89; // A4 height
+    const pageWidth = 595.28;
+    const pageHeight = 841.89;
     const margin = 45;
     const contentWidth = pageWidth - (margin * 2);
     
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
     let yPosition = pageHeight - margin;
 
-    // Helper function to add new page
     const addNewPage = () => {
       page = pdfDoc.addPage([pageWidth, pageHeight]);
       yPosition = pageHeight - margin - 20;
     };
 
-    // Helper function to check if we need a new page
     const checkPageBreak = (requiredHeight: number) => {
       if (yPosition - requiredHeight < margin + 30) {
         addNewPage();
@@ -183,7 +174,6 @@ serve(async (req) => {
       return false;
     };
 
-    // Get font for segment
     const getFontForSegment = (seg: TextSegment) => {
       if (seg.bold && seg.italic) return fontBoldItalic;
       if (seg.bold) return fontBold;
@@ -202,7 +192,6 @@ serve(async (req) => {
       });
     }
     
-    // Main header rectangle
     page.drawRectangle({
       x: 0,
       y: pageHeight - 140,
@@ -211,7 +200,6 @@ serve(async (req) => {
       color: primaryColor,
     });
 
-    // Draw accent stripe
     page.drawRectangle({
       x: 0,
       y: pageHeight - 145,
@@ -220,7 +208,6 @@ serve(async (req) => {
       color: accentColor,
     });
 
-    // Decorative circles
     page.drawCircle({
       x: pageWidth - 80,
       y: pageHeight - 50,
@@ -247,66 +234,36 @@ serve(async (req) => {
       color: rgb(1, 1, 1),
     });
 
-    // Destination subtitle with pin icon
     if (destination) {
       const cleanDest = cleanTextForPDF(destination);
-      // Draw location pin
-      page.drawCircle({
-        x: margin + 6,
-        y: pageHeight - 81,
-        size: 5,
-        color: accentColor,
-      });
-      page.drawCircle({
-        x: margin + 6,
-        y: pageHeight - 81,
-        size: 2,
-        color: rgb(1, 1, 1),
-      });
+      page.drawCircle({ x: margin + 6, y: pageHeight - 81, size: 5, color: accentColor });
+      page.drawCircle({ x: margin + 6, y: pageHeight - 81, size: 2, color: rgb(1, 1, 1) });
       page.drawText(cleanDest, {
-        x: margin + 18,
-        y: pageHeight - 85,
-        size: 14,
-        font: font,
-        color: rgb(0.9, 0.92, 0.95),
+        x: margin + 18, y: pageHeight - 85, size: 14, font: font, color: rgb(0.9, 0.92, 0.95),
       });
     }
 
-    // Traveler name
     if (traveler_name) {
       const cleanName = cleanTextForPDF(traveler_name);
       page.drawText(`Viajante: ${cleanName}`, {
-        x: margin,
-        y: pageHeight - 110,
-        size: 11,
-        font: font,
-        color: rgb(0.75, 0.8, 0.85),
+        x: margin, y: pageHeight - 110, size: 11, font: font, color: rgb(0.75, 0.8, 0.85),
       });
     }
 
-    // Date
-    const today = new Date().toLocaleDateString('pt-BR', { 
-      day: '2-digit', 
-      month: 'long', 
-      year: 'numeric' 
-    });
+    const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     const dateWidth = font.widthOfTextAtSize(today, 10);
     page.drawText(today, {
-      x: pageWidth - margin - dateWidth,
-      y: pageHeight - 110,
-      size: 10,
-      font: font,
-      color: rgb(0.75, 0.8, 0.85),
+      x: pageWidth - margin - dateWidth, y: pageHeight - 110, size: 10, font: font, color: rgb(0.75, 0.8, 0.85),
     });
 
     yPosition = pageHeight - 175;
 
-    // Process text content
+    // Process text content - INCREASED FONT SIZES
     const lines = text.split('\n');
-    const fontSize = 11;
-    const lineHeight = 18;
-    const headerFontSize = 13;
-    const subHeaderFontSize = 11;
+    const fontSize = 12;
+    const lineHeight = 20;
+    const headerFontSize = 14;
+    const subHeaderFontSize = 12;
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -319,121 +276,79 @@ serve(async (req) => {
       const cleanLine = cleanTextForPDF(trimmedLine);
       if (!cleanLine) continue;
 
-      // Check for DAY headers (e.g., "DIA 1", "*DIA 1*")
-      const dayMatch = cleanLine.match(/^\*?(DIA\s*\d+|DAY\s*\d+)/i);
+      // Check for DAY headers - handles **DIA 1**, *DIA 1*, DIA 1, etc.
+      const dayMatch = cleanLine.match(/^\*{0,2}\s*(DIA\s*\d+|DAY\s*\d+)/i);
       if (dayMatch) {
-        // Each day starts on a new page (except if we're near the top of a fresh page)
-        if (yPosition < pageHeight - 200) {
+        // Each day ALWAYS starts on a new page (except first content near top)
+        if (yPosition < pageHeight - 180) {
           addNewPage();
         }
         
-        yPosition -= 10; // Extra spacing before day
+        yPosition -= 10;
         
-        // Draw day header with styled background
         page.drawRectangle({
-          x: margin - 5,
-          y: yPosition - 8,
-          width: contentWidth + 10,
-          height: 32,
+          x: margin - 5, y: yPosition - 8, width: contentWidth + 10, height: 32,
           color: primaryColor,
-          borderRadius: 4,
         });
         
-        // Accent bar on left
         page.drawRectangle({
-          x: margin - 5,
-          y: yPosition - 8,
-          width: 5,
-          height: 32,
-          color: accentColor,
+          x: margin - 5, y: yPosition - 8, width: 5, height: 32, color: accentColor,
         });
         
-        page.drawText(cleanLine.replace(/^\*|\*$/g, '').toUpperCase(), {
-          x: margin + 8,
-          y: yPosition + 3,
-          size: headerFontSize,
-          font: fontBold,
-          color: rgb(1, 1, 1),
+        page.drawText(cleanLine.replace(/^\*+\s*|\*+$/g, '').toUpperCase(), {
+          x: margin + 8, y: yPosition + 3, size: headerFontSize, font: fontBold, color: rgb(1, 1, 1),
         });
         
         yPosition -= 48;
         continue;
       }
 
-      // Check for time/period entries (e.g., "Manha (09:00):", "Tarde (14:30):", "Por do Sol", "Noite", "Manha")
-      const timeMatch = cleanLine.match(/^(\*?\*?)?(Manha|Manha|Tarde|Noite|Por do Sol|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*(\*?\*?)?/i);
+      // Check for time/period - handles Manhã, Manha, Tarde, Noite, Pôr do Sol with accents
+      const timeMatch = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*\*{0,2}/i);
       if (timeMatch) {
         checkPageBreak(40);
         
         yPosition -= 5;
         
-        // Draw time block background
+        // Gray background
         page.drawRectangle({
-          x: margin,
-          y: yPosition - 5,
-          width: contentWidth,
-          height: 24,
-          color: secondaryColor,
+          x: margin, y: yPosition - 5, width: contentWidth, height: 24, color: secondaryColor,
         });
         
-        // Accent dot
+        // Orange accent dot - NOW FOR ALL PERIODS INCLUDING MANHÃ
         page.drawCircle({
-          x: margin + 10,
-          y: yPosition + 5,
-          size: 4,
-          color: accentColor,
+          x: margin + 10, y: yPosition + 5, size: 4, color: accentColor,
         });
         
-        page.drawText(cleanLine.replace(/\*\*/g, '').replace(/^\*|\*$/g, ''), {
-          x: margin + 22,
-          y: yPosition + 1,
-          size: subHeaderFontSize,
-          font: fontBold,
-          color: primaryColor,
+        page.drawText(cleanLine.replace(/\*+/g, '').trim(), {
+          x: margin + 22, y: yPosition + 1, size: subHeaderFontSize, font: fontBold, color: primaryColor,
         });
         
         yPosition -= 32;
         continue;
       }
 
-      // Check for attention/warning blocks
-      const warningMatch = cleanLine.match(/^(Atencao|Aviso|Importante|Warning|Note):/i);
+      // Warning blocks
+      const warningMatch = cleanLine.match(/^(Aten[cç][aã]o|Aviso|Importante|Warning|Note):/i);
       if (warningMatch) {
         checkPageBreak(50);
         
-        // Warning background
         page.drawRectangle({
-          x: margin,
-          y: yPosition - 25,
-          width: contentWidth,
-          height: 40,
-          color: rgb(1, 0.95, 0.9),
-          borderColor: warningColor,
-          borderWidth: 1,
+          x: margin, y: yPosition - 25, width: contentWidth, height: 40,
+          color: rgb(1, 0.95, 0.9), borderColor: warningColor, borderWidth: 1,
         });
         
-        // Warning icon (triangle shape with lines)
-        page.drawCircle({
-          x: margin + 15,
-          y: yPosition - 5,
-          size: 8,
-          color: warningColor,
-        });
+        page.drawCircle({ x: margin + 15, y: yPosition - 5, size: 8, color: warningColor });
         
-        const warningText = cleanLine;
-        page.drawText(warningText, {
-          x: margin + 30,
-          y: yPosition - 5,
-          size: fontSize,
-          font: fontBold,
-          color: warningColor,
+        page.drawText(cleanLine, {
+          x: margin + 30, y: yPosition - 5, size: fontSize, font: fontBold, color: warningColor,
         });
         
         yPosition -= 50;
         continue;
       }
 
-      // Check for bullet points with content
+      // Bullet points
       const bulletMatch = trimmedLine.match(/^[-•]\s*/);
       if (bulletMatch) {
         checkPageBreak(lineHeight * 3);
@@ -441,39 +356,25 @@ serve(async (req) => {
         const bulletContent = cleanTextForPDF(trimmedLine.replace(/^[-•]\s*/, ''));
         const segments = parseWhatsAppFormatting(bulletContent);
         
-        // Draw bullet point
-        page.drawCircle({
-          x: margin + 12,
-          y: yPosition - 1,
-          size: 3,
-          color: accentColor,
-        });
+        page.drawCircle({ x: margin + 12, y: yPosition - 1, size: 3, color: accentColor });
         
-        // Render segments with word wrap
-        let xPos = margin + 25;
         const bulletContentWidth = contentWidth - 30;
         let lineText = '';
         
         for (const seg of segments) {
           if (!seg.text.trim()) continue;
-          
           const segFont = getFontForSegment(seg);
           const words = seg.text.split(' ');
           
           for (const word of words) {
             if (!word) continue;
-            
             const testText = lineText ? lineText + ' ' + word : word;
             const testWidth = font.widthOfTextAtSize(testText, fontSize);
             
             if (testWidth > bulletContentWidth && lineText) {
-              // Draw current line and start new one
               checkPageBreak(lineHeight);
               page.drawText(lineText, {
-                x: margin + 25,
-                y: yPosition,
-                size: fontSize,
-                font: segFont,
+                x: margin + 25, y: yPosition, size: fontSize, font: segFont,
                 color: seg.isLink ? linkColor : textColor,
               });
               yPosition -= lineHeight;
@@ -484,31 +385,25 @@ serve(async (req) => {
           }
         }
         
-        // Draw remaining text
         if (lineText) {
           const lastSeg = segments[segments.length - 1] || { bold: false, italic: false, isLink: false };
           page.drawText(lineText, {
-            x: margin + 25,
-            y: yPosition,
-            size: fontSize,
-            font: getFontForSegment(lastSeg),
+            x: margin + 25, y: yPosition, size: fontSize, font: getFontForSegment(lastSeg),
             color: lastSeg.isLink ? linkColor : textColor,
           });
           yPosition -= lineHeight;
         }
         
-        yPosition -= 4; // Extra spacing after bullet
+        yPosition -= 4;
         continue;
       }
 
-      // Check for "Por que escolhi" or similar explanatory text
+      // Explanatory text
       const explanationMatch = cleanLine.match(/^(Por que escolhi|Why I chose|Dica|Tip):/i);
       if (explanationMatch) {
         checkPageBreak(lineHeight * 2);
         
-        // Italicized explanation with special color
-        const explanationText = cleanLine;
-        const words = explanationText.split(' ');
+        const words = cleanLine.split(' ');
         let currentLine = '';
         
         for (const word of words) {
@@ -518,11 +413,7 @@ serve(async (req) => {
           if (textWidth > contentWidth - 20) {
             checkPageBreak(lineHeight);
             page.drawText(currentLine, {
-              x: margin + 20,
-              y: yPosition,
-              size: fontSize - 1,
-              font: fontItalic,
-              color: rgb(0.35, 0.35, 0.35),
+              x: margin + 20, y: yPosition, size: fontSize - 1, font: fontItalic, color: rgb(0.35, 0.35, 0.35),
             });
             yPosition -= lineHeight;
             currentLine = word;
@@ -534,11 +425,7 @@ serve(async (req) => {
         if (currentLine) {
           checkPageBreak(lineHeight);
           page.drawText(currentLine, {
-            x: margin + 20,
-            y: yPosition,
-            size: fontSize - 1,
-            font: fontItalic,
-            color: rgb(0.35, 0.35, 0.35),
+            x: margin + 20, y: yPosition, size: fontSize - 1, font: fontItalic, color: rgb(0.35, 0.35, 0.35),
           });
           yPosition -= lineHeight;
         }
@@ -546,105 +433,186 @@ serve(async (req) => {
         continue;
       }
 
-      // Check for navigation links [Navegar com Waze...](url) or [Navegar com Google Maps...](url)
+      // ===== LINK HANDLING =====
+
+      // Markdown links [text](url)
       const navMatch = cleanLine.match(/^\[([^\]]+)\]\(([^)]+)\)/i);
       if (navMatch) {
-        checkPageBreak(lineHeight);
+        checkPageBreak(lineHeight + 10);
         
         const linkText = navMatch[1];
         const linkUrl = navMatch[2];
         
-        // Draw as a styled link
+        // Red background highlight
+        page.drawRectangle({
+          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
+          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
+        });
+        
+        // Map pin icon
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        
         page.drawText(linkText, {
-          x: margin + 20,
-          y: yPosition,
-          size: fontSize - 1,
-          font: font,
-          color: linkColor,
+          x: margin + 24, y: yPosition + 1, size: fontSize, font: fontBold, color: linkColor,
         });
         
-        // Underline
-        const linkWidth = font.widthOfTextAtSize(linkText, fontSize - 1);
+        const linkWidth = fontBold.widthOfTextAtSize(linkText, fontSize);
         page.drawLine({
-          start: { x: margin + 20, y: yPosition - 2 },
-          end: { x: margin + 20 + linkWidth, y: yPosition - 2 },
-          thickness: 0.5,
-          color: linkColor,
+          start: { x: margin + 24, y: yPosition - 2 },
+          end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
+          thickness: 1, color: linkColor,
         });
         
-        // Add clickable link annotation
         if (linkUrl) {
           page.node.addAnnot(
             pdfDoc.context.obj({
-              Type: 'Annot',
-              Subtype: 'Link',
-              Rect: [margin + 20, yPosition - 4, margin + 20 + linkWidth, yPosition + 10],
+              Type: 'Annot', Subtype: 'Link',
+              Rect: [margin, yPosition - 6, margin + contentWidth, yPosition + 20],
               Border: [0, 0, 0],
-              A: {
-                Type: 'Action',
-                S: 'URI',
-                URI: pdfDoc.context.obj(linkUrl),
-              },
+              A: { Type: 'Action', S: 'URI', URI: pdfDoc.context.obj(linkUrl) },
             })
           );
         }
         
-        yPosition -= lineHeight + 4;
+        yPosition -= lineHeight + 10;
         continue;
       }
       
-      // Also handle simple navigation text without markdown format
-      const simpleNavMatch = cleanLine.match(/^\[Navegar com (Waze|Google Maps|Maps)[^\]]*\]/i);
-      if (simpleNavMatch) {
-        checkPageBreak(lineHeight);
+      // "Ver no mapa" or similar with optional URL
+      const verMapaMatch = cleanLine.match(/^(Ver no mapa|Ver mapa|Google Maps|Waze|Navegar com[^:]*)[:\s]*(https?:\/\/[^\s]*)?/i);
+      if (verMapaMatch) {
+        checkPageBreak(lineHeight + 10);
         
-        // Draw as a styled link (text only, no URL)
-        const linkText = cleanLine.replace(/[\[\]]/g, '');
-        page.drawText(linkText, {
-          x: margin + 20,
-          y: yPosition,
-          size: fontSize - 1,
-          font: font,
-          color: linkColor,
+        const labelText = verMapaMatch[1];
+        const mapUrl = verMapaMatch[2] || '';
+        
+        // Red background highlight
+        page.drawRectangle({
+          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
+          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
         });
         
-        // Underline
-        const linkWidth = font.widthOfTextAtSize(linkText, fontSize - 1);
+        // Map pin icon
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        
+        const fullText = mapUrl ? `${labelText}: ${mapUrl.length > 40 ? mapUrl.substring(0, 37) + '...' : mapUrl}` : labelText;
+        page.drawText(fullText, {
+          x: margin + 24, y: yPosition + 1, size: fontSize, font: fontBold, color: linkColor,
+        });
+        
+        const textW = fontBold.widthOfTextAtSize(fullText, fontSize);
         page.drawLine({
-          start: { x: margin + 20, y: yPosition - 2 },
-          end: { x: margin + 20 + linkWidth, y: yPosition - 2 },
-          thickness: 0.5,
-          color: linkColor,
+          start: { x: margin + 24, y: yPosition - 2 },
+          end: { x: margin + 24 + textW, y: yPosition - 2 },
+          thickness: 1, color: linkColor,
         });
         
-        yPosition -= lineHeight + 4;
+        if (mapUrl) {
+          page.node.addAnnot(
+            pdfDoc.context.obj({
+              Type: 'Annot', Subtype: 'Link',
+              Rect: [margin, yPosition - 6, margin + contentWidth, yPosition + 20],
+              Border: [0, 0, 0],
+              A: { Type: 'Action', S: 'URI', URI: pdfDoc.context.obj(mapUrl) },
+            })
+          );
+        }
+        
+        yPosition -= lineHeight + 10;
         continue;
       }
 
-      // Regular paragraph with word wrap and formatting
+      // Raw URLs (https://...)
+      const rawUrlMatch = cleanLine.match(/^(https?:\/\/[^\s]+)/i);
+      if (rawUrlMatch) {
+        checkPageBreak(lineHeight + 10);
+        
+        const linkUrl = rawUrlMatch[1];
+        const displayText = linkUrl.length > 55 ? linkUrl.substring(0, 52) + '...' : linkUrl;
+        
+        // Red background highlight  
+        page.drawRectangle({
+          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
+          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
+        });
+        
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        
+        page.drawText(displayText, {
+          x: margin + 24, y: yPosition + 1, size: fontSize - 1, font: font, color: linkColor,
+        });
+        
+        const linkWidth = font.widthOfTextAtSize(displayText, fontSize - 1);
+        page.drawLine({
+          start: { x: margin + 24, y: yPosition - 2 },
+          end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
+          thickness: 1, color: linkColor,
+        });
+        
+        page.node.addAnnot(
+          pdfDoc.context.obj({
+            Type: 'Annot', Subtype: 'Link',
+            Rect: [margin, yPosition - 6, margin + contentWidth, yPosition + 20],
+            Border: [0, 0, 0],
+            A: { Type: 'Action', S: 'URI', URI: pdfDoc.context.obj(linkUrl) },
+          })
+        );
+        
+        yPosition -= lineHeight + 10;
+        continue;
+      }
+      
+      // [Navegar com ...] without URL
+      const simpleNavMatch = cleanLine.match(/^\[([^\]]+)\]/i);
+      if (simpleNavMatch && cleanLine.match(/navegar|waze|maps/i)) {
+        checkPageBreak(lineHeight);
+        
+        const linkText = simpleNavMatch[1];
+        
+        page.drawRectangle({
+          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
+          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
+        });
+        
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
+        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        
+        page.drawText(linkText, {
+          x: margin + 24, y: yPosition + 1, size: fontSize, font: fontBold, color: linkColor,
+        });
+        
+        const linkWidth = fontBold.widthOfTextAtSize(linkText, fontSize);
+        page.drawLine({
+          start: { x: margin + 24, y: yPosition - 2 },
+          end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
+          thickness: 1, color: linkColor,
+        });
+        
+        yPosition -= lineHeight + 10;
+        continue;
+      }
+
+      // ===== REGULAR PARAGRAPH =====
       const segments = parseWhatsAppFormatting(cleanLine);
-      let xPos = margin;
       let lineText = '';
       
       for (const seg of segments) {
         if (!seg.text.trim()) continue;
-        
         const segFont = getFontForSegment(seg);
         const words = seg.text.split(' ');
         
         for (const word of words) {
           if (!word) continue;
-          
           const testText = lineText ? lineText + ' ' + word : word;
           const testWidth = font.widthOfTextAtSize(testText, fontSize);
           
           if (testWidth > contentWidth && lineText) {
             checkPageBreak(lineHeight);
             page.drawText(lineText, {
-              x: margin,
-              y: yPosition,
-              size: fontSize,
-              font: segFont,
+              x: margin, y: yPosition, size: fontSize, font: segFont,
               color: seg.isLink ? linkColor : textColor,
             });
             yPosition -= lineHeight;
@@ -659,10 +627,7 @@ serve(async (req) => {
         checkPageBreak(lineHeight);
         const lastSeg = segments[segments.length - 1] || { bold: false, italic: false, isLink: false };
         page.drawText(lineText, {
-          x: margin,
-          y: yPosition,
-          size: fontSize,
-          font: getFontForSegment(lastSeg),
+          x: margin, y: yPosition, size: fontSize, font: getFontForSegment(lastSeg),
           color: lastSeg.isLink ? linkColor : textColor,
         });
         yPosition -= lineHeight;
@@ -713,21 +678,15 @@ serve(async (req) => {
       });
     });
 
-    // Generate PDF bytes
     const pdfBytes = await pdfDoc.save();
 
-    // Generate unique filename
     const timestamp = Date.now();
     const randomId = crypto.randomUUID().substring(0, 8);
     const fileName = `roteiro-${timestamp}-${randomId}.pdf`;
 
-    // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('travel-pdfs')
-      .upload(fileName, pdfBytes, {
-        contentType: 'application/pdf',
-        upsert: false,
-      });
+      .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: false });
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
@@ -737,18 +696,12 @@ serve(async (req) => {
       );
     }
 
-    // Get public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('travel-pdfs')
-      .getPublicUrl(fileName);
+    const { data: publicUrlData } = supabase.storage.from('travel-pdfs').getPublicUrl(fileName);
 
-    // Save metadata to database for dashboard
     const { error: insertError } = await supabase
       .from('generated_itineraries')
       .insert({
-        title: title,
-        destination: destination,
-        traveler_name: traveler_name,
+        title, destination, traveler_name,
         pdf_url: publicUrlData.publicUrl,
         file_name: fileName,
         text_length: text.length
@@ -756,7 +709,6 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Error saving itinerary metadata:', insertError);
-      // Don't fail the request, just log the error
     }
 
     return new Response(
