@@ -96,9 +96,7 @@ const CustomersPanel = () => {
     }
   };
 
-  const handleUpdateCredits = async (customerId: string, currentCredits: number, amount: number) => {
-    const newCreditsValue = Math.max(0, currentCredits + amount);
-
+  const handleSaveCredits = async (customerId: string, newCreditsValue: number) => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(
@@ -109,7 +107,7 @@ const CustomersPanel = () => {
           body: JSON.stringify({
             action: "update-credits",
             customer_id: customerId,
-            free_credits: newCreditsValue,
+            free_credits: Math.max(0, newCreditsValue),
           }),
         }
       );
@@ -292,26 +290,17 @@ const CustomersPanel = () => {
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
-                          min={1}
+                          min={0}
                           value={creditAmount}
-                          onChange={(e) => setCreditAmount(parseInt(e.target.value) || 1)}
+                          onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
                           className="w-16 px-2 py-1 rounded border border-slate-200 text-sm text-center"
                         />
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="text-green-600 border-green-300"
-                          onClick={() => handleUpdateCredits(customer.id, customer.free_credits, creditAmount)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => handleSaveCredits(customer.id, creditAmount)}
                         >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 border-red-300"
-                          onClick={() => handleUpdateCredits(customer.id, customer.free_credits, -creditAmount)}
-                        >
-                          <Minus className="h-3 w-3" />
+                          Salvar
                         </Button>
                         <Button
                           size="sm"
@@ -327,7 +316,7 @@ const CustomersPanel = () => {
                         variant="outline"
                         onClick={() => {
                           setAddingCredits(customer.id);
-                          setCreditAmount(1);
+                          setCreditAmount(customer.free_credits);
                         }}
                       >
                         <CreditCard className="h-4 w-4 mr-1" />
