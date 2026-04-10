@@ -74,6 +74,77 @@ export type Database = {
         }
         Relationships: []
       }
+      mural_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          mural_id: string
+          narrative_text: string | null
+          order_index: number
+          photo_url: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          mural_id: string
+          narrative_text?: string | null
+          order_index?: number
+          photo_url: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          mural_id?: string
+          narrative_text?: string | null
+          order_index?: number
+          photo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mural_photos_mural_id_fkey"
+            columns: ["mural_id"]
+            isOneToOne: false
+            referencedRelation: "photo_murals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_murals: {
+        Row: {
+          cover_photo_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          pdf_url: string | null
+          phone: string
+          share_code: string
+          title: string | null
+        }
+        Insert: {
+          cover_photo_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          pdf_url?: string | null
+          phone: string
+          share_code: string
+          title?: string | null
+        }
+        Update: {
+          cover_photo_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          pdf_url?: string | null
+          phone?: string
+          share_code?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

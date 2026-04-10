@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users } from "lucide-react";
+import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import CustomersPanel from "@/components/CustomersPanel";
+import MuralsPanel from "@/components/MuralsPanel";
 
 interface Itinerary {
   id: string;
@@ -28,7 +29,7 @@ interface Stats {
 }
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState<"roteiros" | "clientes">("roteiros");
+  const [activeTab, setActiveTab] = useState<"roteiros" | "clientes" | "murais">("roteiros");
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
   const [stats, setStats] = useState<Stats>({
     total: 0, today: 0, thisWeek: 0, thisMonth: 0, avgTextLength: 0,
@@ -117,6 +118,14 @@ const AdminDashboard = () => {
           >
             <Users className="h-4 w-4" />
             Clientes
+          </Button>
+          <Button
+            variant={activeTab === "murais" ? "default" : "outline"}
+            onClick={() => setActiveTab("murais")}
+            className="flex items-center gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            Murais
           </Button>
         </div>
 
@@ -240,8 +249,10 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </>
-        ) : (
+        ) : activeTab === "clientes" ? (
           <CustomersPanel />
+        ) : (
+          <MuralsPanel />
         )}
       </div>
     </div>
