@@ -316,7 +316,7 @@ const CustomersPanel = () => {
                         variant="outline"
                         onClick={() => {
                           setAddingCredits(customer.id);
-                          setCreditAmount(1);
+                          setCreditAmount(customer.free_credits);
                         }}
                       >
                         <CreditCard className="h-4 w-4 mr-1" />
