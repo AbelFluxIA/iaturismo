@@ -101,6 +101,10 @@ const AdminDashboard = () => {
             <h1 className="text-3xl font-bold text-slate-800">Painel Administrativo</h1>
             <p className="text-slate-600 mt-1">Gerencie roteiros e clientes</p>
           </div>
+          <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
+            <LogOut className="h-4 w-4" />
+            Sair
+          </Button>
         </div>
 
         {/* Tabs */}
