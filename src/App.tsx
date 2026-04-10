@@ -9,7 +9,6 @@ import MuralGallery from "./pages/MuralGallery";
 
 const queryClient = new QueryClient();
 
-// Layout component with scroll restoration
 const Layout = () => (
   <>
     <ScrollRestoration />
@@ -17,7 +16,6 @@ const Layout = () => (
   </>
 );
 
-// Create router with automatic scroll restoration
 const router = createBrowserRouter([
   {
     element: <Layout />,
@@ -25,6 +23,10 @@ const router = createBrowserRouter([
       {
         path: "/",
         element: <AdminDashboard />,
+      },
+      {
+        path: "/mural/:shareCode",
+        element: <MuralGallery />,
       },
       {
         path: "*",

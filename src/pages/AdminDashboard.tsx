@@ -249,8 +249,10 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </>
-        ) : (
+        ) : activeTab === "clientes" ? (
           <CustomersPanel />
+        ) : (
+          <MuralsPanel />
         )}
       </div>
     </div>
