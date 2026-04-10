@@ -10,22 +10,30 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      toast({
-        title: "Erro no login",
-        description: error.message === "Invalid login credentials"
-          ? "Email ou senha incorretos"
-          : error.message,
-        variant: "destructive",
-      });
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        toast({ title: "Erro ao criar conta", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Conta criada com sucesso!", description: "Você já pode fazer login." });
+        setIsSignUp(false);
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast({
+          title: "Erro no login",
+          description: error.message === "Invalid login credentials" ? "Email ou senha incorretos" : error.message,
+          variant: "destructive",
+        });
+      }
     }
 
     setLoading(false);
@@ -39,10 +47,12 @@ const Login = () => {
             <LogIn className="h-7 w-7 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-white">IA Turismo</CardTitle>
-          <p className="text-slate-400 text-sm mt-1">Acesse o painel administrativo</p>
+          <p className="text-slate-400 text-sm mt-1">
+            {isSignUp ? "Crie sua conta de administrador" : "Acesse o painel administrativo"}
+          </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-sm font-medium text-slate-300 mb-1.5 block">Email</label>
               <div className="relative">
@@ -83,8 +93,15 @@ const Login = () => {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition"
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? (isSignUp ? "Criando..." : "Entrando...") : (isSignUp ? "Criar Conta" : "Entrar")}
             </Button>
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="w-full text-sm text-slate-400 hover:text-white transition"
+            >
+              {isSignUp ? "Já tem conta? Fazer login" : "Primeiro acesso? Criar conta"}
+            </button>
           </form>
         </CardContent>
       </Card>
