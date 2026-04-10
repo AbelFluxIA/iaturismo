@@ -30,6 +30,7 @@ interface Stats {
 }
 
 const AdminDashboard = () => {
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<"roteiros" | "clientes" | "murais">("roteiros");
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
   const [stats, setStats] = useState<Stats>({
