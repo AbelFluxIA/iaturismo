@@ -96,9 +96,7 @@ const CustomersPanel = () => {
     }
   };
 
-  const handleUpdateCredits = async (customerId: string, currentCredits: number, amount: number) => {
-    const newCreditsValue = Math.max(0, currentCredits + amount);
-
+  const handleSaveCredits = async (customerId: string, newCreditsValue: number) => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(
@@ -109,7 +107,7 @@ const CustomersPanel = () => {
           body: JSON.stringify({
             action: "update-credits",
             customer_id: customerId,
-            free_credits: newCreditsValue,
+            free_credits: Math.max(0, newCreditsValue),
           }),
         }
       );
