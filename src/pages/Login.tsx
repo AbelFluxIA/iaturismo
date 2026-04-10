@@ -50,6 +50,8 @@ const Login = () => {
           description: error.message === "Invalid login credentials" ? "Email ou senha incorretos" : error.message,
           variant: "destructive",
         });
+      } else {
+        navigate("/", { replace: true });
       }
     }
 
