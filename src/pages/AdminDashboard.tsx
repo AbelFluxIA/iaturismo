@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera } from "lucide-react";
+import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import CustomersPanel from "@/components/CustomersPanel";
