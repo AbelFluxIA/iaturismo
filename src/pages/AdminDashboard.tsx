@@ -86,8 +86,8 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
       </div>
     );
   }
@@ -153,102 +153,81 @@ const AdminDashboard = () => {
           <>
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <Card className="bg-white border-none shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Total de Roteiros</CardTitle>
-                  <FileText className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
-                  <p className="text-xs text-slate-500 mt-1">PDFs gerados</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Hoje</CardTitle>
-                  <Calendar className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-800">{stats.today}</div>
-                  <p className="text-xs text-slate-500 mt-1">roteiros gerados hoje</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Esta Semana</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-orange-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-800">{stats.thisWeek}</div>
-                  <p className="text-xs text-slate-500 mt-1">últimos 7 dias</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Tamanho Médio</CardTitle>
-                  <FileText className="h-4 w-4 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-800">
-                    {(stats.avgTextLength / 1000).toFixed(1)}k
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">caracteres por roteiro</p>
-                </CardContent>
-              </Card>
+              {[
+                { label: "Total de Roteiros", value: stats.total, sub: "PDFs gerados", icon: FileText, bg: "bg-vibrant-lavender" },
+                { label: "Hoje", value: stats.today, sub: "gerados hoje", icon: Calendar, bg: "bg-vibrant-mint" },
+                { label: "Esta Semana", value: stats.thisWeek, sub: "últimos 7 dias", icon: TrendingUp, bg: "bg-vibrant-orange" },
+                { label: "Tamanho Médio", value: `${(stats.avgTextLength / 1000).toFixed(1)}k`, sub: "caracteres por roteiro", icon: FileText, bg: "bg-vibrant-yellow" },
+              ].map((s) => {
+                const Icon = s.icon;
+                return (
+                  <Card key={s.label} className={`${s.bg} border-2 border-foreground rounded-3xl shadow-none`}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground">{s.label}</CardTitle>
+                      <Icon className="h-5 w-5 text-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-black text-foreground">{s.value}</div>
+                      <p className="text-xs text-foreground/70 mt-1 font-medium">{s.sub}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
             {/* Refresh */}
             <div className="flex justify-end mb-4">
-              <Button onClick={handleRefresh} variant="outline" size="sm" disabled={refreshing}>
+              <Button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="rounded-full bg-card hover:bg-foreground hover:text-background border-2 border-foreground text-foreground font-bold uppercase"
+              >
                 <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
                 Atualizar
               </Button>
             </div>
 
             {/* Itineraries List */}
-            <Card className="bg-white border-none shadow-sm">
+            <Card className="bg-card border-2 border-foreground rounded-3xl shadow-none">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-800">Roteiros Recentes</CardTitle>
+                <CardTitle className="text-lg font-bold uppercase tracking-wide text-foreground">Roteiros Recentes</CardTitle>
               </CardHeader>
               <CardContent>
                 {itineraries.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500">
+                  <div className="text-center py-12 text-foreground/60">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhum roteiro gerado ainda</p>
+                    <p className="font-medium">Nenhum roteiro gerado ainda</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {itineraries.map((itinerary) => (
                       <div
                         key={itinerary.id}
-                        className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                        className="flex items-center justify-between gap-3 p-4 bg-background rounded-2xl border-2 border-foreground/10 hover:border-secondary transition-colors flex-wrap"
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium text-slate-800 truncate">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="font-bold text-foreground truncate">
                               {itinerary.title || "Roteiro sem título"}
                             </h3>
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge className="bg-vibrant-yellow text-foreground border border-foreground text-[10px] uppercase">
                               {(itinerary.text_length / 1000).toFixed(1)}k chars
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-slate-500">
+                          <div className="flex items-center gap-4 text-sm text-foreground/70 flex-wrap">
                             {itinerary.destination && (
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1 font-medium">
                                 <MapPin className="h-3 w-3" />
                                 {itinerary.destination}
                               </span>
                             )}
                             {itinerary.traveler_name && (
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1 font-medium">
                                 <User className="h-3 w-3" />
                                 {itinerary.traveler_name}
                               </span>
                             )}
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 text-xs">
                               <Calendar className="h-3 w-3" />
                               {format(new Date(itinerary.created_at), "dd/MM/yyyy HH:mm", {
                                 locale: ptBR,
@@ -256,9 +235,12 @@ const AdminDashboard = () => {
                             </span>
                           </div>
                         </div>
-                        <a href={itinerary.pdf_url} target="_blank" rel="noopener noreferrer" className="ml-4">
-                          <Button size="sm" variant="outline" className="flex items-center gap-2">
-                            <Download className="h-4 w-4" />
+                        <a href={itinerary.pdf_url} target="_blank" rel="noopener noreferrer" download={itinerary.file_name}>
+                          <Button
+                            size="sm"
+                            className="rounded-full bg-secondary hover:bg-secondary-hover text-secondary-foreground font-bold uppercase border-2 border-foreground"
+                          >
+                            <Download className="h-4 w-4 mr-1" />
                             PDF
                           </Button>
                         </a>
