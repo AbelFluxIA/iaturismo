@@ -48,6 +48,7 @@ export type Database = {
           file_name: string
           id: string
           pdf_url: string
+          phone: string | null
           text_length: number
           title: string | null
           traveler_name: string | null
@@ -58,6 +59,7 @@ export type Database = {
           file_name: string
           id?: string
           pdf_url: string
+          phone?: string | null
           text_length?: number
           title?: string | null
           traveler_name?: string | null
@@ -68,6 +70,7 @@ export type Database = {
           file_name?: string
           id?: string
           pdf_url?: string
+          phone?: string | null
           text_length?: number
           title?: string | null
           traveler_name?: string | null
