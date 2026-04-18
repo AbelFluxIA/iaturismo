@@ -758,9 +758,16 @@ serve(async (req) => {
 
     const pdfBytes = await pdfDoc.save();
 
+    // File name: roteiro-{traveler_name}.pdf (timestamp suffix to prevent collision)
+    const slugify = (s: string) =>
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase()
+        .substring(0, 60);
+    const namePart = traveler_name ? slugify(traveler_name) : "viajante";
     const timestamp = Date.now();
-    const randomId = crypto.randomUUID().substring(0, 8);
-    const fileName = `roteiro-${timestamp}-${randomId}.pdf`;
+    const fileName = `roteiro-${namePart}-${timestamp}.pdf`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('travel-pdfs')
