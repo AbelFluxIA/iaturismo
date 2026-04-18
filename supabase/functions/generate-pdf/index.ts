@@ -145,13 +145,37 @@ serve(async (req) => {
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
     const fontBoldItalic = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
-    
-    const primaryColor = rgb(0.08, 0.32, 0.52);
-    const secondaryColor = rgb(0.96, 0.97, 0.98);
-    const accentColor = rgb(0.96, 0.55, 0.15);
-    const textColor = rgb(0.15, 0.15, 0.15);
-    const linkColor = rgb(0.85, 0.12, 0.12);
+
+    // Embed brand logo (SOL)
+    let logoImage: any = null;
+    try {
+      const logoUrl = `${supabaseUrl}/storage/v1/object/public/travel-pdfs/assets/logo-sol.png`;
+      const logoRes = await fetch(logoUrl);
+      if (logoRes.ok) {
+        const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
+        try {
+          logoImage = await pdfDoc.embedPng(logoBytes);
+        } catch {
+          logoImage = await pdfDoc.embedJpg(logoBytes);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to embed logo:", e);
+    }
+
+    // Refined sophisticated palette
+    const primaryColor = rgb(0.05, 0.20, 0.40);      // deep navy
+    const primaryDark = rgb(0.03, 0.13, 0.27);       // darker navy for gradient
+    const goldColor = rgb(0.95, 0.72, 0.20);         // brand gold
+    const goldDark = rgb(0.78, 0.55, 0.10);
+    const secondaryColor = rgb(0.97, 0.97, 0.95);    // warm paper
+    const accentColor = rgb(0.95, 0.72, 0.20);       // gold accent (was orange)
+    const textColor = rgb(0.13, 0.15, 0.20);
+    const mutedText = rgb(0.42, 0.45, 0.50);
+    const linkColor = rgb(0.80, 0.10, 0.12);         // strong red
+    const linkBg = rgb(1, 0.93, 0.93);
     const warningColor = rgb(0.85, 0.45, 0.12);
+    const dividerColor = rgb(0.88, 0.86, 0.80);
 
     const pageWidth = 595.28;
     const pageHeight = 841.89;
