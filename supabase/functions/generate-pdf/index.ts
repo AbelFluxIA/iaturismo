@@ -715,33 +715,30 @@ serve(async (req) => {
     // Add footer to all pages
     const pages = pdfDoc.getPages();
     pages.forEach((p, index) => {
-      // Footer separator line
+      // Gold footer separator
       p.drawRectangle({
-        x: margin,
-        y: 40,
-        width: contentWidth,
-        height: 1,
-        color: rgb(0.85, 0.85, 0.85),
-      });
-      
-      // Page number centered
-      const pageText = `${index + 1} / ${pages.length}`;
-      const pageTextWidth = font.widthOfTextAtSize(pageText, 9);
-      p.drawText(pageText, {
-        x: (pageWidth - pageTextWidth) / 2,
-        y: 25,
-        size: 9,
-        font: font,
-        color: rgb(0.5, 0.5, 0.5),
+        x: margin, y: 45, width: contentWidth, height: 0.8, color: goldColor,
       });
 
-      // Brand text on left
-      p.drawText("IA de Turismo", {
-        x: margin,
-        y: 25,
-        size: 8,
-        font: fontBold,
-        color: primaryColor,
+      // Footer logo on left
+      if (logoImage) {
+        p.drawImage(logoImage, { x: margin, y: 14, width: 26, height: 26 });
+      }
+
+      // Brand text next to logo
+      const brandX = margin + (logoImage ? 32 : 0);
+      p.drawText("SOL", {
+        x: brandX, y: 28, size: 11, font: fontBold, color: primaryColor,
+      });
+      p.drawText("Roteiros de viagem", {
+        x: brandX, y: 17, size: 7, font: font, color: mutedText,
+      });
+
+      // Page number centered
+      const pageText = `${index + 1} / ${pages.length}`;
+      const pageTextWidth = fontBold.widthOfTextAtSize(pageText, 9);
+      p.drawText(pageText, {
+        x: (pageWidth - pageTextWidth) / 2, y: 22, size: 9, font: fontBold, color: primaryColor,
       });
 
       // Date on right
@@ -749,10 +746,7 @@ serve(async (req) => {
       const footerDateWidth = font.widthOfTextAtSize(footerDate, 8);
       p.drawText(footerDate, {
         x: pageWidth - margin - footerDateWidth,
-        y: 25,
-        size: 8,
-        font: font,
-        color: rgb(0.5, 0.5, 0.5),
+        y: 22, size: 8, font: font, color: mutedText,
       });
     });
 
