@@ -231,89 +231,138 @@ serve(async (req) => {
       return font;
     };
 
-    // Draw header background with gradient effect (multiple rectangles)
-    for (let i = 0; i < 5; i++) {
+    // ====== SOPHISTICATED COVER HEADER ======
+    const headerHeight = 200;
+
+    // Deep navy gradient background (layered for richness)
+    for (let i = 0; i < 12; i++) {
+      const t = i / 11;
       page.drawRectangle({
         x: 0,
-        y: pageHeight - 140 + (i * 5),
+        y: pageHeight - headerHeight + (i * (headerHeight / 12)),
         width: pageWidth,
-        height: 30,
-        color: rgb(0.08 + (i * 0.02), 0.32 + (i * 0.03), 0.52 + (i * 0.04)),
+        height: headerHeight / 12 + 1,
+        color: rgb(
+          0.03 + t * 0.05,
+          0.13 + t * 0.10,
+          0.27 + t * 0.15
+        ),
       });
     }
-    
+
+    // Decorative gold corner ornaments
+    page.drawCircle({ x: pageWidth - 70, y: pageHeight - 60, size: 50, color: goldColor, opacity: 0.10 });
+    page.drawCircle({ x: pageWidth - 50, y: pageHeight - 110, size: 30, color: goldColor, opacity: 0.08 });
+    page.drawCircle({ x: 30, y: pageHeight - 180, size: 40, color: goldColor, opacity: 0.06 });
+
+    // Gold accent line at bottom of header
     page.drawRectangle({
       x: 0,
-      y: pageHeight - 140,
+      y: pageHeight - headerHeight - 4,
       width: pageWidth,
-      height: 140,
-      color: primaryColor,
+      height: 4,
+      color: goldColor,
     });
-
     page.drawRectangle({
       x: 0,
-      y: pageHeight - 145,
+      y: pageHeight - headerHeight - 6,
       width: pageWidth,
-      height: 5,
-      color: accentColor,
+      height: 1,
+      color: goldDark,
     });
 
-    page.drawCircle({
-      x: pageWidth - 80,
-      y: pageHeight - 50,
-      size: 40,
-      color: rgb(0.12, 0.38, 0.58),
-      opacity: 0.3,
-    });
-    page.drawCircle({
-      x: pageWidth - 60,
-      y: pageHeight - 90,
-      size: 25,
-      color: rgb(0.15, 0.42, 0.62),
-      opacity: 0.2,
-    });
+    // Logo (top-right)
+    if (logoImage) {
+      const logoSize = 70;
+      page.drawImage(logoImage, {
+        x: pageWidth - margin - logoSize,
+        y: pageHeight - margin - logoSize + 5,
+        width: logoSize,
+        height: logoSize,
+      });
+    }
 
-    // Title
-    const cleanTitle = cleanTextForPDF(title);
-    const titleFontSize = 26;
-    page.drawText(cleanTitle.toUpperCase(), {
+    // Small gold uppercase eyebrow
+    page.drawText("ROTEIRO DE VIAGEM", {
       x: margin,
       y: pageHeight - 55,
+      size: 10,
+      font: fontBold,
+      color: goldColor,
+    });
+    // Eyebrow underline
+    page.drawRectangle({
+      x: margin,
+      y: pageHeight - 60,
+      width: 30,
+      height: 1.5,
+      color: goldColor,
+    });
+
+    // Main title (LARGER, elegant)
+    const cleanTitle = cleanTextForPDF(title);
+    const titleFontSize = 30;
+    // Wrap title if too long
+    const titleMaxWidth = logoImage ? pageWidth - margin * 2 - 90 : pageWidth - margin * 2;
+    const titleWords = cleanTitle.split(" ");
+    let titleLine1 = "";
+    let titleLine2 = "";
+    for (const w of titleWords) {
+      const test = titleLine1 ? titleLine1 + " " + w : w;
+      if (fontBold.widthOfTextAtSize(test, titleFontSize) <= titleMaxWidth) {
+        titleLine1 = test;
+      } else {
+        titleLine2 = titleLine2 ? titleLine2 + " " + w : w;
+      }
+    }
+    page.drawText(titleLine1, {
+      x: margin,
+      y: pageHeight - 95,
       size: titleFontSize,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
+    if (titleLine2) {
+      page.drawText(titleLine2, {
+        x: margin,
+        y: pageHeight - 95 - titleFontSize - 4,
+        size: titleFontSize,
+        font: fontBold,
+        color: rgb(1, 1, 1),
+      });
+    }
+
+    const metaY = titleLine2 ? pageHeight - 165 : pageHeight - 135;
 
     if (destination) {
       const cleanDest = cleanTextForPDF(destination);
-      page.drawCircle({ x: margin + 6, y: pageHeight - 81, size: 5, color: accentColor });
-      page.drawCircle({ x: margin + 6, y: pageHeight - 81, size: 2, color: rgb(1, 1, 1) });
+      page.drawCircle({ x: margin + 5, y: metaY + 5, size: 4, color: goldColor });
       page.drawText(cleanDest, {
-        x: margin + 18, y: pageHeight - 85, size: 14, font: font, color: rgb(0.9, 0.92, 0.95),
+        x: margin + 16, y: metaY, size: 14, font: fontItalic, color: rgb(0.92, 0.94, 0.97),
       });
     }
 
     if (traveler_name) {
       const cleanName = cleanTextForPDF(traveler_name);
-      page.drawText(`Viajante: ${cleanName}`, {
-        x: margin, y: pageHeight - 110, size: 11, font: font, color: rgb(0.75, 0.8, 0.85),
+      page.drawText(`Preparado para ${cleanName}`, {
+        x: margin, y: metaY - 22, size: 11, font: font, color: rgb(0.78, 0.82, 0.88),
       });
     }
 
     const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     const dateWidth = font.widthOfTextAtSize(today, 10);
     page.drawText(today, {
-      x: pageWidth - margin - dateWidth, y: pageHeight - 110, size: 10, font: font, color: rgb(0.75, 0.8, 0.85),
+      x: pageWidth - margin - dateWidth, y: metaY - 22, size: 10, font: font, color: rgb(0.78, 0.82, 0.88),
     });
 
-    yPosition = pageHeight - 175;
+    yPosition = pageHeight - headerHeight - 30;
 
-    // Process text content - INCREASED FONT SIZES
+    // Process text content - LARGER FONTS
     const lines = text.split('\n');
-    const fontSize = 12;
-    const lineHeight = 20;
-    const headerFontSize = 14;
-    const subHeaderFontSize = 12;
+    const fontSize = 13;
+    const lineHeight = 22;
+    const headerFontSize = 16;
+    const subHeaderFontSize = 13;
 
     for (const line of lines) {
       const trimmedLine = line.trim();
