@@ -560,7 +560,7 @@ serve(async (req) => {
         page.drawLine({
           start: { x: margin + 24, y: yPosition - 2 },
           end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
-          thickness: 1, color: linkColor,
+          thickness: 2, color: linkColor,
         });
         
         if (linkUrl) {
@@ -598,7 +598,7 @@ serve(async (req) => {
         page.drawLine({
           start: { x: margin + 24, y: yPosition - 2 },
           end: { x: margin + 24 + textW, y: yPosition - 2 },
-          thickness: 1, color: linkColor,
+          thickness: 2, color: linkColor,
         });
         
         if (mapUrl) {
@@ -634,7 +634,7 @@ serve(async (req) => {
         page.drawLine({
           start: { x: margin + 24, y: yPosition - 2 },
           end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
-          thickness: 1, color: linkColor,
+          thickness: 2, color: linkColor,
         });
         
         addLinkAnnotation(linkUrl, margin, yPosition - 8, contentWidth, 30);
@@ -666,7 +666,7 @@ serve(async (req) => {
         page.drawLine({
           start: { x: margin + 24, y: yPosition - 2 },
           end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
-          thickness: 1, color: linkColor,
+          thickness: 2, color: linkColor,
         });
         
         yPosition -= lineHeight + 10;
