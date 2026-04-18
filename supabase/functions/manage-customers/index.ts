@@ -31,7 +31,7 @@ serve(async (req) => {
         .insert({
           phone: phone.replace(/[\s\-\(\)]/g, ''),
           name: name || null,
-          free_credits: free_credits ?? 2,
+          free_credits: free_credits ?? 3,
         })
         .select()
         .single();
