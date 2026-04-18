@@ -93,46 +93,60 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Painel Administrativo</h1>
-            <p className="text-slate-600 mt-1">Gerencie roteiros e clientes</p>
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <img
+              src="/logo-sol.png"
+              alt="Sol Turismo"
+              className="h-14 w-14 rounded-full border-2 border-foreground bg-card object-contain"
+            />
+            <div>
+              <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-foreground">
+                Painel Sol
+              </h1>
+              <p className="text-foreground/70 mt-1 font-medium">
+                Roteiros, clientes e murais
+              </p>
+            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
-            <LogOut className="h-4 w-4" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={signOut}
+            className="rounded-full border-2 border-foreground bg-card hover:bg-foreground hover:text-background font-bold uppercase"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
             Sair
           </Button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8">
-          <Button
-            variant={activeTab === "roteiros" ? "default" : "outline"}
-            onClick={() => setActiveTab("roteiros")}
-            className="flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Roteiros
-          </Button>
-          <Button
-            variant={activeTab === "clientes" ? "default" : "outline"}
-            onClick={() => setActiveTab("clientes")}
-            className="flex items-center gap-2"
-          >
-            <Users className="h-4 w-4" />
-            Clientes
-          </Button>
-          <Button
-            variant={activeTab === "murais" ? "default" : "outline"}
-            onClick={() => setActiveTab("murais")}
-            className="flex items-center gap-2"
-          >
-            <Camera className="h-4 w-4" />
-            Murais
-          </Button>
+        <div className="flex gap-2 mb-8 flex-wrap">
+          {[
+            { id: "roteiros", label: "Roteiros", icon: FileText },
+            { id: "clientes", label: "Clientes", icon: Users },
+            { id: "murais", label: "Murais", icon: Camera },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <Button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`rounded-full border-2 border-foreground font-bold uppercase ${
+                  active
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary-hover"
+                    : "bg-card text-foreground hover:bg-foreground hover:text-background"
+                }`}
+              >
+                <Icon className="h-4 w-4 mr-2" />
+                {tab.label}
+              </Button>
+            );
+          })}
         </div>
 
         {activeTab === "roteiros" ? (
