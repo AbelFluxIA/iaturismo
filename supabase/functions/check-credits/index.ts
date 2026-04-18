@@ -84,13 +84,13 @@ serve(async (req) => {
       );
     }
 
-    // New customer - create with default credits (2) and consume one
+    // New customer - create with default credits (3) and consume one
     const { data: newCustomer, error: insertError } = await supabase
       .from('customers')
       .insert({
         phone: normalizedPhone,
         name: name || null,
-        free_credits: 1, // starts with 2 default, minus 1 consumed now
+        free_credits: 2, // starts with 3 default, minus 1 consumed now
       })
       .select()
       .single();
