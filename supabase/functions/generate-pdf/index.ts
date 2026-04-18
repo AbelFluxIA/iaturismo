@@ -12,6 +12,7 @@ interface TravelItinerary {
   destination?: string;
   text: string;
   traveler_name?: string;
+  phone?: string;
 }
 
 // Remove emojis and special unicode characters that PDF fonts can't render
@@ -137,8 +138,10 @@ serve(async (req) => {
       title = "Roteiro de Viagem",
       destination = "",
       text,
-      traveler_name = ""
+      traveler_name = "",
+      phone = ""
     } = body;
+    const normalizedPhone = phone ? phone.replace(/[\s\-\(\)]/g, "") : null;
 
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -781,6 +784,7 @@ serve(async (req) => {
       .from('generated_itineraries')
       .insert({
         title, destination, traveler_name,
+        phone: normalizedPhone,
         pdf_url: publicUrlData.publicUrl,
         file_name: fileName,
         text_length: text.length
