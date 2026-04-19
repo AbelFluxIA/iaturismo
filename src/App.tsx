@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import MuralGallery from "./pages/MuralGallery";
 import Login from "./pages/Login";
+import { InstallPWAButton } from "@/components/InstallPWAButton";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <RouterProvider router={router} />
+      <InstallPWAButton />
     </TooltipProvider>
   </QueryClientProvider>
 );

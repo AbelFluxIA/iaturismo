@@ -19,6 +19,15 @@ if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((registrations) => {
     registrations.forEach((r) => r.unregister());
   });
+} else if ("serviceWorker" in navigator) {
+  // Register PWA service worker in production
+  import("virtual:pwa-register")
+    .then(({ registerSW }) => {
+      registerSW({ immediate: true });
+    })
+    .catch(() => {
+      // virtual module unavailable — safe to ignore
+    });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
