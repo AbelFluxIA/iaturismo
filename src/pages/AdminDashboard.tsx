@@ -4,11 +4,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera, LogOut } from "lucide-react";
+import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera, LogOut, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import CustomersPanel from "@/components/CustomersPanel";
 import MuralsPanel from "@/components/MuralsPanel";
+import UsersPanel from "@/components/UsersPanel";
 
 interface Itinerary {
   id: string;
@@ -31,7 +32,7 @@ interface Stats {
 
 const AdminDashboard = () => {
   const { signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<"roteiros" | "clientes" | "murais">("roteiros");
+  const [activeTab, setActiveTab] = useState<"roteiros" | "clientes" | "murais" | "usuarios">("roteiros");
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
   const [stats, setStats] = useState<Stats>({
     total: 0, today: 0, thisWeek: 0, thisMonth: 0, avgTextLength: 0,
@@ -129,6 +130,7 @@ const AdminDashboard = () => {
             { id: "roteiros", label: "Roteiros", icon: FileText },
             { id: "clientes", label: "Clientes", icon: Users },
             { id: "murais", label: "Murais", icon: Camera },
+            { id: "usuarios", label: "Usuários", icon: Shield },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -253,8 +255,10 @@ const AdminDashboard = () => {
           </>
         ) : activeTab === "clientes" ? (
           <CustomersPanel />
-        ) : (
+        ) : activeTab === "murais" ? (
           <MuralsPanel />
+        ) : (
+          <UsersPanel />
         )}
       </div>
     </div>
