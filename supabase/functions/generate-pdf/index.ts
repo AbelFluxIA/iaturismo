@@ -900,6 +900,7 @@ serve(async (req) => {
         success: true,
         pdf_url: publicUrlData.publicUrl,
         file_name: fileName,
+        interest_categories: interestCategories,
         message: 'PDF gerado com sucesso!'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
