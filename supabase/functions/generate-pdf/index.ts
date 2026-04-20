@@ -208,12 +208,13 @@ serve(async (req) => {
       );
     }
 
-    const { 
+    const {
       title = "Roteiro de Viagem",
       destination = "",
       text,
       traveler_name = "",
-      phone = ""
+      phone = "",
+      customer_interest = "",
     } = body;
     const normalizedPhone = phone ? phone.replace(/[\s\-\(\)]/g, "") : null;
 
