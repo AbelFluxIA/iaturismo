@@ -855,6 +855,9 @@ serve(async (req) => {
 
     const { data: publicUrlData } = supabase.storage.from('travel-pdfs').getPublicUrl(fileName);
 
+    // Classifica o interesse do cliente (texto livre -> categorias)
+    const interestCategories = await classifyInterest(customer_interest);
+
     const { error: insertError } = await supabase
       .from('generated_itineraries')
       .insert({
@@ -862,11 +865,34 @@ serve(async (req) => {
         phone: normalizedPhone,
         pdf_url: publicUrlData.publicUrl,
         file_name: fileName,
-        text_length: text.length
+        text_length: text.length,
+        interest_focus: customer_interest || null,
+        interest_categories: interestCategories,
       });
 
     if (insertError) {
       console.error('Error saving itinerary metadata:', insertError);
+    }
+
+    // Acumula interesses no perfil do cliente (sem duplicar)
+    if (normalizedPhone && interestCategories.length > 0) {
+      try {
+        const { data: existing } = await supabase
+          .from('customers')
+          .select('id, interests')
+          .eq('phone', normalizedPhone)
+          .maybeSingle();
+
+        if (existing) {
+          const merged = Array.from(new Set([...(existing.interests || []), ...interestCategories]));
+          await supabase
+            .from('customers')
+            .update({ interests: merged })
+            .eq('id', existing.id);
+        }
+      } catch (e) {
+        console.error('Error updating customer interests:', e);
+      }
     }
 
     return new Response(
