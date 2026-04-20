@@ -13,6 +13,80 @@ interface TravelItinerary {
   text: string;
   traveler_name?: string;
   phone?: string;
+  customer_interest?: string; // texto livre do que o cliente busca
+}
+
+// Categorias fixas para classificação de perfil
+const INTEREST_CATEGORIES = [
+  "praia", "gastronomia", "cultura", "historia", "natureza", "aventura",
+  "tecnologia", "negocios", "vida_noturna", "compras", "romantico",
+  "familia", "religioso", "esportes", "bem_estar", "ecoturismo"
+] as const;
+
+async function classifyInterest(rawText: string): Promise<string[]> {
+  if (!rawText || !rawText.trim()) return [];
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    console.warn("LOVABLE_API_KEY not set, skipping classification");
+    return [];
+  }
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `Você classifica interesses de viajantes em categorias fixas. Categorias permitidas: ${INTEREST_CATEGORIES.join(", ")}. Retorne SOMENTE via tool call, escolhendo de 1 a 4 categorias mais relevantes.`,
+          },
+          { role: "user", content: rawText },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "set_interests",
+              description: "Define as categorias de interesse do viajante",
+              parameters: {
+                type: "object",
+                properties: {
+                  categories: {
+                    type: "array",
+                    items: { type: "string", enum: [...INTEREST_CATEGORIES] },
+                    minItems: 1,
+                    maxItems: 4,
+                  },
+                },
+                required: ["categories"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "set_interests" } },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI classify error:", response.status, await response.text());
+      return [];
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) return [];
+    const args = JSON.parse(toolCall.function.arguments);
+    return Array.isArray(args.categories) ? args.categories : [];
+  } catch (e) {
+    console.error("classifyInterest failed:", e);
+    return [];
+  }
 }
 
 // Remove emojis and special unicode characters that PDF fonts can't render
@@ -134,12 +208,13 @@ serve(async (req) => {
       );
     }
 
-    const { 
+    const {
       title = "Roteiro de Viagem",
       destination = "",
       text,
       traveler_name = "",
-      phone = ""
+      phone = "",
+      customer_interest = "",
     } = body;
     const normalizedPhone = phone ? phone.replace(/[\s\-\(\)]/g, "") : null;
 
@@ -780,6 +855,9 @@ serve(async (req) => {
 
     const { data: publicUrlData } = supabase.storage.from('travel-pdfs').getPublicUrl(fileName);
 
+    // Classifica o interesse do cliente (texto livre -> categorias)
+    const interestCategories = await classifyInterest(customer_interest);
+
     const { error: insertError } = await supabase
       .from('generated_itineraries')
       .insert({
@@ -787,11 +865,34 @@ serve(async (req) => {
         phone: normalizedPhone,
         pdf_url: publicUrlData.publicUrl,
         file_name: fileName,
-        text_length: text.length
+        text_length: text.length,
+        interest_focus: customer_interest || null,
+        interest_categories: interestCategories,
       });
 
     if (insertError) {
       console.error('Error saving itinerary metadata:', insertError);
+    }
+
+    // Acumula interesses no perfil do cliente (sem duplicar)
+    if (normalizedPhone && interestCategories.length > 0) {
+      try {
+        const { data: existing } = await supabase
+          .from('customers')
+          .select('id, interests')
+          .eq('phone', normalizedPhone)
+          .maybeSingle();
+
+        if (existing) {
+          const merged = Array.from(new Set([...(existing.interests || []), ...interestCategories]));
+          await supabase
+            .from('customers')
+            .update({ interests: merged })
+            .eq('id', existing.id);
+        }
+      } catch (e) {
+        console.error('Error updating customer interests:', e);
+      }
     }
 
     return new Response(
@@ -799,6 +900,7 @@ serve(async (req) => {
         success: true,
         pdf_url: publicUrlData.publicUrl,
         file_name: fileName,
+        interest_categories: interestCategories,
         message: 'PDF gerado com sucesso!'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

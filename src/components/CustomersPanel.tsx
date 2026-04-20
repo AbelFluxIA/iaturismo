@@ -23,9 +23,29 @@ interface Customer {
   phone: string;
   name: string | null;
   free_credits: number;
+  interests: string[] | null;
   created_at: string;
   updated_at: string;
 }
+
+const INTEREST_LABELS: Record<string, string> = {
+  praia: "🏖️ Praia",
+  gastronomia: "🍽️ Gastronomia",
+  cultura: "🎭 Cultura",
+  historia: "🏛️ História",
+  natureza: "🌿 Natureza",
+  aventura: "🧗 Aventura",
+  tecnologia: "💻 Tecnologia",
+  negocios: "💼 Negócios",
+  vida_noturna: "🌃 Vida Noturna",
+  compras: "🛍️ Compras",
+  romantico: "💕 Romântico",
+  familia: "👨‍👩‍👧 Família",
+  religioso: "⛪ Religioso",
+  esportes: "⚽ Esportes",
+  bem_estar: "🧘 Bem-estar",
+  ecoturismo: "🌳 Ecoturismo",
+};
 
 const CustomersPanel = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -319,6 +339,18 @@ const CustomersPanel = () => {
                               Desde {format(new Date(customer.created_at), "dd/MM/yyyy", { locale: ptBR })}
                             </span>
                           </div>
+                          {customer.interests && customer.interests.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {customer.interests.map((tag) => (
+                                <Badge
+                                  key={tag}
+                                  className="text-[10px] font-bold border bg-vibrant-lavender text-foreground border-foreground/40 capitalize"
+                                >
+                                  {INTEREST_LABELS[tag] || tag.replace(/_/g, " ")}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </button>
                       <div className="flex items-center gap-2">

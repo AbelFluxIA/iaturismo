@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           free_credits: number
           id: string
+          interests: string[]
           name: string | null
           phone: string
           updated_at: string
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           free_credits?: number
           id?: string
+          interests?: string[]
           name?: string | null
           phone: string
           updated_at?: string
@@ -35,6 +37,7 @@ export type Database = {
           created_at?: string
           free_credits?: number
           id?: string
+          interests?: string[]
           name?: string | null
           phone?: string
           updated_at?: string
@@ -47,6 +50,8 @@ export type Database = {
           destination: string | null
           file_name: string
           id: string
+          interest_categories: string[]
+          interest_focus: string | null
           pdf_url: string
           phone: string | null
           text_length: number
@@ -58,6 +63,8 @@ export type Database = {
           destination?: string | null
           file_name: string
           id?: string
+          interest_categories?: string[]
+          interest_focus?: string | null
           pdf_url: string
           phone?: string | null
           text_length?: number
@@ -69,6 +76,8 @@ export type Database = {
           destination?: string | null
           file_name?: string
           id?: string
+          interest_categories?: string[]
+          interest_focus?: string | null
           pdf_url?: string
           phone?: string | null
           text_length?: number
