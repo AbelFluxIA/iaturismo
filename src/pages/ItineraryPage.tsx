@@ -309,6 +309,68 @@ function VisitButton({
   );
 }
 
+// ─── Canvas image generator for sharing ──────────────────────────────────────
+
+async function generateShareImage(destination: string, name: string, imageUrl: string | null): Promise<Blob> {
+  const W = 1080, H = 1920;
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+
+  // Background
+  ctx.fillStyle = "#0f3d2e";
+  ctx.fillRect(0, 0, W, H);
+
+  // Background photo
+  if (imageUrl) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); img.src = imageUrl; });
+      if (img.width > 0) {
+        const scale = Math.max(W / img.width, H / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+      }
+    } catch { /* fail silently */ }
+  }
+
+  // Gradient overlay
+  const grad = ctx.createLinearGradient(0, H * 0.25, 0, H);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(0.55, "rgba(15,61,46,0.75)");
+  grad.addColorStop(1, "rgba(15,61,46,0.97)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Top brand
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = "500 50px sans-serif";
+  ctx.fillText("☀️  Sol Roteiros", W / 2, 110);
+
+  // Destination
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `bold ${destination.length > 14 ? 76 : 96}px serif`;
+  ctx.fillText(destination, W / 2, H * 0.72);
+
+  // Traveler
+  ctx.font = "500 52px sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.fillText(`Roteiro de ${name}`, W / 2, H * 0.80);
+
+  // CTA
+  ctx.font = "bold 46px sans-serif";
+  ctx.fillStyle = "#f59e0b";
+  ctx.fillText("Quero o meu! ✈️", W / 2, H * 0.89);
+
+  ctx.font = "38px sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.38)";
+  ctx.fillText("tripsol.com.br", W / 2, H * 0.94);
+
+  return new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.92));
+}
+
 // ─── Share Modal ──────────────────────────────────────────────────────────────
 
 function ShareModal({
@@ -317,8 +379,9 @@ function ShareModal({
   destination: string; travelerName: string; shareCode: string;
   coverImage: string | null; onClose: () => void;
 }) {
-  const link = `https://tripsol.com.br/r/${shareCode}`;
+  const link = `https://iaturismo-two.vercel.app/r/${shareCode}`;
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const copyLink = () => {
     navigator.clipboard.writeText(link).then(() => {
@@ -329,16 +392,30 @@ function ShareModal({
 
   const shareNative = () => {
     if (navigator.share) {
-      navigator.share({ title: `Meu roteiro para ${destination}`, url: link });
+      navigator.share({ title: `Meu roteiro para ${destination}`, text: `Confira meu roteiro para ${destination} feito pela Sol! ☀️`, url: link });
     } else {
       copyLink();
     }
   };
 
-  // Instagram Stories deep link (mobile only)
-  const shareStories = () => {
-    const encoded = encodeURIComponent(link);
-    window.open(`https://www.instagram.com/stories/create/?url=${encoded}`, "_blank");
+  // Gera imagem via canvas e compartilha via Web Share API (mobile) ou baixa (desktop)
+  const shareWithImage = async () => {
+    setSharing(true);
+    try {
+      const blob = await generateShareImage(destination, travelerName, coverImage);
+      const file = new File([blob], "roteiro-sol.jpg", { type: "image/jpeg" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Roteiro: ${destination}`, text: `Meu roteiro para ${destination} pela Sol! ☀️\n${link}` });
+      } else {
+        // Fallback desktop: baixa a imagem
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "roteiro-sol.jpg"; a.click();
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
@@ -380,11 +457,12 @@ function ShareModal({
           </button>
 
           <button
-            onClick={shareStories}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm"
+            onClick={shareWithImage}
+            disabled={sharing}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm disabled:opacity-60"
           >
             <span className="text-base">📸</span>
-            Compartilhar nos Stories
+            {sharing ? "Gerando imagem..." : "Compartilhar com foto (Stories)"}
           </button>
 
           <button
@@ -730,8 +808,21 @@ export default function ItineraryPage() {
           </div>
         )}
 
-        <footer className={`text-center text-xs py-6 ${textDim}`}>
-          Criado com carinho por <span className="font-semibold">Sol ☀️</span>
+        {/* Footer personalizado — CTA de conversão */}
+        <footer className={`text-center py-8 px-4 mt-2 border-t ${cardBorder}`}>
+          <p className={`text-sm font-semibold ${textMain} mb-1`}>
+            Este roteiro é personalizado para {itinerary.traveler_name}.
+          </p>
+          <p className={`text-sm ${textMid} mb-5`}>Quer o seu? 👇</p>
+          <a
+            href={`https://wa.me/${import.meta.env.VITE_SOL_PHONE || ""}?text=${encodeURIComponent("Oi Sol! Quero meu roteiro de viagem")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-[hsl(152,42%,18%)] text-white px-7 py-3 rounded-full font-semibold text-sm shadow-md hover:bg-[hsl(152,42%,14%)] transition-colors"
+          >
+            ☀️ Criar meu roteiro com a Sol
+          </a>
+          <p className={`text-xs mt-6 ${textDim}`}>Criado com carinho por Sol ☀️</p>
         </footer>
       </div>
 
