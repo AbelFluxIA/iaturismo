@@ -40,8 +40,19 @@ const VISIT_STATES: { key: VisitState; label: string; color: string; dot: string
   { key: "done",    label: "Concluído",  color: "border-[hsl(152,42%,18%)] bg-[hsl(152,42%,18%)]/5", dot: "bg-[hsl(152,42%,18%)] border-2 border-[hsl(152,42%,18%)]" },
 ];
 
+// Remove todos os asteriscos e trim
+function cleanLine(raw: string): string {
+  return raw.replace(/\*/g, "").trim();
+}
+
+// Remove emojis e símbolos do início da linha para facilitar regex
+function stripLeadingSymbols(s: string): string {
+  // Remove qualquer caractere que não seja letra, dígito ou parêntese no início
+  return s.replace(/^[^\p{L}\d(]+/u, "").trim();
+}
+
 function parseItinerary(text: string): ParsedItinerary {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const rawLines = text.split("\n");
   const days: Day[] = [];
   const introParagraphs: string[] = [];
   let currentDay: Day | null = null;
@@ -64,42 +75,79 @@ function parseItinerary(text: string): ParsedItinerary {
     descBuffer = [];
   };
 
-  for (const line of lines) {
-    const clean = line.replace(/^\*+|\*+$/g, "").trim();
+  for (const raw of rawLines) {
+    const line = cleanLine(raw);
+    if (!line) continue;
 
-    const dayMatch = clean.match(/^(DIA\s*\d+[^)]*(?:\([^)]+\))?.*)/i);
+    // Pula separadores e assinatura
+    if (/^---+$/.test(line) || /^(Com carinho|Sol)$/i.test(line)) continue;
+
+    // Day header: "DIA 1 - Sábado, 16 de Maio" (pode vir com ou sem emoji/asterisco)
+    const stripped = stripLeadingSymbols(line);
+    const dayMatch = stripped.match(/^(DIA\s*\d+.*)/i);
     if (dayMatch) {
       inIntro = false;
       flushActivity();
-      currentDay = { label: clean.replace(/^\*+/, "").trim(), activities: [] };
+      currentDay = { label: stripped, activities: [] };
       days.push(currentDay);
       continue;
     }
 
-    if (inIntro) { introParagraphs.push(clean); continue; }
+    if (inIntro) {
+      // Inclui apenas parágrafos substantivos (>20 chars)
+      if (stripped.length > 20) introParagraphs.push(stripped);
+      continue;
+    }
 
-    const periodMatch = clean.match(
-      /^(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro)\s*\(([^)]+)\)[:\s-]+(.+)/i
+    // Pula alertas de clima (⚠️) e linhas descritivas do dia sem período
+    if (line.startsWith("⚠️")) continue;
+
+    // Linha de deslocamento: começa com 🚗 ou ~Xmin
+    if (line.startsWith("🚗") || /^~\s*\d+/i.test(stripped)) {
+      if (currentActivity) {
+        currentActivity.travel = line.replace(/^🚗\s*/, "").trim();
+      }
+      continue;
+    }
+
+    // URL de mapa: começa com 📍 ou https://
+    if (line.startsWith("📍") || /^https?:\/\//i.test(stripped)) {
+      if (currentActivity) {
+        const url = line.replace(/^📍\s*/, "").trim();
+        if (/^https?:\/\//i.test(url)) currentActivity.mapUrl = url;
+      }
+      continue;
+    }
+
+    // Descrição: começa com 💬
+    if (line.startsWith("💬")) {
+      if (currentActivity) descBuffer.push(line.replace(/^💬\s*/, "").trim());
+      continue;
+    }
+
+    // Period/time header: "☀️ Manhã (10:00): Nome do Local"
+    // A linha pode começar com emoji de período — stripLeadingSymbols resolve
+    const periodMatch = stripped.match(
+      /^(Manh[aã]|Tarde|Noite|P[oô]r\s*do\s*Sol|Dia\s*Inteiro)\s*\(([^)]+)\)[:\s-]+(.+)/i
     );
     if (periodMatch) {
       flushActivity();
       currentActivity = {
         period: periodMatch[1],
-        time: periodMatch[2],
-        name: periodMatch[3].replace(/\*+/g, "").trim(),
+        time: periodMatch[2].trim(),
+        name: periodMatch[3].trim(),
         travel: "",
         mapUrl: "",
       };
       continue;
     }
 
-    if (!currentActivity) continue;
-
-    if (line.match(/^~\s*\d+\s*(min|h\b|hora)/i)) { currentActivity.travel = clean; continue; }
-    if (line.match(/^https?:\/\//i)) { currentActivity.mapUrl = line.trim(); continue; }
-    if (line.match(/^(Ver no mapa|Google Maps|Waze)/i)) continue;
-
-    descBuffer.push(clean);
+    // Texto solto dentro de uma atividade → descrição
+    if (currentActivity && stripped.length > 10) {
+      if (!/^(Ver no mapa|Google Maps|Waze)/i.test(stripped)) {
+        descBuffer.push(stripped);
+      }
+    }
   }
 
   flushActivity();
@@ -223,6 +271,28 @@ function NoteField({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
+const PEXELS_KEY = "V44MUGPGiCRMtaLLcm2R6K8oMlGMXzgG85S3xbxMYe1n7tXw8WFLfKNP";
+
+async function fetchDestinationImage(destination: string): Promise<string | null> {
+  try {
+    // Usa apenas o nome do lugar principal (antes do traço)
+    const query = destination.split(/\s*[-–]\s*/)[0].trim();
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query + " travel landscape")}&per_page=5&orientation=landscape`,
+      { headers: { Authorization: PEXELS_KEY } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const photos = data.photos as { src: { large: string } }[];
+    if (!photos?.length) return null;
+    // Pega uma foto aleatória das 5 primeiras
+    const idx = Math.floor(Math.random() * Math.min(3, photos.length));
+    return photos[idx].src.large;
+  } catch {
+    return null;
+  }
+}
+
 export default function ItineraryPage() {
   const { shareCode } = useParams<{ shareCode: string }>();
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
@@ -233,6 +303,7 @@ export default function ItineraryPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [states, setStates] = useState<Record<string, VisitState>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [coverImage, setCoverImage] = useState<string | null>(null);
 
   // Persist state to localStorage
   useEffect(() => {
@@ -259,12 +330,15 @@ export default function ItineraryPage() {
       .select("title,destination,traveler_name,pdf_url,text_content,created_at")
       .eq("share_code", shareCode)
       .maybeSingle()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error || !data || !data.text_content) {
           setNotFound(true);
         } else {
           setItinerary(data as Itinerary);
           setParsed(parseItinerary(data.text_content));
+          // Busca imagem do destino no Pexels
+          const img = await fetchDestinationImage(data.destination || "");
+          setCoverImage(img);
         }
         setLoading(false);
       });
@@ -307,20 +381,34 @@ export default function ItineraryPage() {
 
   return (
     <div className="min-h-screen bg-[hsl(40,35%,93%)]">
-      {/* Header */}
-      <div className="bg-[hsl(152,42%,18%)] text-white px-4 py-6 sticky top-0 z-10 shadow-md">
-        <div className="max-w-lg mx-auto">
+      {/* Header com imagem de fundo do destino */}
+      <div
+        className="relative text-white px-4 py-8 sticky top-0 z-10 shadow-md overflow-hidden"
+        style={{ background: coverImage ? "transparent" : "hsl(152,42%,18%)" }}
+      >
+        {/* Imagem de fundo */}
+        {coverImage && (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${coverImage})` }}
+            />
+            <div className="absolute inset-0 bg-[hsl(152,42%,10%)]/75" />
+          </>
+        )}
+
+        <div className="relative max-w-lg mx-auto">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">☀️</span>
-            <span className="text-xs font-medium opacity-60 tracking-widest uppercase">Sol Roteiros</span>
+            <span className="text-xs font-medium opacity-70 tracking-widest uppercase">Sol Roteiros</span>
           </div>
-          <h1 className="text-xl font-bold leading-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl font-bold leading-tight drop-shadow-sm" style={{ fontFamily: "'Playfair Display', serif" }}>
             {itinerary.destination}
           </h1>
-          <p className="text-xs opacity-60 mt-0.5">Para {itinerary.traveler_name}</p>
+          <p className="text-xs opacity-70 mt-0.5">Para {itinerary.traveler_name}</p>
 
           <div className="mt-3">
-            <div className="flex justify-between text-xs opacity-50 mb-1">
+            <div className="flex justify-between text-xs opacity-60 mb-1">
               <span>{doneCount} de {totalActivities} concluídos</span>
               <span>{Math.round(progress)}%</span>
             </div>
