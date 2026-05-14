@@ -75,16 +75,11 @@ const CustomersPanel = () => {
     if (!newPhone.trim()) { toast.error("Informe o número de telefone"); return; }
     const normalizedPhone = newPhone.replace(/[\s\-\(\)]/g, "");
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/manage-customers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add", phone: normalizedPhone, name: newName || null, free_credits: newCredits }),
+      const { data, error } = await supabase.functions.invoke("manage-customers", {
+        body: { action: "add", phone: normalizedPhone, name: newName || null, free_credits: newCredits },
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Erro ao adicionar cliente");
-      }
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
       toast.success("Cliente adicionado!");
       setNewPhone(""); setNewName(""); setNewCredits(3); setShowAddForm(false);
       fetchCustomers();
@@ -95,16 +90,11 @@ const CustomersPanel = () => {
 
   const handleSaveCredits = async (customerId: string, value: number) => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/manage-customers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update-credits", customer_id: customerId, free_credits: Math.max(0, value) }),
+      const { data, error } = await supabase.functions.invoke("manage-customers", {
+        body: { action: "update-credits", customer_id: customerId, free_credits: Math.max(0, value) },
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Erro ao atualizar créditos");
-      }
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
       toast.success(`Créditos atualizados para ${value}`);
       setEditingCredits(null);
       fetchCustomers();
