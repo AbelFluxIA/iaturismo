@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera, LogOut, Shield } from "lucide-react";
+import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera, LogOut, Shield, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import CustomersPanel from "@/components/CustomersPanel";
@@ -30,13 +28,20 @@ interface Stats {
   avgTextLength: number;
 }
 
+const TABS = [
+  { id: "roteiros",  label: "Roteiros",  Icon: FileText },
+  { id: "clientes",  label: "Clientes",  Icon: Users    },
+  { id: "murais",    label: "Murais",    Icon: Camera   },
+  { id: "usuarios",  label: "Usuários",  Icon: Shield   },
+] as const;
+
+type TabId = typeof TABS[number]["id"];
+
 const AdminDashboard = () => {
   const { signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<"roteiros" | "clientes" | "murais" | "usuarios">("roteiros");
+  const [activeTab, setActiveTab] = useState<TabId>("roteiros");
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    total: 0, today: 0, thisWeek: 0, thisMonth: 0, avgTextLength: 0,
-  });
+  const [stats, setStats] = useState<Stats>({ total: 0, today: 0, thisWeek: 0, thisMonth: 0, avgTextLength: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -53,16 +58,15 @@ const AdminDashboard = () => {
       if (data) {
         setItineraries(data);
         const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const weekStart = new Date(todayStart);
-        weekStart.setDate(weekStart.getDate() - 7);
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const todayStart  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart   = new Date(todayStart); weekStart.setDate(weekStart.getDate() - 7);
+        const monthStart  = new Date(now.getFullYear(), now.getMonth(), 1);
 
         setStats({
-          total: data.length,
-          today: data.filter((i) => new Date(i.created_at) >= todayStart).length,
-          thisWeek: data.filter((i) => new Date(i.created_at) >= weekStart).length,
-          thisMonth: data.filter((i) => new Date(i.created_at) >= monthStart).length,
+          total:         data.length,
+          today:         data.filter(i => new Date(i.created_at) >= todayStart).length,
+          thisWeek:      data.filter(i => new Date(i.created_at) >= weekStart).length,
+          thisMonth:     data.filter(i => new Date(i.created_at) >= monthStart).length,
           avgTextLength: data.length > 0
             ? Math.round(data.reduce((acc, i) => acc + i.text_length, 0) / data.length)
             : 0,
@@ -76,182 +80,150 @@ const AdminDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
+  useEffect(() => { fetchData(); }, []);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
             <img
               src="/logo-sol.png"
               alt="Sol Turismo"
-              className="h-14 w-14 rounded-full border-2 border-foreground bg-card object-contain"
+              className="h-11 w-11 rounded-full border border-border bg-card object-contain"
             />
             <div>
-              <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-foreground">
+              <h1 className="text-2xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
                 Painel Sol
               </h1>
-              <p className="text-foreground/70 mt-1 font-medium">
-                Roteiros, clientes e murais
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                Roteiros · Clientes · Murais
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={signOut}
-            className="rounded-full border-2 border-foreground bg-card hover:bg-foreground hover:text-background font-bold uppercase"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg bg-card hover:bg-muted transition-colors"
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="h-4 w-4" />
             Sair
-          </Button>
+          </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 flex-wrap">
-          {[
-            { id: "roteiros", label: "Roteiros", icon: FileText },
-            { id: "clientes", label: "Clientes", icon: Users },
-            { id: "murais", label: "Murais", icon: Camera },
-            { id: "usuarios", label: "Usuários", icon: Shield },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <Button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`rounded-full border-2 border-foreground font-bold uppercase ${
-                  active
-                    ? "bg-secondary text-secondary-foreground hover:bg-secondary-hover"
-                    : "bg-card text-foreground hover:bg-foreground hover:text-background"
-                }`}
-              >
-                <Icon className="h-4 w-4 mr-2" />
-                {tab.label}
-              </Button>
-            );
-          })}
+        <div className="flex gap-1 mb-8 bg-muted/50 rounded-lg p-1 w-fit flex-wrap">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === id
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
         </div>
 
         {activeTab === "roteiros" ? (
           <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               {[
-                { label: "Total de Roteiros", value: stats.total, sub: "PDFs gerados", icon: FileText, bg: "bg-vibrant-lavender" },
-                { label: "Hoje", value: stats.today, sub: "gerados hoje", icon: Calendar, bg: "bg-vibrant-mint" },
-                { label: "Esta Semana", value: stats.thisWeek, sub: "últimos 7 dias", icon: TrendingUp, bg: "bg-vibrant-orange" },
-                { label: "Tamanho Médio", value: `${(stats.avgTextLength / 1000).toFixed(1)}k`, sub: "caracteres por roteiro", icon: FileText, bg: "bg-vibrant-yellow" },
-              ].map((s) => {
-                const Icon = s.icon;
-                return (
-                  <Card key={s.label} className={`${s.bg} border-2 border-foreground rounded-3xl shadow-none`}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground">{s.label}</CardTitle>
-                      <Icon className="h-5 w-5 text-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-4xl font-black text-foreground">{s.value}</div>
-                      <p className="text-xs text-foreground/70 mt-1 font-medium">{s.sub}</p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                { label: "Total", value: stats.total,         sub: "PDFs gerados",         bg: "bg-vibrant-mint"     },
+                { label: "Hoje",  value: stats.today,         sub: "gerados hoje",          bg: "bg-vibrant-lavender" },
+                { label: "Semana",value: stats.thisWeek,      sub: "últimos 7 dias",        bg: "bg-vibrant-orange"   },
+                { label: "Média", value: `${(stats.avgTextLength / 1000).toFixed(1)}k`, sub: "chars por roteiro", bg: "bg-vibrant-yellow" },
+              ].map(s => (
+                <div key={s.label} className={`${s.bg} rounded-xl border border-border p-4`}>
+                  <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wide mb-1">{s.label}</p>
+                  <p className="text-3xl font-bold text-foreground">{s.value}</p>
+                  <p className="text-xs text-foreground/50 mt-0.5">{s.sub}</p>
+                </div>
+              ))}
             </div>
 
             {/* Refresh */}
-            <div className="flex justify-end mb-4">
-              <Button
-                onClick={handleRefresh}
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={() => { setRefreshing(true); fetchData(); }}
                 disabled={refreshing}
-                className="rounded-full bg-card hover:bg-foreground hover:text-background border-2 border-foreground text-foreground font-bold uppercase"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground border border-border rounded-lg bg-card hover:bg-muted transition-colors"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
                 Atualizar
-              </Button>
+              </button>
             </div>
 
-            {/* Itineraries List */}
-            <Card className="bg-card border-2 border-foreground rounded-3xl shadow-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold uppercase tracking-wide text-foreground">Roteiros Recentes</CardTitle>
-              </CardHeader>
-              <CardContent>
+            {/* List */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <h2 className="text-base font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  Roteiros Recentes
+                </h2>
+              </div>
+              <div className="divide-y divide-border">
                 {itineraries.length === 0 ? (
-                  <div className="text-center py-12 text-foreground/60">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="font-medium">Nenhum roteiro gerado ainda</p>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Nenhum roteiro gerado ainda</p>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {itineraries.map((itinerary) => (
-                      <div
-                        key={itinerary.id}
-                        className="flex items-center justify-between gap-3 p-4 bg-background rounded-2xl border-2 border-foreground/10 hover:border-secondary transition-colors flex-wrap"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="font-bold text-foreground truncate">
-                              {itinerary.title || "Roteiro sem título"}
-                            </h3>
-                            <Badge className="bg-vibrant-yellow text-foreground border border-foreground text-[10px] uppercase">
-                              {(itinerary.text_length / 1000).toFixed(1)}k chars
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-foreground/70 flex-wrap">
-                            {itinerary.destination && (
-                              <span className="flex items-center gap-1 font-medium">
-                                <MapPin className="h-3 w-3" />
-                                {itinerary.destination}
-                              </span>
-                            )}
-                            {itinerary.traveler_name && (
-                              <span className="flex items-center gap-1 font-medium">
-                                <User className="h-3 w-3" />
-                                {itinerary.traveler_name}
-                              </span>
-                            )}
-                            <span className="flex items-center gap-1 text-xs">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(itinerary.created_at), "dd/MM/yyyy HH:mm", {
-                                locale: ptBR,
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                        <a href={itinerary.pdf_url} target="_blank" rel="noopener noreferrer" download={itinerary.file_name}>
-                          <Button
-                            size="sm"
-                            className="rounded-full bg-secondary hover:bg-secondary-hover text-secondary-foreground font-bold uppercase border-2 border-foreground"
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            PDF
-                          </Button>
-                        </a>
+                ) : itineraries.map(itinerary => (
+                  <div
+                    key={itinerary.id}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-muted/30 transition-colors flex-wrap"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <h3 className="font-semibold text-sm text-foreground truncate">
+                          {itinerary.title || "Roteiro sem título"}
+                        </h3>
+                        <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          {(itinerary.text_length / 1000).toFixed(1)}k
+                        </span>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                        {itinerary.destination && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {itinerary.destination}
+                          </span>
+                        )}
+                        {itinerary.traveler_name && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {itinerary.traveler_name}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(itinerary.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
+                    </div>
+                    <a href={itinerary.pdf_url} target="_blank" rel="noopener noreferrer" download={itinerary.file_name}>
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                        <Download className="h-3.5 w-3.5" />
+                        PDF
+                      </button>
+                    </a>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
           </>
         ) : activeTab === "clientes" ? (
           <CustomersPanel />
@@ -260,6 +232,7 @@ const AdminDashboard = () => {
         ) : (
           <UsersPanel />
         )}
+
       </div>
     </div>
   );

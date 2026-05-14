@@ -1,12 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogIn, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -20,8 +17,8 @@ const Login = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
       </div>
     );
   }
@@ -59,71 +56,84 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4">
-      <Card className="w-full max-w-md bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
-        <CardHeader className="text-center pb-2">
-          <div className="mx-auto w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-4">
-            <LogIn className="h-7 w-7 text-white" />
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+            <span className="text-3xl">☀️</span>
           </div>
-          <CardTitle className="text-2xl font-bold text-white">IA Turismo</CardTitle>
-          <p className="text-slate-400 text-sm mt-1">
-            {isSignUp ? "Crie sua conta de administrador" : "Acesse o painel administrativo"}
+          <h1 className="text-4xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Sol
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1 font-medium tracking-wide uppercase">
+            Painel Administrativo
           </p>
-        </CardHeader>
-        <CardContent>
+        </div>
+
+        {/* Card */}
+        <div className="bg-card border border-border rounded-xl shadow-sm p-8">
+          <p className="text-sm font-medium text-foreground mb-6">
+            {isSignUp ? "Criar conta de administrador" : "Entre com sua conta"}
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@email.com"
-                  className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                />
-              </div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@email.com"
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition text-sm"
+              />
             </div>
+
             <div>
-              <label className="text-sm font-medium text-slate-300 mb-1.5 block">Senha</label>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                Senha
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-2.5 bg-white/10 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  className="w-full px-4 py-2.5 pr-10 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            <Button
+
+            <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center justify-center gap-2 mt-2"
             >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? (isSignUp ? "Criando..." : "Entrando...") : (isSignUp ? "Criar Conta" : "Entrar")}
-            </Button>
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="w-full text-sm text-slate-400 hover:text-white transition"
-            >
-              {isSignUp ? "Já tem conta? Fazer login" : "Primeiro acesso? Criar conta"}
             </button>
           </form>
-        </CardContent>
-      </Card>
+
+          <button
+            type="button"
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition mt-4"
+          >
+            {isSignUp ? "Já tem conta? Fazer login" : "Primeiro acesso? Criar conta"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

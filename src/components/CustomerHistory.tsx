@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Calendar, MapPin, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -67,43 +65,40 @@ const CustomerHistory = ({ phone }: { phone: string }) => {
   return (
     <div className="space-y-2 mt-3">
       <div className="flex items-center gap-2 mb-2">
-        <FileText className="h-4 w-4 text-secondary" />
-        <span className="font-bold uppercase text-xs tracking-wider text-foreground">
+        <FileText className="h-4 w-4 text-muted-foreground" />
+        <span className="font-semibold text-xs tracking-wide text-muted-foreground uppercase">
           Histórico ({items.length} {items.length === 1 ? "roteiro" : "roteiros"})
         </span>
       </div>
       {items.map((it) => (
         <div
           key={it.id}
-          className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-background border-2 border-foreground/10 hover:border-secondary transition-colors"
+          className="flex items-center justify-between gap-3 p-3 rounded-lg bg-background border border-border hover:border-primary/30 transition-colors"
         >
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h4 className="font-bold text-sm text-foreground truncate">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <h4 className="font-semibold text-sm text-foreground truncate">
                 {it.title || "Roteiro sem título"}
               </h4>
               {it.destination && (
-                <Badge className="bg-vibrant-yellow text-foreground border border-foreground text-[10px] uppercase">
-                  <MapPin className="h-3 w-3 mr-1" />
+                <span className="text-[10px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                  <MapPin className="h-2.5 w-2.5" />
                   {it.destination}
-                </Badge>
+                </span>
               )}
             </div>
-            <div className="flex items-center gap-1 text-xs text-foreground/60">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              {format(new Date(it.created_at), "dd 'de' MMM 'de' yyyy 'às' HH:mm", {
-                locale: ptBR,
-              })}
+              {format(new Date(it.created_at), "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
             </div>
           </div>
-          <Button
-            size="sm"
+          <button
             onClick={() => handleDownload(it.pdf_url, it.file_name)}
-            className="bg-secondary hover:bg-secondary-hover text-secondary-foreground rounded-full font-bold uppercase text-xs"
+            className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors"
           >
-            <Download className="h-3 w-3 mr-1" />
+            <Download className="h-3 w-3" />
             PDF
-          </Button>
+          </button>
         </div>
       ))}
     </div>

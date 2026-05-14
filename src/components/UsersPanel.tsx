@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Trash2, Mail, Calendar, Loader2, Shield, Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
@@ -27,9 +24,7 @@ const UsersPanel = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("list-admin-users", {
-      method: "GET",
-    });
+    const { data, error } = await supabase.functions.invoke("list-admin-users", { method: "GET" });
     if (error || data?.error) {
       toast({ title: "Erro ao carregar usuários", description: error?.message || data?.error, variant: "destructive" });
     } else {
@@ -38,9 +33,7 @@ const UsersPanel = () => {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  useEffect(() => { fetchUsers(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,9 +49,7 @@ const UsersPanel = () => {
       toast({ title: "Erro ao criar usuário", description: error?.message || data?.error, variant: "destructive" });
     } else {
       toast({ title: "Usuário criado!", description: `${email} já pode fazer login` });
-      setEmail("");
-      setPassword("");
-      fetchUsers();
+      setEmail(""); setPassword(""); fetchUsers();
     }
     setCreating(false);
   };
@@ -77,24 +68,27 @@ const UsersPanel = () => {
     }
   };
 
+  const inputClass = "w-full px-4 py-2.5 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 transition text-sm font-medium";
+
   return (
-    <div className="space-y-6">
-      <Card className="bg-vibrant-mint border-2 border-foreground rounded-3xl shadow-none">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold uppercase tracking-wide text-foreground flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Criar Novo Administrador
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-5">
+      {/* Create Form */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+          <UserPlus className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Criar Administrador
+          </h2>
+        </div>
+        <div className="p-5">
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <input
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               placeholder="email@exemplo.com"
-              className="px-4 py-2.5 bg-card border-2 border-foreground rounded-full text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-secondary font-medium"
+              className={inputClass}
             />
             <div className="relative">
               <input
@@ -102,89 +96,86 @@ const UsersPanel = () => {
                 required
                 minLength={6}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="Senha (mín. 6 caracteres)"
-                className="w-full px-4 py-2.5 pr-10 bg-card border-2 border-foreground rounded-full text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-secondary font-medium"
+                className={inputClass + " pr-10"}
               />
               <button
                 type="button"
                 onClick={() => setShowPwd(!showPwd)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60 hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <Button
+            <button
               type="submit"
               disabled={creating}
-              className="rounded-full bg-secondary hover:bg-secondary-hover text-secondary-foreground font-bold uppercase border-2 border-foreground"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
             >
-              {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
               Criar
-            </Button>
+            </button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="bg-card border-2 border-foreground rounded-3xl shadow-none">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold uppercase tracking-wide text-foreground flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+      {/* Users List */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+          <Shield className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
             Administradores ({users.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-foreground/60" />
-            </div>
-          ) : users.length === 0 ? (
-            <p className="text-center text-foreground/60 py-8">Nenhum administrador cadastrado</p>
-          ) : (
-            <div className="space-y-3">
-              {users.map((u) => (
-                <div
-                  key={u.id}
-                  className="flex items-center justify-between gap-3 p-4 bg-background rounded-2xl border-2 border-foreground/10 flex-wrap"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <Mail className="h-4 w-4 text-foreground/70" />
-                      <span className="font-bold text-foreground truncate">{u.email}</span>
-                      {u.isCurrent && (
-                        <Badge className="bg-vibrant-yellow text-foreground border border-foreground text-[10px] uppercase">
-                          Você
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-foreground/60 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Criado em {format(new Date(u.created_at), "dd/MM/yyyy", { locale: ptBR })}
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-primary/40" />
+          </div>
+        ) : users.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10 text-sm">Nenhum administrador cadastrado</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {users.map(u => (
+              <div
+                key={u.id}
+                className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-muted/20 transition-colors flex-wrap"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold text-sm text-foreground truncate">{u.email}</span>
+                    {u.isCurrent && (
+                      <span className="text-[10px] font-semibold bg-vibrant-yellow text-foreground px-2 py-0.5 rounded-full">
+                        Você
                       </span>
-                      {u.last_sign_in_at && (
-                        <span>
-                          Último acesso: {format(new Date(u.last_sign_in_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
-                  {!u.isCurrent && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleDelete(u.id, u.email)}
-                      className="rounded-full bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold uppercase border-2 border-foreground"
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Excluir
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Criado em {format(new Date(u.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                    {u.last_sign_in_at && (
+                      <span>Último acesso: {format(new Date(u.last_sign_in_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {!u.isCurrent && (
+                  <button
+                    onClick={() => handleDelete(u.id, u.email)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Excluir
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

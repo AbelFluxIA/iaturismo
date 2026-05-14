@@ -22,8 +22,8 @@ export default {
         "sm-590": "590px",
       },
       fontFamily: {
-        sans: ["Supreme", "system-ui", "-apple-system", "sans-serif"],
-        serif: ["Lora", "Georgia", "serif"],
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        serif: ["Playfair Display", "Georgia", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -41,7 +41,13 @@ export default {
           foreground: "hsl(var(--secondary-foreground))",
           hover: "hsl(var(--secondary-hover))",
         },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
         accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
           red: "hsl(var(--accent-red))",
           pink: "hsl(var(--accent-pink))",
         },
