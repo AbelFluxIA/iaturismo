@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import MuralGallery from "./pages/MuralGallery";
+import ItineraryPage from "./pages/ItineraryPage";
 import Login from "./pages/Login";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
       {
         path: "/mural/:shareCode",
         element: <MuralGallery />,
+      },
+      {
+        path: "/r/:shareCode",
+        element: <ItineraryPage />,
       },
       {
         path: "*",
