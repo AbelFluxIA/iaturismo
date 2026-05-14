@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import MuralGallery from "./pages/MuralGallery";
 import ItineraryPage from "./pages/ItineraryPage";
+import StatsPage from "./pages/StatsPage";
 import Login from "./pages/Login";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
 
@@ -61,6 +62,10 @@ const router = createBrowserRouter([
       {
         path: "/r/:shareCode",
         element: <ItineraryPage />,
+      },
+      {
+        path: "/stats/:referralCode",
+        element: <StatsPage />,
       },
       {
         path: "*",
