@@ -250,8 +250,8 @@ serve(async (req) => {
     const accentColor = rgb(0.95, 0.72, 0.20);       // gold accent (was orange)
     const textColor = rgb(0.13, 0.15, 0.20);
     const mutedText = rgb(0.42, 0.45, 0.50);
-    const linkColor = rgb(0.80, 0.10, 0.12);         // strong red
-    const linkBg = rgb(1, 0.93, 0.93);
+    const linkColor = rgb(0.10, 0.30, 0.60);         // navy blue
+    const linkBg = rgb(0.94, 0.97, 1.0);
     const warningColor = rgb(0.85, 0.45, 0.12);
     const dividerColor = rgb(0.88, 0.86, 0.80);
 
@@ -435,16 +435,30 @@ serve(async (req) => {
 
     yPosition = pageHeight - headerHeight - 30;
 
-    // Process text content - LARGER FONTS
+    // Process text content
     const lines = text.split('\n');
-    const fontSize = 13;
-    const lineHeight = 22;
-    const headerFontSize = 16;
-    const subHeaderFontSize = 13;
+    const fontSize = 12;
+    const lineHeight = 20;
+    const headerFontSize = 15;
+    const subHeaderFontSize = 12;
+
+    // Timeline layout constants (used in day sections)
+    const tlX = margin + 14;          // center x of the vertical timeline line
+    const contentX = margin + 36;     // x where activity content starts
+    const contentAreaW = pageWidth - contentX - margin;
+
+    let inDaySection = false;
+    let lastNodeY: number | null = null;
+
+    // Draw vertical line segment from y1 down to y2 on the timeline
+    const drawTimelineSegment = (y1: number, y2: number) => {
+      if (y1 <= y2) return;
+      page.drawRectangle({ x: tlX - 1, y: y2, width: 2, height: y1 - y2, color: dividerColor });
+    };
 
     for (const line of lines) {
       const trimmedLine = line.trim();
-      
+
       if (!trimmedLine) {
         yPosition -= lineHeight / 2;
         continue;
@@ -453,54 +467,60 @@ serve(async (req) => {
       const cleanLine = cleanTextForPDF(trimmedLine);
       if (!cleanLine) continue;
 
-      // Check for DAY headers - handles **DIA 1**, *DIA 1*, DIA 1, etc.
+      // ── DAY HEADER ──
       const dayMatch = cleanLine.match(/^\*{0,2}\s*(DIA\s*\d+|DAY\s*\d+)/i);
       if (dayMatch) {
-        // Each day ALWAYS starts on a new page (except first content near top)
-        if (yPosition < pageHeight - 180) {
-          addNewPage();
-        }
-        
-        yPosition -= 10;
-        
-        page.drawRectangle({
-          x: margin - 5, y: yPosition - 8, width: contentWidth + 10, height: 32,
-          color: primaryColor,
-        });
-        
-        page.drawRectangle({
-          x: margin - 5, y: yPosition - 8, width: 5, height: 32, color: accentColor,
-        });
-        
+        if (yPosition < pageHeight - 180) addNewPage();
+        inDaySection = true;
+        lastNodeY = null;
+
+        yPosition -= 8;
+        page.drawRectangle({ x: 0, y: yPosition - 10, width: pageWidth, height: 34, color: primaryColor });
+        page.drawRectangle({ x: 0, y: yPosition - 10, width: 6, height: 34, color: accentColor });
         page.drawText(cleanLine.replace(/^\*+\s*|\*+$/g, '').toUpperCase(), {
-          x: margin + 8, y: yPosition + 3, size: headerFontSize, font: fontBold, color: rgb(1, 1, 1),
+          x: margin, y: yPosition + 4, size: headerFontSize, font: fontBold, color: rgb(1, 1, 1),
         });
-        
-        yPosition -= 48;
+        yPosition -= 44;
         continue;
       }
 
-      // Check for time/period - handles Manhã, Manha, Tarde, Noite, Pôr do Sol, Dia Inteiro with accents
-      const timeMatch = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*\*{0,2}/i);
-      if (timeMatch) {
+      // ── PERIOD / ACTIVITY NODE ──
+      const timeMatch = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*/i);
+      if (timeMatch && inDaySection) {
+        checkPageBreak(50);
+        yPosition -= 8;
+
+        const nodeY = yPosition + 6;
+
+        // Connect from previous node
+        if (lastNodeY !== null) drawTimelineSegment(lastNodeY - 8, nodeY + 8);
+
+        // Node circle (outer navy, inner gold)
+        page.drawCircle({ x: tlX, y: nodeY, size: 8, color: primaryColor });
+        page.drawCircle({ x: tlX, y: nodeY, size: 4, color: accentColor });
+
+        // Short horizontal tick to content
+        page.drawRectangle({ x: tlX + 8, y: nodeY - 0.5, width: contentX - tlX - 8, height: 1, color: dividerColor });
+
+        lastNodeY = nodeY;
+
+        page.drawText(cleanLine.replace(/\*+/g, '').trim(), {
+          x: contentX, y: yPosition + 2, size: subHeaderFontSize, font: fontBold, color: primaryColor,
+        });
+        yPosition -= 28;
+        continue;
+      }
+
+      // ── NON-DAY period (intro section) ──
+      const timeMatchIntro = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*\*{0,2}/i);
+      if (timeMatchIntro && !inDaySection) {
         checkPageBreak(40);
-        
         yPosition -= 5;
-        
-        // Gray background
-        page.drawRectangle({
-          x: margin, y: yPosition - 5, width: contentWidth, height: 24, color: secondaryColor,
-        });
-        
-        // Orange accent dot - NOW FOR ALL PERIODS INCLUDING MANHÃ
-        page.drawCircle({
-          x: margin + 10, y: yPosition + 5, size: 4, color: accentColor,
-        });
-        
+        page.drawRectangle({ x: margin, y: yPosition - 5, width: contentWidth, height: 24, color: secondaryColor });
+        page.drawCircle({ x: margin + 10, y: yPosition + 5, size: 4, color: accentColor });
         page.drawText(cleanLine.replace(/\*+/g, '').trim(), {
           x: margin + 22, y: yPosition + 1, size: subHeaderFontSize, font: fontBold, color: primaryColor,
         });
-        
         yPosition -= 32;
         continue;
       }
@@ -525,52 +545,58 @@ serve(async (req) => {
         continue;
       }
 
+      // Travel time lines (~X min de / do)
+      const travelTimeMatch = cleanLine.match(/^~\s*\d+\s*(min|h\b|hora)/i);
+      if (travelTimeMatch) {
+        checkPageBreak(lineHeight + 8);
+        const txLeft = inDaySection ? tlX : margin;
+        const txText = inDaySection ? contentX : margin + 12;
+        // Draw dotted segment on timeline (or gold bar outside day section)
+        for (let dy = 0; dy < lineHeight + 4; dy += 5) {
+          page.drawRectangle({ x: txLeft - 0.5, y: yPosition - dy, width: 1, height: 3, color: mutedText });
+        }
+        if (inDaySection && lastNodeY !== null) {
+          // extend the timeline line up to where we are
+          drawTimelineSegment(lastNodeY - 8, yPosition + lineHeight);
+          lastNodeY = yPosition - 2;
+        }
+        page.drawText(cleanLine, {
+          x: txText, y: yPosition, size: fontSize - 1, font: fontItalic, color: mutedText,
+        });
+        yPosition -= lineHeight + 4;
+        continue;
+      }
+
       // Bullet points
+      const bx = inDaySection ? contentX + 10 : margin + 12;
+      const bContentW = inDaySection ? contentAreaW - 20 : contentWidth - 30;
       const bulletMatch = trimmedLine.match(/^[-•]\s*/);
       if (bulletMatch) {
         checkPageBreak(lineHeight * 3);
-        
         const bulletContent = cleanTextForPDF(trimmedLine.replace(/^[-•]\s*/, ''));
         const segments = parseWhatsAppFormatting(bulletContent);
-        
-        page.drawCircle({ x: margin + 12, y: yPosition - 1, size: 3, color: accentColor });
-        
-        const bulletContentWidth = contentWidth - 30;
+        page.drawCircle({ x: bx - 10, y: yPosition - 1, size: 3, color: accentColor });
         let lineText = '';
-        
         for (const seg of segments) {
           if (!seg.text.trim()) continue;
           const segFont = getFontForSegment(seg);
           const words = seg.text.split(' ');
-          
           for (const word of words) {
             if (!word) continue;
             const testText = lineText ? lineText + ' ' + word : word;
-            const testWidth = font.widthOfTextAtSize(testText, fontSize);
-            
-            if (testWidth > bulletContentWidth && lineText) {
+            if (font.widthOfTextAtSize(testText, fontSize) > bContentW && lineText) {
               checkPageBreak(lineHeight);
-              page.drawText(lineText, {
-                x: margin + 25, y: yPosition, size: fontSize, font: segFont,
-                color: seg.isLink ? linkColor : textColor,
-              });
+              page.drawText(lineText, { x: bx, y: yPosition, size: fontSize, font: segFont, color: seg.isLink ? linkColor : textColor });
               yPosition -= lineHeight;
               lineText = word;
-            } else {
-              lineText = testText;
-            }
+            } else { lineText = testText; }
           }
         }
-        
         if (lineText) {
           const lastSeg = segments[segments.length - 1] || { bold: false, italic: false, isLink: false };
-          page.drawText(lineText, {
-            x: margin + 25, y: yPosition, size: fontSize, font: getFontForSegment(lastSeg),
-            color: lastSeg.isLink ? linkColor : textColor,
-          });
+          page.drawText(lineText, { x: bx, y: yPosition, size: fontSize, font: getFontForSegment(lastSeg), color: lastSeg.isLink ? linkColor : textColor });
           yPosition -= lineHeight;
         }
-        
         yPosition -= 4;
         continue;
       }
@@ -611,181 +637,69 @@ serve(async (req) => {
       }
 
       // ===== LINK HANDLING =====
+      // In day sections, links render at contentX; intro section at margin
+      const lx = inDaySection ? contentX : margin;
+      const lw = inDaySection ? contentAreaW : contentWidth;
+
+      const drawLinkBlock = (labelText: string, url: string) => {
+        checkPageBreak(lineHeight + 6);
+        page.drawRectangle({ x: lx, y: yPosition - 5, width: lw, height: 22, color: linkBg, borderColor: linkColor, borderWidth: 0.8 });
+        page.drawCircle({ x: lx + 10, y: yPosition + 4, size: 4, color: linkColor });
+        page.drawCircle({ x: lx + 10, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
+        const display = labelText.length > 60 ? labelText.substring(0, 57) + '...' : labelText;
+        page.drawText(display, { x: lx + 20, y: yPosition + 1, size: fontSize - 1, font, color: linkColor });
+        const tw = font.widthOfTextAtSize(display, fontSize - 1);
+        page.drawLine({ start: { x: lx + 20, y: yPosition - 1 }, end: { x: lx + 20 + tw, y: yPosition - 1 }, thickness: 0.7, color: linkColor });
+        if (url) addLinkAnnotation(url, lx, yPosition - 5, lw, 22);
+        yPosition -= lineHeight + 6;
+      };
 
       // Markdown links [text](url)
       const navMatch = cleanLine.match(/^\[([^\]]+)\]\(([^)]+)\)/i);
-      if (navMatch) {
-        checkPageBreak(lineHeight + 10);
-        
-        const linkText = navMatch[1];
-        const linkUrl = navMatch[2];
-        
-        // Bold red background highlight
-        page.drawRectangle({
-          x: margin, y: yPosition - 8, width: contentWidth, height: 30,
-          color: rgb(1, 0.90, 0.90), borderColor: linkColor, borderWidth: 1.5,
-        });
-        
-        // Map pin icon (larger)
-        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 7, color: linkColor });
-        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 3, color: rgb(1, 1, 1) });
-        
-        page.drawText(linkText, {
-          x: margin + 24, y: yPosition + 1, size: fontSize, font: fontBold, color: linkColor,
-        });
-        
-        const linkWidth = fontBold.widthOfTextAtSize(linkText, fontSize);
-        page.drawLine({
-          start: { x: margin + 24, y: yPosition - 2 },
-          end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
-          thickness: 2, color: linkColor,
-        });
-        
-        if (linkUrl) {
-          addLinkAnnotation(linkUrl, margin, yPosition - 8, contentWidth, 30);
-        }
-        
-        yPosition -= lineHeight + 10;
-        continue;
-      }
-      
-      // "Ver no mapa" or similar with optional URL
+      if (navMatch) { drawLinkBlock(navMatch[1], navMatch[2]); continue; }
+
+      // "Ver no mapa" with optional URL
       const verMapaMatch = cleanLine.match(/^(Ver no [Mm]apa|Ver [Mm]apa|Google Maps|Waze|Navegar com[^:]*)[:\s]*(https?:\/\/[^\s]*)?/i);
       if (verMapaMatch) {
-        checkPageBreak(lineHeight + 14);
-        
-        const labelText = verMapaMatch[1];
-        const mapUrl = verMapaMatch[2] || '';
-        
-        // Bold red background highlight
-        page.drawRectangle({
-          x: margin, y: yPosition - 8, width: contentWidth, height: 30,
-          color: rgb(1, 0.90, 0.90), borderColor: linkColor, borderWidth: 1.5,
-        });
-        
-        // Map pin icon (larger)
-        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 7, color: linkColor });
-        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 3, color: rgb(1, 1, 1) });
-        
-        const fullText = mapUrl ? `${labelText}: ${mapUrl.length > 40 ? mapUrl.substring(0, 37) + '...' : mapUrl}` : labelText;
-        page.drawText(fullText, {
-          x: margin + 24, y: yPosition + 1, size: fontSize, font: fontBold, color: linkColor,
-        });
-        
-        const textW = fontBold.widthOfTextAtSize(fullText, fontSize);
-        page.drawLine({
-          start: { x: margin + 24, y: yPosition - 2 },
-          end: { x: margin + 24 + textW, y: yPosition - 2 },
-          thickness: 2, color: linkColor,
-        });
-        
-        if (mapUrl) {
-          addLinkAnnotation(mapUrl, margin, yPosition - 8, contentWidth, 30);
-        }
-        
-        yPosition -= lineHeight + 10;
+        const label = verMapaMatch[2] ? `${verMapaMatch[1]}: ${verMapaMatch[2].substring(0, 35)}...` : verMapaMatch[1];
+        drawLinkBlock(label, verMapaMatch[2] || '');
         continue;
       }
 
       // Raw URLs (https://...)
       const rawUrlMatch = cleanLine.match(/^(https?:\/\/[^\s]+)/i);
-      if (rawUrlMatch) {
-        checkPageBreak(lineHeight + 14);
-        
-        const linkUrl = rawUrlMatch[1];
-        const displayText = linkUrl.length > 55 ? linkUrl.substring(0, 52) + '...' : linkUrl;
-        
-        // Bold red background highlight  
-        page.drawRectangle({
-          x: margin, y: yPosition - 8, width: contentWidth, height: 30,
-          color: rgb(1, 0.90, 0.90), borderColor: linkColor, borderWidth: 1.5,
-        });
-        
-        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 7, color: linkColor });
-        page.drawCircle({ x: margin + 14, y: yPosition + 4, size: 3, color: rgb(1, 1, 1) });
-        
-        page.drawText(displayText, {
-          x: margin + 24, y: yPosition + 1, size: fontSize - 1, font: font, color: linkColor,
-        });
-        
-        const linkWidth = font.widthOfTextAtSize(displayText, fontSize - 1);
-        page.drawLine({
-          start: { x: margin + 24, y: yPosition - 2 },
-          end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
-          thickness: 2, color: linkColor,
-        });
-        
-        addLinkAnnotation(linkUrl, margin, yPosition - 8, contentWidth, 30);
-        
-        yPosition -= lineHeight + 10;
-        continue;
-      }
-      
+      if (rawUrlMatch) { drawLinkBlock(rawUrlMatch[1].substring(0, 55), rawUrlMatch[1]); continue; }
+
       // [Navegar com ...] without URL
       const simpleNavMatch = cleanLine.match(/^\[([^\]]+)\]/i);
       if (simpleNavMatch && cleanLine.match(/navegar|waze|maps/i)) {
-        checkPageBreak(lineHeight);
-        
-        const linkText = simpleNavMatch[1];
-        
-        page.drawRectangle({
-          x: margin, y: yPosition - 6, width: contentWidth, height: 26,
-          color: rgb(1, 0.94, 0.94), borderColor: linkColor, borderWidth: 0.5,
-        });
-        
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 5, color: linkColor });
-        page.drawCircle({ x: margin + 12, y: yPosition + 4, size: 2, color: rgb(1, 1, 1) });
-        
-        page.drawText(linkText, {
-          x: margin + 24, y: yPosition + 1, size: fontSize, font: fontBold, color: linkColor,
-        });
-        
-        const linkWidth = fontBold.widthOfTextAtSize(linkText, fontSize);
-        page.drawLine({
-          start: { x: margin + 24, y: yPosition - 2 },
-          end: { x: margin + 24 + linkWidth, y: yPosition - 2 },
-          thickness: 2, color: linkColor,
-        });
-        
-        yPosition -= lineHeight + 10;
+        drawLinkBlock(simpleNavMatch[1], '');
         continue;
       }
 
       // ===== REGULAR PARAGRAPH =====
+      const px = inDaySection ? contentX : margin;
+      const pw = inDaySection ? contentAreaW : contentWidth;
       const segments = parseWhatsAppFormatting(cleanLine);
       let lineText = '';
-      
       for (const seg of segments) {
         if (!seg.text.trim()) continue;
         const segFont = getFontForSegment(seg);
-        const words = seg.text.split(' ');
-        
-        for (const word of words) {
+        for (const word of seg.text.split(' ')) {
           if (!word) continue;
           const testText = lineText ? lineText + ' ' + word : word;
-          const testWidth = font.widthOfTextAtSize(testText, fontSize);
-          
-          if (testWidth > contentWidth && lineText) {
+          if (font.widthOfTextAtSize(testText, fontSize) > pw && lineText) {
             checkPageBreak(lineHeight);
-            page.drawText(lineText, {
-              x: margin, y: yPosition, size: fontSize, font: segFont,
-              color: seg.isLink ? linkColor : textColor,
-            });
+            page.drawText(lineText, { x: px, y: yPosition, size: fontSize, font: segFont, color: seg.isLink ? linkColor : textColor });
             yPosition -= lineHeight;
             lineText = word;
-          } else {
-            lineText = testText;
-          }
+          } else { lineText = testText; }
         }
       }
-      
       if (lineText) {
         checkPageBreak(lineHeight);
         const lastSeg = segments[segments.length - 1] || { bold: false, italic: false, isLink: false };
-        page.drawText(lineText, {
-          x: margin, y: yPosition, size: fontSize, font: getFontForSegment(lastSeg),
-          color: lastSeg.isLink ? linkColor : textColor,
-        });
+        page.drawText(lineText, { x: px, y: yPosition, size: fontSize, font: getFontForSegment(lastSeg), color: lastSeg.isLink ? linkColor : textColor });
         yPosition -= lineHeight;
       }
     }
@@ -858,6 +772,8 @@ serve(async (req) => {
     // Classifica o interesse do cliente (texto livre -> categorias)
     const interestCategories = await classifyInterest(customer_interest);
 
+    const shareCode = crypto.randomUUID();
+
     const { error: insertError } = await supabase
       .from('generated_itineraries')
       .insert({
@@ -866,6 +782,8 @@ serve(async (req) => {
         pdf_url: publicUrlData.publicUrl,
         file_name: fileName,
         text_length: text.length,
+        text_content: text,
+        share_code: shareCode,
         interest_focus: customer_interest || null,
         interest_categories: interestCategories,
       });
@@ -899,6 +817,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         pdf_url: publicUrlData.publicUrl,
+        share_code: shareCode,
         file_name: fileName,
         interest_categories: interestCategories,
         message: 'PDF gerado com sucesso!'
