@@ -317,58 +317,96 @@ async function generateShareImage(destination: string, name: string, imageUrl: s
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d")!;
 
-  // Background
-  ctx.fillStyle = "#0f3d2e";
+  // Deep luxury fallback background
+  ctx.fillStyle = "#0a1628";
   ctx.fillRect(0, 0, W, H);
 
-  // Background photo
+  // Background photo — fetch as blob to bypass canvas CORS taint restriction
   if (imageUrl) {
     try {
+      const resp = await fetch(imageUrl);
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
       const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); img.src = imageUrl; });
+      await new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); img.src = objUrl; });
       if (img.width > 0) {
         const scale = Math.max(W / img.width, H / img.height);
         const w = img.width * scale, h = img.height * scale;
         ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
       }
+      URL.revokeObjectURL(objUrl);
     } catch { /* fail silently */ }
   }
 
-  // Gradient overlay
-  const grad = ctx.createLinearGradient(0, H * 0.25, 0, H);
-  grad.addColorStop(0, "rgba(0,0,0,0)");
-  grad.addColorStop(0.55, "rgba(15,61,46,0.75)");
-  grad.addColorStop(1, "rgba(15,61,46,0.97)");
+  // Heavy cinematic gradient — photo shows at top, fades to dark at bottom
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "rgba(0,0,0,0.48)");
+  grad.addColorStop(0.30, "rgba(0,0,0,0.12)");
+  grad.addColorStop(0.50, "rgba(0,0,0,0.44)");
+  grad.addColorStop(0.74, "rgba(0,0,0,0.82)");
+  grad.addColorStop(1, "rgba(0,0,0,0.96)");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Top brand
   ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.font = "500 50px sans-serif";
-  ctx.fillText("☀️  Sol Roteiros", W / 2, 110);
 
-  // Destination
+  // ── Top masthead — luxury magazine style ──
+  ctx.fillStyle = "rgba(255,255,255,0.62)";
+  ctx.font = "300 38px sans-serif";
+  ctx.fillText("✦  S O L  R O T E I R O S  ✦", W / 2, 112);
+
+  // Gold accent line under masthead
+  ctx.fillStyle = "rgba(212,175,55,0.75)";
+  ctx.fillRect(W / 2 - 140, 134, 280, 1.5);
+
+  // ── Hero destination name ──
+  const destCity = destination.split(/\s*[-–,]\s*/)[0].trim().toUpperCase();
+  const cityFontSize = destCity.length > 14 ? 86 : destCity.length > 10 ? 108 : 132;
+  ctx.shadowColor = "rgba(0,0,0,0.7)";
+  ctx.shadowBlur = 40;
   ctx.fillStyle = "#ffffff";
-  ctx.font = `bold ${destination.length > 14 ? 76 : 96}px serif`;
-  ctx.fillText(destination, W / 2, H * 0.72);
+  ctx.font = `bold ${cityFontSize}px serif`;
+  ctx.fillText(destCity, W / 2, H * 0.615);
+  ctx.shadowBlur = 0;
 
-  // Traveler
-  ctx.font = "500 52px sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.82)";
-  ctx.fillText(`Roteiro de ${name}`, W / 2, H * 0.80);
+  // State / region subtitle
+  const stateMatch = destination.match(/[-–]\s*(.+)/);
+  if (stateMatch) {
+    ctx.fillStyle = "rgba(255,255,255,0.52)";
+    ctx.font = "300 46px sans-serif";
+    ctx.fillText(stateMatch[1].trim().toUpperCase(), W / 2, H * 0.615 + 72);
+  }
 
-  // CTA
-  ctx.font = "bold 46px sans-serif";
+  // ── Gold separator ──
+  ctx.fillStyle = "#d4af37";
+  ctx.fillRect(W / 2 - 100, H * 0.695, 200, 2);
+
+  // ── "ROTEIRO EXCLUSIVO" label ──
+  ctx.fillStyle = "rgba(255,255,255,0.48)";
+  ctx.font = "300 34px sans-serif";
+  ctx.fillText("R O T E I R O  E X C L U S I V O  D E", W / 2, H * 0.756);
+
+  // ── Traveler name — bold, prominent, ego-satisfying ──
+  const nameUpper = name.toUpperCase();
+  const nameFontSize = nameUpper.length > 14 ? 70 : nameUpper.length > 10 ? 82 : 96;
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `bold ${nameFontSize}px serif`;
+  ctx.fillText(nameUpper, W / 2, H * 0.820);
+  ctx.shadowBlur = 0;
+
+  // ── CTA ──
   ctx.fillStyle = "#f59e0b";
-  ctx.fillText("Quero o meu! ✈️", W / 2, H * 0.89);
+  ctx.font = "bold 44px sans-serif";
+  ctx.fillText("Quero o meu! ✈️", W / 2, H * 0.903);
 
-  ctx.font = "38px sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.38)";
-  ctx.fillText("tripsol.com.br", W / 2, H * 0.94);
+  // ── Domain watermark ──
+  ctx.fillStyle = "rgba(255,255,255,0.27)";
+  ctx.font = "300 34px sans-serif";
+  ctx.fillText("tripsol.com.br", W / 2, H * 0.954);
 
-  return new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.92));
+  return new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.93));
 }
 
 // ─── Share Modal ──────────────────────────────────────────────────────────────
