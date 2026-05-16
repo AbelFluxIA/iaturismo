@@ -359,6 +359,11 @@ async function generateShareImage(destination: string, name: string, imageUrl: s
   ctx.fillStyle = "rgba(212,175,55,0.75)";
   ctx.fillRect(W / 2 - 140, 134, 280, 1.5);
 
+  // ── "Roteiro para" label ──
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "300 40px sans-serif";
+  ctx.fillText("R O T E I R O  P A R A", W / 2, H * 0.545);
+
   // ── Hero destination name ──
   const destCity = destination.split(/\s*[-–,]\s*/)[0].trim().toUpperCase();
   const cityFontSize = destCity.length > 14 ? 86 : destCity.length > 10 ? 108 : 132;
@@ -366,7 +371,7 @@ async function generateShareImage(destination: string, name: string, imageUrl: s
   ctx.shadowBlur = 40;
   ctx.fillStyle = "#ffffff";
   ctx.font = `bold ${cityFontSize}px serif`;
-  ctx.fillText(destCity, W / 2, H * 0.615);
+  ctx.fillText(destCity, W / 2, H * 0.625);
   ctx.shadowBlur = 0;
 
   // State / region subtitle
@@ -374,17 +379,17 @@ async function generateShareImage(destination: string, name: string, imageUrl: s
   if (stateMatch) {
     ctx.fillStyle = "rgba(255,255,255,0.52)";
     ctx.font = "300 46px sans-serif";
-    ctx.fillText(stateMatch[1].trim().toUpperCase(), W / 2, H * 0.615 + 72);
+    ctx.fillText(stateMatch[1].trim().toUpperCase(), W / 2, H * 0.625 + 72);
   }
 
   // ── Gold separator ──
   ctx.fillStyle = "#d4af37";
-  ctx.fillRect(W / 2 - 100, H * 0.695, 200, 2);
+  ctx.fillRect(W / 2 - 100, H * 0.705, 200, 2);
 
-  // ── "ROTEIRO EXCLUSIVO" label ──
-  ctx.fillStyle = "rgba(255,255,255,0.48)";
-  ctx.font = "300 34px sans-serif";
-  ctx.fillText("R O T E I R O  E X C L U S I V O  D E", W / 2, H * 0.756);
+  // ── "Personalizado para" label ──
+  ctx.fillStyle = "rgba(255,255,255,0.50)";
+  ctx.font = "300 36px sans-serif";
+  ctx.fillText("P E R S O N A L I Z A D O  P A R A", W / 2, H * 0.762);
 
   // ── Traveler name — bold, prominent, ego-satisfying ──
   const nameUpper = name.toUpperCase();
@@ -393,18 +398,23 @@ async function generateShareImage(destination: string, name: string, imageUrl: s
   ctx.shadowBlur = 24;
   ctx.fillStyle = "#ffffff";
   ctx.font = `bold ${nameFontSize}px serif`;
-  ctx.fillText(nameUpper, W / 2, H * 0.820);
+  ctx.fillText(nameUpper, W / 2, H * 0.827);
   ctx.shadowBlur = 0;
 
-  // ── CTA ──
+  // ── "Sua viagem está pronta" hook ──
   ctx.fillStyle = "#f59e0b";
-  ctx.font = "bold 44px sans-serif";
-  ctx.fillText("Quero o meu! ✈️", W / 2, H * 0.903);
+  ctx.font = "bold 40px sans-serif";
+  ctx.fillText("✈️  Sua viagem está pronta!", W / 2, H * 0.892);
+
+  // ── CTA ──
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = "300 36px sans-serif";
+  ctx.fillText("Quero o meu também →", W / 2, H * 0.930);
 
   // ── Domain watermark ──
-  ctx.fillStyle = "rgba(255,255,255,0.27)";
-  ctx.font = "300 34px sans-serif";
-  ctx.fillText("tripsol.com.br", W / 2, H * 0.954);
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.font = "300 32px sans-serif";
+  ctx.fillText("tripsol.com.br", W / 2, H * 0.960);
 
   return new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.93));
 }
@@ -845,6 +855,24 @@ export default function ItineraryPage() {
             </a>
           </div>
         )}
+
+        {/* Sol Acompanhante CTA — card para quem já tem roteiro */}
+        <div className={`mx-0 my-3 rounded-2xl overflow-hidden border ${cardBorder} ${card}`}>
+          <div className="bg-gradient-to-br from-[hsl(152,42%,18%)] to-[hsl(152,52%,26%)] px-5 py-5">
+            <p className="text-white font-bold text-sm mb-1">☀️ Sol Acompanhante</p>
+            <p className="text-white/80 text-xs leading-relaxed mb-3">
+              Orientação em tempo real durante sua viagem — localização, dicas, eventos, clima e mural de fotos narrado.
+            </p>
+            <a
+              href={`https://wa.me/${import.meta.env.VITE_SOL_PHONE || ""}?text=${encodeURIComponent("Oi Sol! Quero ativar a Sol Acompanhante")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-[#f59e0b] text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow hover:bg-[#d97706] transition-colors"
+            >
+              Ativar acompanhante →
+            </a>
+          </div>
+        </div>
 
         {/* Footer personalizado — CTA de conversão */}
         <footer className={`text-center py-8 px-4 mt-2 border-t ${cardBorder}`}>
