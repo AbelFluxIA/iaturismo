@@ -11,8 +11,21 @@ import ItineraryPage from "./pages/ItineraryPage";
 import StatsPage from "./pages/StatsPage";
 import Login from "./pages/Login";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
+import { ClientAuthProvider, useClientAuth } from "@/contexts/ClientAuthContext";
+import AppLayout from "@/components/app/AppLayout";
+import Entrar from "./pages/app/Entrar";
+import AppDashboard from "./pages/app/AppDashboard";
+import AppMural from "./pages/app/AppMural";
+import AppRoteiro from "./pages/app/AppRoteiro";
+import AppCreditos from "./pages/app/AppCreditos";
 
 const queryClient = new QueryClient();
+
+const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { token } = useClientAuth();
+  if (!token) return <Navigate to="/app/entrar" replace />;
+  return <>{children}</>;
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
@@ -71,6 +84,30 @@ const router = createBrowserRouter([
         path: "*",
         element: <NotFound />,
       },
+    ],
+  },
+  {
+    path: "/app/entrar",
+    element: (
+      <ClientAuthProvider>
+        <Entrar />
+      </ClientAuthProvider>
+    ),
+  },
+  {
+    path: "/app",
+    element: (
+      <ClientAuthProvider>
+        <ClientProtectedRoute>
+          <AppLayout />
+        </ClientProtectedRoute>
+      </ClientAuthProvider>
+    ),
+    children: [
+      { index: true, element: <AppDashboard /> },
+      { path: "roteiro", element: <AppRoteiro /> },
+      { path: "mural", element: <AppMural /> },
+      { path: "creditos", element: <AppCreditos /> },
     ],
   },
 ]);
