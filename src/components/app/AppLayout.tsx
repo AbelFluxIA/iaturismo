@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { Settings } from "lucide-react";
 
 const tabs = [
   { to: "/app", label: "Início", icon: "🏠", exact: true },
@@ -28,8 +29,11 @@ export default function AppLayout() {
         </div>
         <div className="flex items-center gap-3">
           {name && <span className="text-sm text-[#666]">{name.split(" ")[0]}</span>}
-          <button onClick={handleLogout} className="text-xs text-[#999] underline">
-            Sair
+          <button
+            onClick={() => navigate("/app/config")}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#999] hover:text-[#c8a96e] transition-colors"
+          >
+            <Settings size={18} />
           </button>
         </div>
       </header>

@@ -19,6 +19,7 @@ import AppMural from "./pages/app/AppMural";
 import AppRoteiro from "./pages/app/AppRoteiro";
 import AppCreditos from "./pages/app/AppCreditos";
 import AppChat from "./pages/app/AppChat";
+import AppConfig from "./pages/app/AppConfig";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +111,7 @@ const router = createBrowserRouter([
       { path: "roteiro", element: <AppRoteiro /> },
       { path: "mural", element: <AppMural /> },
       { path: "creditos", element: <AppCreditos /> },
+      { path: "config", element: <AppConfig /> },
     ],
   },
 ]);
