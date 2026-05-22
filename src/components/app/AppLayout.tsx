@@ -3,6 +3,7 @@ import { useClientAuth } from "@/contexts/ClientAuthContext";
 
 const tabs = [
   { to: "/app", label: "Início", icon: "🏠", exact: true },
+  { to: "/app/chat", label: "Sol", icon: "💬", exact: false },
   { to: "/app/roteiro", label: "Roteiro", icon: "📄", exact: false },
   { to: "/app/mural", label: "Mural", icon: "📸", exact: false },
   { to: "/app/creditos", label: "Créditos", icon: "⭐", exact: false },

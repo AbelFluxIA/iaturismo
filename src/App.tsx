@@ -18,6 +18,7 @@ import AppDashboard from "./pages/app/AppDashboard";
 import AppMural from "./pages/app/AppMural";
 import AppRoteiro from "./pages/app/AppRoteiro";
 import AppCreditos from "./pages/app/AppCreditos";
+import AppChat from "./pages/app/AppChat";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +106,7 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <AppDashboard /> },
+      { path: "chat", element: <AppChat /> },
       { path: "roteiro", element: <AppRoteiro /> },
       { path: "mural", element: <AppMural /> },
       { path: "creditos", element: <AppCreditos /> },
