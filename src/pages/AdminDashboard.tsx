@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera, LogOut, Shield, Loader2 } from "lucide-react";
+import { FileText, Download, Calendar, MapPin, User, TrendingUp, RefreshCw, Users, Camera, LogOut, Shield, Loader2, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import CustomersPanel from "@/components/CustomersPanel";
 import MuralsPanel from "@/components/MuralsPanel";
 import UsersPanel from "@/components/UsersPanel";
+import MetricsPanel from "@/components/MetricsPanel";
 
 interface Itinerary {
   id: string;
@@ -29,10 +30,11 @@ interface Stats {
 }
 
 const TABS = [
-  { id: "roteiros",  label: "Roteiros",  Icon: FileText },
-  { id: "clientes",  label: "Clientes",  Icon: Users    },
-  { id: "murais",    label: "Murais",    Icon: Camera   },
-  { id: "usuarios",  label: "Usuários",  Icon: Shield   },
+  { id: "roteiros",  label: "Roteiros",  Icon: FileText  },
+  { id: "clientes",  label: "Clientes",  Icon: Users     },
+  { id: "murais",    label: "Murais",    Icon: Camera    },
+  { id: "usuarios",  label: "Usuários",  Icon: Shield    },
+  { id: "metricas",  label: "Métricas",  Icon: BarChart3 },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -229,8 +231,10 @@ const AdminDashboard = () => {
           <CustomersPanel />
         ) : activeTab === "murais" ? (
           <MuralsPanel />
-        ) : (
+        ) : activeTab === "usuarios" ? (
           <UsersPanel />
+        ) : (
+          <MetricsPanel />
         )}
 
       </div>
