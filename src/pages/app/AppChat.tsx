@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { ArrowRight } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
+import { Carregando } from "@/components/app/ui";
 
 interface Message {
   role: "user" | "assistant";
@@ -7,75 +9,64 @@ interface Message {
   createdAt?: string;
 }
 
-function TypingIndicator() {
-  return (
-    <div className="flex items-end gap-2 max-w-[80%]">
-      <div className="w-7 h-7 rounded-full bg-[#c8a96e] flex items-center justify-center text-sm flex-shrink-0">
-        ☀️
-      </div>
-      <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-        <div className="flex gap-1 items-center h-4">
-          <span className="w-2 h-2 bg-[#c8a96e] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-          <span className="w-2 h-2 bg-[#c8a96e] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-          <span className="w-2 h-2 bg-[#c8a96e] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MessageBubble({ msg }: { msg: Message }) {
-  const isUser = msg.role === "user";
-
-  // Formata texto: *negrito* e quebras de linha
-  const formatted = msg.content
+// Escapa o HTML antes de aplicar *negrito* e quebras de linha,
+// para que nenhum texto da conversa seja interpretado como código.
+function formatar(texto: string) {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
     .replace(/\*(.*?)\*/g, "<strong>$1</strong>")
     .replace(/\n/g, "<br/>");
+}
 
-  if (isUser) {
-    return (
-      <div className="flex justify-end">
-        <div
-          className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-sm text-white text-sm leading-relaxed shadow-sm"
-          style={{ backgroundColor: "#c8a96e" }}
-          dangerouslySetInnerHTML={{ __html: formatted }}
-        />
-      </div>
-    );
-  }
-
+function Digitando() {
   return (
-    <div className="flex items-end gap-2 max-w-[80%]">
-      <div className="w-7 h-7 rounded-full bg-[#c8a96e] flex items-center justify-center text-sm flex-shrink-0">
-        ☀️
-      </div>
-      <div
-        className="bg-white px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm text-[#1a1a1a] leading-relaxed shadow-sm"
-        dangerouslySetInnerHTML={{ __html: formatted }}
-      />
+    <div aria-live="polite" className="self-start flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-sol-linha text-sm text-sol-texto2">
+      <span className="flex gap-1">
+        {[0, 150, 300].map((d) => (
+          <span key={d} className="w-1.5 h-1.5 rounded-full bg-sol-sun animate-bounce" style={{ animationDelay: `${d}ms` }} />
+        ))}
+      </span>
+      A Sol está respondendo
     </div>
   );
 }
 
-const WELCOME: Message = {
+function Balao({ msg }: { msg: Message }) {
+  if (msg.role === "user") {
+    return (
+      <div
+        className="self-end max-w-[78%] px-3.5 py-3 rounded-[18px_18px_4px_18px] bg-sol-mar text-white text-[15px] leading-snug"
+        dangerouslySetInnerHTML={{ __html: formatar(msg.content) }}
+      />
+    );
+  }
+  return (
+    <div
+      className="self-start max-w-[86%] px-3.5 py-3 rounded-[18px_18px_18px_4px] bg-white border border-sol-linha text-[15px] leading-snug"
+      dangerouslySetInnerHTML={{ __html: formatar(msg.content) }}
+    />
+  );
+}
+
+const BOAS_VINDAS: Message = {
   role: "assistant",
-  content: "Oi! Sou a Sol, sua assistente de viagens em João Pessoa. ☀️\n\nPosso montar seu roteiro personalizado, tirar dúvidas sobre a cidade ou te ajudar com o que precisar. Como posso te ajudar?",
+  content: "Oi! Sou a Sol, sua assistente de viagens. ☀️\n\nPosso montar seu roteiro personalizado, tirar dúvidas sobre o destino ou te ajudar com o que precisar. Como posso ajudar?",
 };
 
 export default function AppChat() {
-  const { token } = useClientAuth();
+  const { token, profile } = useClientAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // Load history
   useEffect(() => {
     if (!token) { setLoadingHistory(false); return; }
     fetch(`${API_URL}/api/app/chat/historico`, {
@@ -86,9 +77,9 @@ export default function AppChat() {
         const msgs: Message[] = (data.messages ?? []).filter(
           (m: Message) => m.role === "user" || m.role === "assistant"
         );
-        setMessages(msgs.length > 0 ? msgs : [WELCOME]);
+        setMessages(msgs.length > 0 ? msgs : [BOAS_VINDAS]);
       })
-      .catch(() => setMessages([WELCOME]))
+      .catch(() => setMessages([BOAS_VINDAS]))
       .finally(() => setLoadingHistory(false));
   }, [token]);
 
@@ -119,71 +110,69 @@ export default function AppChat() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Erro de conexão. Verifica sua internet e tenta de novo." },
+        { role: "assistant", content: "Sem conexão agora. Confira sua internet e tente de novo. Em emergência, use o SOS ou ligue 190." },
       ]);
     } finally {
       setSending(false);
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  }
+  if (loadingHistory) return <Carregando />;
 
-  if (loadingHistory) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#c8a96e]" />
-      </div>
-    );
-  }
+  const guiaAtiva = !!profile?.hasCompanion;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.map((msg, i) => (
-          <MessageBubble key={i} msg={msg} />
-        ))}
-        {sending && <TypingIndicator />}
+    <div className="flex flex-col h-[calc(100dvh-100px)]">
+      <header className="flex items-center gap-2.5 px-5 pt-8 pb-3.5 bg-white border-b border-sol-linha">
+        <img src="/sol-mark.png" alt="" className="w-10 h-10 object-contain" />
+        <div className="flex flex-col">
+          <h1 className="m-0 font-display font-extrabold text-[22px]">Guia Sol</h1>
+          {guiaAtiva ? (
+            <span className="flex items-center gap-1.5 text-[13px] font-bold text-sol-ok">
+              <span className="w-2 h-2 rounded-full bg-sol-ok" />Ativa na sua viagem
+            </span>
+          ) : (
+            <span className="text-[13px] font-semibold text-sol-texto2">Converse com a Sol · também no WhatsApp</span>
+          )}
+        </div>
+      </header>
+
+      <div role="log" aria-label="Conversa com a Sol" className="flex-1 overflow-y-auto flex flex-col gap-3.5 px-4 py-4">
+        {messages.map((msg, i) => <Balao key={i} msg={msg} />)}
+        {sending && <Digitando />}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="px-4 pb-4 pt-2 border-t border-[#e8e2db] bg-[#ece8e3]">
-        <div className="flex items-end gap-2 bg-white rounded-2xl px-4 py-2 shadow-sm border border-[#e0d9d0]">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              e.target.style.height = "auto";
-              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Mensagem..."
-            rows={1}
-            disabled={sending}
-            className="flex-1 resize-none bg-transparent text-sm text-[#1a1a1a] placeholder-[#aaa] focus:outline-none py-1.5 max-h-28"
-            style={{ lineHeight: "1.5" }}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || sending}
-            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-white disabled:opacity-40 active:scale-90 transition-transform mb-0.5"
-            style={{ backgroundColor: "#c8a96e" }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </div>
-        <p className="text-[10px] text-[#bbb] text-center mt-1.5">Enter para enviar · Shift+Enter para quebrar linha</p>
-      </div>
+      <form
+        onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+        className="flex items-end gap-2 px-3 py-2.5 bg-white border-t border-sol-linha"
+      >
+        <label htmlFor="msg" className="sr-only">Mensagem para a Sol</label>
+        <textarea
+          id="msg"
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            e.target.style.height = "auto";
+            e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+          }}
+          placeholder="Pergunte à Sol"
+          rows={1}
+          disabled={sending}
+          className="flex-1 min-w-0 min-h-[48px] max-h-28 resize-none px-4 py-3 rounded-3xl border-[1.5px] border-sol-borda bg-sol-areia text-[15px] text-sol-fundo placeholder-[#8A9599] focus:outline-none focus:border-sol-mar"
+        />
+        <button
+          type="submit"
+          aria-label="Enviar"
+          disabled={!input.trim() || sending}
+          className="flex-none w-12 h-12 rounded-full bg-sol-mar text-white flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform"
+        >
+          <ArrowRight size={20} strokeWidth={2.2} />
+        </button>
+      </form>
     </div>
   );
 }

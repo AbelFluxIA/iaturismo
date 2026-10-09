@@ -1,17 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
+import { Aviso, btnPrimario } from "@/components/app/ui";
 
-type Step = "phone" | "otp";
+type Step = "inicio" | "phone" | "otp";
 
 export default function Entrar() {
-  const [step, setStep] = useState<Step>("phone");
+  const [step, setStep] = useState<Step>("inicio");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { login } = useClientAuth();
   const navigate = useNavigate();
+
+  const digitos = phone.replace(/\D/g, "");
 
   async function handleSolicitarOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -24,10 +28,10 @@ export default function Entrar() {
         body: JSON.stringify({ phone }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Erro ao enviar código"); return; }
+      if (!res.ok) { setError(data.error || "Não foi possível enviar o código."); return; }
       setStep("otp");
     } catch {
-      setError("Erro de conexão. Tente novamente.");
+      setError("Sem conexão. Conecte-se para receber o código.");
     } finally {
       setLoading(false);
     }
@@ -44,91 +48,115 @@ export default function Entrar() {
         body: JSON.stringify({ phone, code: otp }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Código inválido"); return; }
+      if (!res.ok) { setError(data.error || "Código incorreto."); return; }
       login(data.token, data.phone, data.name);
       navigate("/app", { replace: true });
     } catch {
-      setError("Erro de conexão. Tente novamente.");
+      setError("Sem conexão. Tente de novo.");
     } finally {
       setLoading(false);
     }
   }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#ece8e3] px-6">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="text-5xl mb-3">☀️</div>
-          <h1 className="text-3xl font-bold text-[#1a1a1a]">Sol</h1>
-          <p className="text-[#666] mt-1 text-sm">Sua assistente de viagens em João Pessoa</p>
-        </div>
+  const voltar = (
+    <button
+      type="button"
+      aria-label="Voltar"
+      onClick={() => { setError(""); setStep(step === "otp" ? "phone" : "inicio"); }}
+      className="flex items-center justify-center w-12 h-12 -ml-3 text-sol-fundo"
+    >
+      <ChevronLeft size={24} />
+    </button>
+  );
 
-        {step === "phone" ? (
-          <form onSubmit={handleSolicitarOtp} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#333] mb-1">
-                Seu número do WhatsApp
-              </label>
+  return (
+    <div className="min-h-screen flex flex-col bg-sol-areia font-corpo text-sol-fundo">
+      <div className="flex-1 flex flex-col w-full max-w-[430px] mx-auto px-6 pt-10 pb-10">
+        {step === "inicio" && (
+          <>
+            <div className="flex justify-center items-center h-[300px] mt-2">
+              <img src="/sol-logo.png" alt="Sol" className="w-[210px] h-auto object-contain" />
+            </div>
+            <div className="flex flex-col gap-3.5">
+              <h1 className="m-0 font-display font-extrabold text-[30px] leading-[1.02] tracking-[-0.03em]">
+                Sua viagem pela Paraíba, organizada.
+              </h1>
+              <p className="m-0 text-[15px] leading-snug text-sol-texto2">
+                Roteiro, mapa, álbum e segurança no mesmo lugar. A Sol também atende você no WhatsApp.
+              </p>
+            </div>
+            <div className="mt-auto pt-8 flex flex-col gap-3">
+              <button type="button" onClick={() => setStep("phone")} className={btnPrimario}>
+                Entrar com meu WhatsApp
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === "phone" && (
+          <form onSubmit={handleSolicitarOtp} className="flex-1 flex flex-col">
+            {voltar}
+            <h1 className="m-0 font-display font-extrabold text-[21px] leading-tight">Qual é o seu WhatsApp?</h1>
+            <p className="mt-2.5 mb-0 text-[15px] leading-snug text-sol-texto2">
+              Vamos enviar um código pelo WhatsApp para confirmar que o número é seu.
+            </p>
+            <label htmlFor="phone" className="mt-6 text-[15px] font-bold">Número com DDD</label>
+            <div className="flex gap-2 mt-2.5">
+              <span className="flex-none min-w-[76px] h-14 rounded-xl border-[1.5px] border-sol-borda bg-white flex items-center justify-center text-[17px] font-bold">+55</span>
               <input
+                id="phone"
                 type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="(11) 99999-9999"
+                placeholder="83 99999 0000"
                 required
-                className="w-full px-4 py-3 rounded-xl border border-[#d0c9c0] bg-white text-[#1a1a1a] placeholder-[#aaa] focus:outline-none focus:ring-2 focus:ring-[#c8a96e] text-base"
+                className="flex-1 min-w-0 h-14 px-4 rounded-xl border-[1.5px] border-sol-borda bg-white text-[19px] font-semibold tracking-wide focus:outline-none focus:border-sol-mar"
               />
             </div>
-
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading || phone.length < 8}
-              className="w-full py-3 rounded-xl bg-[#c8a96e] text-white font-semibold text-base disabled:opacity-50 active:scale-95 transition-transform"
-            >
-              {loading ? "Enviando..." : "Receber código via WhatsApp"}
-            </button>
+            {error && <div className="mt-3"><Aviso tom="erro">{error}</Aviso></div>}
+            <div className="mt-auto pt-8">
+              <button type="submit" disabled={loading || digitos.length < 10} className={`${btnPrimario} w-full`}>
+                {loading ? "Enviando..." : "Enviar código"}
+              </button>
+            </div>
           </form>
-        ) : (
-          <form onSubmit={handleVerificarOtp} className="space-y-4">
-            <div>
-              <p className="text-sm text-[#555] mb-4 text-center">
-                Enviamos um código de 6 dígitos para o WhatsApp do número{" "}
-                <span className="font-semibold text-[#1a1a1a]">{phone}</span>
-              </p>
-              <label className="block text-sm font-medium text-[#333] mb-1">
-                Código de verificação
-              </label>
-              <input
-                type="number"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="000000"
-                maxLength={6}
-                required
-                autoFocus
-                className="w-full px-4 py-3 rounded-xl border border-[#d0c9c0] bg-white text-[#1a1a1a] placeholder-[#aaa] focus:outline-none focus:ring-2 focus:ring-[#c8a96e] text-center text-2xl tracking-widest font-mono"
-              />
-            </div>
+        )}
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading || otp.length < 6}
-              className="w-full py-3 rounded-xl bg-[#c8a96e] text-white font-semibold text-base disabled:opacity-50 active:scale-95 transition-transform"
-            >
-              {loading ? "Verificando..." : "Entrar"}
-            </button>
-
+        {step === "otp" && (
+          <form onSubmit={handleVerificarOtp} className="flex-1 flex flex-col">
+            {voltar}
+            <h1 className="m-0 font-display font-extrabold text-[21px] leading-tight">Confirme seu número</h1>
+            <p className="mt-2.5 mb-0 text-[15px] leading-snug text-sol-texto2">
+              Enviamos um código pelo WhatsApp para <strong className="text-sol-fundo whitespace-nowrap">{phone}</strong>.
+            </p>
+            <label htmlFor="otp" className="mt-6 text-[15px] font-bold">Código do WhatsApp</label>
+            <input
+              id="otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              required
+              autoFocus
+              className="mt-2.5 h-14 px-4 rounded-xl border-[1.5px] border-sol-borda bg-white text-center text-2xl font-bold tracking-[0.4em] focus:outline-none focus:border-sol-mar"
+            />
+            {error && <div className="mt-3"><Aviso tom="erro">{error}</Aviso></div>}
             <button
               type="button"
               onClick={() => { setStep("phone"); setOtp(""); setError(""); }}
-              className="w-full py-2 text-sm text-[#888] underline"
+              className="self-start mt-2 min-h-[44px] text-[15px] font-bold text-sol-mar underline"
             >
-              Usar outro número
+              Trocar número
             </button>
+            <div className="mt-auto pt-8">
+              <button type="submit" disabled={loading || otp.length < 6} className={`${btnPrimario} w-full`}>
+                {loading ? "Confirmando..." : "Confirmar"}
+              </button>
+            </div>
           </form>
         )}
       </div>

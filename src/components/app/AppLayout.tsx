@@ -1,65 +1,73 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { useClientAuth } from "@/contexts/ClientAuthContext";
-import { Settings } from "lucide-react";
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { Home, Map, MessageCircle, User, type LucideIcon } from "lucide-react";
 
-const tabs = [
-  { to: "/app", label: "Início", icon: "🏠", exact: true },
-  { to: "/app/chat", label: "Sol", icon: "💬", exact: false },
-  { to: "/app/roteiro", label: "Roteiro", icon: "📄", exact: false },
-  { to: "/app/mural", label: "Mural", icon: "📸", exact: false },
-  { to: "/app/creditos", label: "Créditos", icon: "⭐", exact: false },
+interface Aba {
+  to: string;
+  label: string;
+  Icon: LucideIcon;
+  // Outras rotas que também acendem esta aba (ex.: álbum faz parte de Roteiros)
+  match: string[];
+}
+
+const ESQUERDA: Aba[] = [
+  { to: "/app", label: "Início", Icon: Home, match: ["/app"] },
+  { to: "/app/roteiro", label: "Roteiros", Icon: Map, match: ["/app/roteiro", "/app/mural"] },
+];
+const DIREITA: Aba[] = [
+  { to: "/app/chat", label: "Guia Sol", Icon: MessageCircle, match: ["/app/chat"] },
+  { to: "/app/perfil", label: "Perfil", Icon: User, match: ["/app/perfil", "/app/creditos", "/app/config"] },
 ];
 
-export default function AppLayout() {
-  const { logout, name } = useClientAuth();
-  const navigate = useNavigate();
+function ItemAba({ aba, ativo }: { aba: Aba; ativo: boolean }) {
+  return (
+    <Link
+      to={aba.to}
+      aria-current={ativo ? "page" : undefined}
+      className={`flex flex-col items-center justify-center gap-1 min-h-[52px] text-xs no-underline ${
+        ativo ? "text-sol-fundo font-extrabold" : "text-[#4E5F66] font-semibold"
+      }`}
+    >
+      <span className={`flex px-3.5 py-[3px] rounded-full ${ativo ? "bg-sol-sun" : "bg-transparent"}`}>
+        <aba.Icon size={22} strokeWidth={1.9} />
+      </span>
+      {aba.label}
+    </Link>
+  );
+}
 
-  function handleLogout() {
-    logout();
-    navigate("/app/entrar", { replace: true });
-  }
+export default function AppLayout() {
+  const { pathname } = useLocation();
+  const caminho = pathname.replace(/\/+$/, "") || "/app";
+  const ativo = (aba: Aba) => aba.match.includes(caminho);
+  const segAtiva = caminho === "/app/seguranca";
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#ece8e3]">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e0d9d0] safe-top">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">☀️</span>
-          <span className="font-bold text-[#1a1a1a]">Sol</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {name && <span className="text-sm text-[#666]">{name.split(" ")[0]}</span>}
-          <button
-            onClick={() => navigate("/app/config")}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#999] hover:text-[#c8a96e] transition-colors"
-          >
-            <Settings size={18} />
-          </button>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto pb-20">
+    <div className="flex flex-col min-h-screen bg-sol-areia font-corpo text-sol-fundo">
+      <main className="flex-1 pb-[100px]">
         <Outlet />
       </main>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#e0d9d0] flex safe-bottom z-50">
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.exact}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs transition-colors ${
-                isActive ? "text-[#c8a96e]" : "text-[#aaa]"
-              }`
-            }
+      <nav
+        aria-label="Navegação principal"
+        className="fixed bottom-0 inset-x-0 z-50 grid grid-cols-5 items-end bg-white border-t border-sol-linha px-1 pt-1.5 pb-[max(14px,env(safe-area-inset-bottom))]"
+      >
+        {ESQUERDA.map((a) => <ItemAba key={a.to} aba={a} ativo={ativo(a)} />)}
+        <Link
+          to="/app/seguranca"
+          aria-label="SOS e segurança: telefones de emergência e alertas"
+          aria-current={segAtiva ? "page" : undefined}
+          className={`flex flex-col items-center justify-end gap-[3px] min-h-[52px] text-[11px] text-sol-fundo no-underline ${segAtiva ? "font-extrabold" : "font-semibold"}`}
+        >
+          <span
+            className={`-mt-[22px] w-[58px] h-[58px] rounded-full bg-sol-sos text-white flex items-center justify-center text-[15px] font-extrabold tracking-wide shadow-[0_4px_12px_rgba(180,35,24,0.30)] border-[3px] ${
+              segAtiva ? "border-sol-sun" : "border-white"
+            }`}
           >
-            <span className="text-lg leading-none">{tab.icon}</span>
-            <span>{tab.label}</span>
-          </NavLink>
-        ))}
+            SOS
+          </span>
+          Segurança
+        </Link>
+        {DIREITA.map((a) => <ItemAba key={a.to} aba={a} ativo={ativo(a)} />)}
       </nav>
     </div>
   );
