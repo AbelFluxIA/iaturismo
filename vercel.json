@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/app/:path*", "destination": "https://sol-agent.caxgyu.easypanel.host/api/app/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
