@@ -50,17 +50,18 @@ export default defineConfig(({ mode }) => ({
       },
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "Sol Turismo - Painel",
-        short_name: "Sol Turismo",
-        description: "Painel Sol Turismo: gerencie roteiros de viagem, clientes e murais de fotos.",
-        theme_color: "#1e293b",
-        background_color: "#ffffff",
+        // O app instalado é o do cliente (/app); o painel segue no navegador.
+        name: "Sol · sua viagem pela Paraíba",
+        short_name: "Sol",
+        description: "Roteiro, mapa, álbum e segurança da sua viagem, com a Sol.",
+        theme_color: "#0E2F45",
+        background_color: "#FBF7F0",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
-        start_url: "/",
+        start_url: "/app",
+        categories: ["travel"],
         lang: "pt-BR",
-        categories: ["travel", "business", "productivity"],
         icons: [
           {
             src: "/pwa-192x192.png",
