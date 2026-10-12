@@ -26,7 +26,7 @@ function Field({
 }
 
 export default function AppConfig() {
-  const { profile, token, refreshProfile } = useClientAuth();
+  const { profile, token, refreshProfile, isDemo } = useClientAuth();
 
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
@@ -51,6 +51,7 @@ export default function AppConfig() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError("Nome é obrigatório"); return; }
+    if (isDemo) { setError("No modo demonstração nada é salvo. Entre com seu WhatsApp para salvar."); return; }
     setError("");
     setSaving(true);
     try {

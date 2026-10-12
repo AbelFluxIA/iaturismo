@@ -1,4 +1,5 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { Home, Map, MessageCircle, User, type LucideIcon } from "lucide-react";
 
 interface Aba {
@@ -40,9 +41,23 @@ export default function AppLayout() {
   const caminho = pathname.replace(/\/+$/, "") || "/app";
   const ativo = (aba: Aba) => aba.match.includes(caminho);
   const segAtiva = caminho === "/app/seguranca";
+  const { isDemo, logout } = useClientAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col min-h-screen bg-sol-areia font-corpo text-sol-fundo">
+      {isDemo && (
+        <div role="status" className="sticky top-0 z-40 flex items-center gap-2 px-4 py-2 bg-sol-creme text-sol-creme-texto text-[13px]">
+          <span className="flex-1"><strong>Modo demonstração</strong> · viagem de exemplo, nada é salvo</span>
+          <button
+            type="button"
+            onClick={() => { logout(); navigate("/app/entrar", { replace: true }); }}
+            className="flex-none min-h-[36px] px-3 rounded-lg bg-white font-bold text-sol-fundo"
+          >
+            Entrar de verdade
+          </button>
+        </div>
+      )}
       <main className="flex-1 pb-[100px]">
         <Outlet />
       </main>

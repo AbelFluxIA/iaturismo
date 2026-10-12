@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, btnPrimario } from "@/components/app/ui";
+import { DEMO_TOKEN } from "@/lib/demo";
 
 type Step = "inicio" | "phone" | "otp";
 
@@ -16,6 +17,22 @@ export default function Entrar() {
   const navigate = useNavigate();
 
   const digitos = phone.replace(/\D/g, "");
+
+  // Temporário: entra com uma viagem de exemplo, sem código
+  function pularDemonstracao() {
+    login(DEMO_TOKEN, "", "Visitante");
+    navigate("/app", { replace: true });
+  }
+
+  const pular = (
+    <button
+      type="button"
+      onClick={pularDemonstracao}
+      className="min-h-[48px] text-[15px] font-bold text-sol-mar"
+    >
+      Pular por enquanto · ver demonstração
+    </button>
+  );
 
   async function handleSolicitarOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -89,6 +106,7 @@ export default function Entrar() {
               <button type="button" onClick={() => setStep("phone")} className={btnPrimario}>
                 Entrar com meu WhatsApp
               </button>
+              {pular}
             </div>
           </>
         )}
@@ -156,6 +174,7 @@ export default function Entrar() {
               <button type="submit" disabled={loading || otp.length < 6} className={`${btnPrimario} w-full`}>
                 {loading ? "Confirmando..." : "Confirmar"}
               </button>
+              <div className="flex justify-center mt-2">{pular}</div>
             </div>
           </form>
         )}

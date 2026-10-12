@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { DEMO_TOKEN, demoProfile } from "@/lib/demo";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -28,6 +29,7 @@ interface ClientAuthState {
   name: string | null;
   profile: ClientProfile | null;
   profileLoading: boolean;
+  isDemo: boolean;
   login: (token: string, phone: string, name: string) => void;
   logout: () => void;
   refreshProfile: () => Promise<void>;
@@ -61,8 +63,11 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  const isDemo = token === DEMO_TOKEN;
+
   const refreshProfile = async () => {
     if (!token) return;
+    if (token === DEMO_TOKEN) { setProfile(demoProfile()); return; }
     setProfileLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/app/perfil`, {
@@ -88,7 +93,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <ClientAuthContext.Provider value={{ token, phone, name, profile, profileLoading, login, logout, refreshProfile }}>
+    <ClientAuthContext.Provider value={{ token, phone, name, profile, profileLoading, isDemo, login, logout, refreshProfile }}>
       {children}
     </ClientAuthContext.Provider>
   );

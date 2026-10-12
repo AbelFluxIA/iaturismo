@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ArrowRight } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Carregando } from "@/components/app/ui";
+import { DEMO_RESPOSTA_CHAT } from "@/lib/demo";
 
 interface Message {
   role: "user" | "assistant";
@@ -56,7 +57,7 @@ const BOAS_VINDAS: Message = {
 };
 
 export default function AppChat() {
-  const { token, profile } = useClientAuth();
+  const { token, profile, isDemo } = useClientAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -69,6 +70,7 @@ export default function AppChat() {
 
   useEffect(() => {
     if (!token) { setLoadingHistory(false); return; }
+    if (isDemo) { setMessages([BOAS_VINDAS]); setLoadingHistory(false); return; }
     fetch(`${API_URL}/api/app/chat/historico`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -81,7 +83,7 @@ export default function AppChat() {
       })
       .catch(() => setMessages([BOAS_VINDAS]))
       .finally(() => setLoadingHistory(false));
-  }, [token]);
+  }, [token, isDemo]);
 
   useEffect(() => {
     scrollToBottom();
@@ -94,6 +96,14 @@ export default function AppChat() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setSending(true);
+
+    if (isDemo) {
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: "assistant", content: DEMO_RESPOSTA_CHAT }]);
+        setSending(false);
+      }, 700);
+      return;
+    }
 
     try {
       const res = await fetch(`${API_URL}/api/app/chat`, {

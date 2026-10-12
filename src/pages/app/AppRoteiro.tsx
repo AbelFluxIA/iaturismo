@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { Check, ChevronLeft, Crosshair, Download, Map as MapIcon, MapPin, MessageCircle } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Carregando, Vazio, btnPrimario, btnSecundario, formatarData } from "@/components/app/ui";
+import { DEMO_ROTEIRO } from "@/lib/demo";
 
 // Fix leaflet default icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -227,7 +228,7 @@ function useFeitas(chave: string | null) {
 type Aba = "dia" | "mapa";
 
 export default function AppRoteiro() {
-  const { profile, profileLoading, token } = useClientAuth();
+  const { profile, profileLoading, token, isDemo } = useClientAuth();
   const [params, setParams] = useSearchParams();
   const aba: Aba = params.get("aba") === "mapa" ? "mapa" : "dia";
   const [rawText, setRawText] = useState<string | null>(null);
@@ -246,6 +247,7 @@ export default function AppRoteiro() {
   // Fetch itinerary text
   useEffect(() => {
     if (!token) { setLoading(false); return; }
+    if (isDemo) { setRawText(DEMO_ROTEIRO); setItineraryId("demo"); setLoading(false); return; }
     fetch(`${API_URL}/api/app/roteiro`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => {
@@ -254,7 +256,7 @@ export default function AppRoteiro() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, isDemo]);
 
   // Localização só enquanto o mapa estiver aberto
   useEffect(() => {
