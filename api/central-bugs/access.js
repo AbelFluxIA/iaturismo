@@ -1,17 +1,22 @@
 // Autorização do plugin Central de Bugs no app do cliente (/app).
-// Contrato: INTEGRACAO-PARA-IA.md do repositório Ioseph-Hughes/Central-de-Bugs.
+// Contrato: INTEGRACAO-PARA-IA.md (v0.10) de Ioseph-Hughes/Central-de-Bugs.
+// Cadastro na Central: empresa Instituto Agilizar, sistema Sol, disponível para
+// todas as contas autenticadas. Quem decide a permissão é a Central.
 //
-// O app da Sol identifica a pessoa pelo WhatsApp (código enviado pelo bot), não
-// por e-mail. Por isso o servidor confirma a sessão no bot, obtém o telefone e
-// só libera o plugin para telefones da equipe listados em CENTRAL_BUGS_EQUIPE,
-// cada um ligado a um e-mail cadastrado como conta autorizada na Central.
-// Turistas e o modo demonstração não veem o botão.
+// A conta do app da Sol é o número de WhatsApp confirmado pelo código que o bot
+// envia; não existe e-mail. O servidor confere a sessão no próprio bot e envia
+// à Central uma identidade derivada desse número: <telefone>@whatsapp.invalid.
+// ".invalid" é reservado (RFC 2606): nunca é um e-mail real. Nada vem do navegador.
+// Visitantes sem sessão e o modo demonstração não recebem autorização.
 //
-// Variáveis (só no servidor, nunca VITE_):
-//   CENTRAL_BUGS_ORIGIN     ex.: https://central-de-bugs.vercel.app
+// Variável obrigatória (só no servidor da Vercel, nunca VITE_):
 //   CENTRAL_BUGS_ACCESS_ID  cb_... gerado no cadastro do sistema na Central
-//   SAAS_ORIGIN             ex.: https://iaturismo.vercel.app
-//   CENTRAL_BUGS_EQUIPE     "5583999990000=pessoa@empresa.com, 5583...=outra@..."
+// Opcionais (têm valor padrão):
+//   CENTRAL_BUGS_ORIGIN     https://central-de-bugs.vercel.app
+//   SAAS_ORIGIN             https://iaturismo.vercel.app
+
+const CENTRAL_PADRAO = "https://central-de-bugs.vercel.app";
+const SAAS_PADRAO = "https://iaturismo.vercel.app";
 
 function responder(res, status, corpo) {
   res.setHeader("Cache-Control", "no-store");
@@ -19,25 +24,19 @@ function responder(res, status, corpo) {
   res.status(status).json(corpo);
 }
 
-function equipe(texto) {
-  const mapa = new Map();
-  for (const item of (texto || "").split(/[,;\n]/)) {
-    const [telefone, email] = item.split("=").map((s) => (s || "").trim());
-    const digitos = (telefone || "").replace(/\D/g, "");
-    if (digitos && email && email.includes("@")) mapa.set(digitos, email.toLowerCase());
-  }
-  return mapa;
+export function identidade(phone) {
+  const digitos = String(phone || "").replace(/\D/g, "");
+  return digitos.length >= 10 ? `${digitos}@whatsapp.invalid` : null;
 }
 
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return responder(res, 405, { error: "Use POST." }); }
 
-  const central = (process.env.CENTRAL_BUGS_ORIGIN || "").replace(/\/+$/, "");
   const accessId = process.env.CENTRAL_BUGS_ACCESS_ID;
-  const origin = (process.env.SAAS_ORIGIN || "").replace(/\/+$/, "");
-  const contas = equipe(process.env.CENTRAL_BUGS_EQUIPE);
-  // Sem configuração: nenhum botão, sem erro para quem usa o app.
-  if (!central || !accessId || !origin || contas.size === 0) return responder(res, 204);
+  const central = (process.env.CENTRAL_BUGS_ORIGIN || CENTRAL_PADRAO).replace(/\/+$/, "");
+  const origin = (process.env.SAAS_ORIGIN || SAAS_PADRAO).replace(/\/+$/, "");
+  // Sem o ID configurado: nenhum botão, sem erro para quem usa o app.
+  if (!accessId) return responder(res, 204);
 
   try {
     const origemPedido = req.headers.origin;
@@ -53,9 +52,8 @@ export default async function handler(req, res) {
     });
     if (perfil.status === 401) return responder(res, 401, { error: "Sessão inválida." });
     if (!perfil.ok) return responder(res, 503, { error: "Não foi possível conferir a sessão." });
-    const { phone } = await perfil.json();
-    const email = contas.get(String(phone || "").replace(/\D/g, ""));
-    if (!email) return responder(res, 403, { error: "Conta sem acesso ao plugin." });
+    const email = identidade((await perfil.json()).phone);
+    if (!email) return responder(res, 401, { error: "Sessão sem conta confirmada." });
 
     const resposta = await fetch(`${central}/api/reports?widget=access`, {
       method: "POST",

@@ -3,8 +3,8 @@ import { useClientAuth } from "@/contexts/ClientAuthContext";
 
 // Plugin Central de Bugs (relatar bug, melhoria ou ajuste com prints).
 // Carregado da própria Central para receber atualizações automáticas.
-// Quem decide se o botão aparece é o servidor (/api/central-bugs/access):
-// só telefones da equipe; turistas e modo demonstração não veem nada.
+// Conecta para qualquer conta logada; quem decide a permissão é a Central
+// (via /api/central-bugs/access). Visitantes e modo demonstração não veem nada.
 const CENTRAL_ORIGIN = "https://central-de-bugs.vercel.app";
 
 interface Instancia { destroy: () => void }
