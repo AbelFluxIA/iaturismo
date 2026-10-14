@@ -1,7 +1,7 @@
 // Autorização do plugin Central de Bugs no app do cliente (/app).
 // Contrato: INTEGRACAO-PARA-IA.md (v0.10) de Ioseph-Hughes/Central-de-Bugs.
-// Cadastro na Central: empresa Instituto Agilizar, sistema Sol, disponível para
-// todas as contas autenticadas. Quem decide a permissão é a Central.
+// Cadastro na Central: empresa Sol, sistema "SOl 2" (domínio painel.tripsol.com.br),
+// disponível para todas as contas autenticadas. Quem decide a permissão é a Central.
 //
 // A conta do app da Sol é o número de WhatsApp confirmado pelo código que o bot
 // envia; não existe e-mail. O servidor confere a sessão no próprio bot e envia
@@ -13,7 +13,7 @@
 //   CENTRAL_BUGS_ACCESS_ID  cb_... gerado no cadastro do sistema na Central
 // Opcionais (têm valor padrão):
 //   CENTRAL_BUGS_ORIGIN     https://central-de-bugs.vercel.app
-//   SAAS_ORIGIN             https://iaturismo.vercel.app
+//   SAAS_ORIGIN             https://iaturismo.vercel.app (no site oficial: https://painel.tripsol.com.br)
 
 const CENTRAL_PADRAO = "https://central-de-bugs.vercel.app";
 const SAAS_PADRAO = "https://iaturismo.vercel.app";
