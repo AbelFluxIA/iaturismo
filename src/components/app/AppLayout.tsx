@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
+import CentralBugs from "@/components/app/CentralBugs";
 import { Home, Map, MessageCircle, User, type LucideIcon } from "lucide-react";
 
 interface Aba {
@@ -61,6 +62,7 @@ export default function AppLayout() {
       <main className="flex-1 pb-[100px]">
         <Outlet />
       </main>
+      <CentralBugs />
 
       <nav
         aria-label="Navegação principal"
