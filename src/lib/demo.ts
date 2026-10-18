@@ -27,6 +27,14 @@ export function demoProfile(): ClientProfile {
   };
 }
 
+// Viagens de exemplo para a lista "Minhas viagens" (uma atual e uma que já passou)
+export function demoViagens() {
+  return [
+    { id: "demo", destination: "João Pessoa - PB", arrivalDate: dataISO(0), departureDate: dataISO(2), days: 3, pdfUrl: null },
+    { id: "demo-passada", destination: "Cabedelo - PB", arrivalDate: dataISO(-40), departureDate: dataISO(-38), days: 3, pdfUrl: null },
+  ];
+}
+
 const mapa = (lugar: string) => `📍 https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lugar)}`;
 
 // Mesmo formato de texto que o bot gera, para passar pelo mesmo leitor do roteiro.

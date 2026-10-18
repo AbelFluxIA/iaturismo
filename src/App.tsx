@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider, createBrowserRouter, ScrollRestoration, Outlet, Navigate } from "react-router-dom";
+import { RouterProvider, createBrowserRouter, ScrollRestoration, Outlet, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -49,6 +49,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Link do roteiro que a Sol manda (/r/código): quem já entrou no app abre o
+// roteiro dentro do app; quem não entrou vê a página pública de sempre.
+const RoteiroCompartilhado = () => {
+  const { shareCode } = useParams();
+  let logado = false;
+  try {
+    const t = localStorage.getItem("sol_client_token");
+    logado = !!t && t !== "demo";
+  } catch { /* sem armazenamento: página pública */ }
+  if (logado && shareCode) return <Navigate to={`/app/roteiro?codigo=${encodeURIComponent(shareCode)}`} replace />;
+  return <ItineraryPage />;
+};
+
 const Layout = () => (
   <>
     <ScrollRestoration />
@@ -78,7 +91,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/r/:shareCode",
-        element: <ItineraryPage />,
+        element: <RoteiroCompartilhado />,
       },
       {
         path: "/stats/:referralCode",

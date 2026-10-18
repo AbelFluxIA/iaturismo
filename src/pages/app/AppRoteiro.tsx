@@ -1,9 +1,10 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Check, ChevronLeft, Download, Map as MapIcon, MapPin, MessageCircle } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Download, Map as MapIcon, MapPin, MessageCircle } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
-import { Carregando, Vazio, btnPrimario, btnSecundario, formatarData } from "@/components/app/ui";
-import { DEMO_ROTEIRO } from "@/lib/demo";
+import { Carregando, Vazio, Selo, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
+import { DEMO_ROTEIRO, demoViagens } from "@/lib/demo";
+import { supabase } from "@/integrations/supabase/client";
 import type { PontoMapa } from "@/components/app/MapaRoteiro";
 
 const MapaRoteiro = lazy(() => import("@/components/app/MapaRoteiro"));
@@ -175,16 +176,144 @@ function useFeitas(chave: string | null) {
   return { feitas, alternar };
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Minhas viagens ───────────────────────────────────────────────────────────
+
+export interface Viagem {
+  id: string;
+  destination: string | null;
+  arrivalDate: string | null;
+  departureDate: string | null;
+  days: number;
+  pdfUrl: string | null;
+}
+
+function hojeISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Datas no formato AAAA-MM-DD (como o bot grava): dá para comparar como texto.
+function situacao(v: Viagem): "passada" | "agora" | "proxima" {
+  const hoje = hojeISO();
+  if (v.departureDate && v.departureDate < hoje) return "passada";
+  if (v.arrivalDate && v.arrivalDate > hoje) return "proxima";
+  return "agora";
+}
+
+function CartaoViagem({ v }: { v: Viagem }) {
+  const sit = situacao(v);
+  const periodo = [formatarData(v.arrivalDate), formatarData(v.departureDate)].filter(Boolean).join(" a ");
+  return (
+    <Link
+      to={`/app/roteiro?id=${encodeURIComponent(v.id)}`}
+      className={`${cartao} flex items-center gap-3 p-4 no-underline text-sol-fundo ${sit === "passada" ? "opacity-75" : ""}`}
+    >
+      <span className={`flex-none w-11 h-11 rounded-xl flex items-center justify-center ${sit === "passada" ? "bg-[#ECEFF1] text-sol-texto2" : "bg-sol-sun text-sol-fundo"}`}>
+        <MapIcon size={22} />
+      </span>
+      <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <span className="text-base font-extrabold truncate">{v.destination || "Roteiro"}</span>
+        <span className="text-[13px] text-sol-texto2">
+          {periodo || "Datas a confirmar"} · {v.days} {v.days === 1 ? "dia" : "dias"}
+        </span>
+      </span>
+      {sit === "agora" && <Selo tom="ok">Agora</Selo>}
+      {sit === "proxima" && <Selo tom="info">Em breve</Selo>}
+      {sit === "passada" && <span className="flex-none text-xs font-extrabold px-2 py-1 rounded-full bg-[#ECEFF1] text-sol-texto2">Já passou</span>}
+      <ChevronRight size={20} className="flex-none text-sol-texto2" />
+    </Link>
+  );
+}
+
+function ListaViagens() {
+  const { profile, profileLoading, token, isDemo } = useClientAuth();
+  const [viagens, setViagens] = useState<Viagem[] | null>(null);
+
+  useEffect(() => {
+    if (!token) { setViagens([]); return; }
+    if (isDemo) { setViagens(demoViagens()); return; }
+    fetch(`${API_URL}/api/app/roteiros`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setViagens(Array.isArray(d?.roteiros) ? d.roteiros : null))
+      .catch(() => setViagens(null));
+  }, [token, isDemo]);
+
+  // Enquanto o bot antigo não tem a lista, mostra só o roteiro mais recente do perfil
+  const lista: Viagem[] | null = viagens ?? (profile
+    ? profile.itinerary
+      ? [{ id: profile.itinerary.id, destination: profile.destination, arrivalDate: profile.arrivalDate, departureDate: profile.departureDate, days: profile.itinerary.days, pdfUrl: profile.itinerary.pdfUrl }]
+      : []
+    : null);
+
+  if (lista === null || (viagens === null && profileLoading)) return <Carregando />;
+
+  const ativas = lista.filter((v) => situacao(v) !== "passada");
+  const passadas = lista.filter((v) => situacao(v) === "passada");
+
+  return (
+    <div className="flex flex-col gap-3 px-5 pt-8">
+      <h1 className="m-0 font-display font-extrabold text-2xl tracking-tight">Minhas viagens</h1>
+      {lista.length === 0 ? (
+        <Vazio
+          icone={<MapIcon size={32} />}
+          titulo="Nenhum roteiro ainda"
+          texto="Quando a Sol terminar seu roteiro personalizado, ele aparece aqui com o dia a dia e o mapa."
+        >
+          <Link to="/app/chat" className={`${btnPrimario} w-full mt-4`}>Pedir roteiro à Sol</Link>
+        </Vazio>
+      ) : (
+        <>
+          {ativas.length > 0 && (
+            <section aria-label="Próximas viagens" className="flex flex-col gap-2">
+              <h2 className="m-0 text-sm font-extrabold text-sol-texto2 uppercase tracking-wide">Próximas e em andamento</h2>
+              {ativas.map((v) => <CartaoViagem key={v.id} v={v} />)}
+            </section>
+          )}
+          {passadas.length > 0 && (
+            <section aria-label="Viagens que já passaram" className="flex flex-col gap-2 mt-2">
+              <h2 className="m-0 text-sm font-extrabold text-sol-texto2 uppercase tracking-wide">Já feitas</h2>
+              {passadas.map((v) => <CartaoViagem key={v.id} v={v} />)}
+            </section>
+          )}
+          <Link to="/app/chat" className={`${btnSecundario} no-underline mt-2`}>
+            <MessageCircle size={18} /> Planejar outra viagem com a Sol
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}
+
+// /app/roteiro            → lista de viagens
+// /app/roteiro?id=X       → roteiro da viagem X (pelo bot)
+// /app/roteiro?codigo=Y   → roteiro do link "/r/Y" que a Sol manda na conversa
+export default function AppRoteiro() {
+  const [params] = useSearchParams();
+  if (!params.get("id") && !params.get("codigo")) return <ListaViagens />;
+  return <RoteiroDetalhe />;
+}
+
+// ─── Roteiro de uma viagem ────────────────────────────────────────────────────
 
 type Aba = "dia" | "mapa";
 
-export default function AppRoteiro() {
+interface DadosRoteiro {
+  texto: string;
+  destino: string | null;
+  chegada: string | null;
+  saida: string | null;
+  pdfUrl: string | null;
+}
+
+function RoteiroDetalhe() {
   const { profile, profileLoading, token, isDemo } = useClientAuth();
   const [params, setParams] = useSearchParams();
   const aba: Aba = params.get("aba") === "mapa" ? "mapa" : "dia";
-  const [rawText, setRawText] = useState<string | null>(null);
-  const [itineraryId, setItineraryId] = useState<string | null>(null);
+  const idParam = params.get("id");
+  const codigo = params.get("codigo");
+  const [dados, setDados] = useState<DadosRoteiro | null>(null);
+  const rawText = dados?.texto ?? null;
+  const itineraryId = idParam || codigo;
   const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState(0);
   const [aberta, setAberta] = useState<number | null>(null);
@@ -194,19 +323,47 @@ export default function AppRoteiro() {
   const [centro, setCentro] = useState<Coord | null>(null);
   const { feitas, alternar } = useFeitas(itineraryId ? `sol_feitas_${itineraryId}` : null);
 
-  // Fetch itinerary text
+  // Texto do roteiro: pelo código do link da conversa ou pelo id da viagem
   useEffect(() => {
+    setLoading(true);
+    setDados(null);
+    setActiveDay(0);
     if (!token) { setLoading(false); return; }
-    if (isDemo) { setRawText(DEMO_ROTEIRO); setItineraryId("demo"); setLoading(false); return; }
-    fetch(`${API_URL}/api/app/roteiro`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => {
-        if (d?.rawItinerary) setRawText(d.rawItinerary);
-        if (d?.id) setItineraryId(String(d.id));
-      })
+    if (isDemo) {
+      const v = demoViagens().find((x) => x.id === idParam) ?? demoViagens()[0];
+      setDados({ texto: DEMO_ROTEIRO, destino: v.destination, chegada: v.arrivalDate, saida: v.departureDate, pdfUrl: null });
+      setLoading(false);
+      return;
+    }
+    let cancelado = false;
+    const carregar = codigo
+      ? (supabase as any)
+          .from("generated_itineraries")
+          .select("destination,pdf_url,text_content")
+          .eq("share_code", codigo)
+          .maybeSingle()
+          .then(({ data }: { data: { destination: string | null; pdf_url: string | null; text_content: string | null } | null }) =>
+            data?.text_content
+              ? { texto: data.text_content, destino: data.destination, chegada: null, saida: null, pdfUrl: data.pdf_url }
+              : null)
+      : fetch(`${API_URL}/api/app/roteiro?id=${encodeURIComponent(idParam ?? "")}`, { headers: { Authorization: `Bearer ${token}` } })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) =>
+            d?.rawItinerary
+              ? { texto: d.rawItinerary, destino: d.destination ?? null, chegada: d.arrivalDate ?? null, saida: d.departureDate ?? null, pdfUrl: d.pdfUrl ?? null }
+              : null);
+    Promise.resolve(carregar)
+      .then((d: DadosRoteiro | null) => { if (!cancelado) setDados(d); })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [token, isDemo]);
+      .finally(() => { if (!cancelado) setLoading(false); });
+    return () => { cancelado = true; };
+  }, [token, isDemo, idParam, codigo]);
+
+  // Destino e datas: os da viagem aberta; se o bot não mandar, os do perfil (viagem atual)
+  const destino = dados?.destino || profile?.destination || null;
+  const chegada = dados?.chegada ?? (dados?.destino ? null : profile?.arrivalDate) ?? null;
+  const saida = dados?.saida ?? (dados?.destino ? null : profile?.departureDate) ?? null;
+  const pdfUrl = dados?.pdfUrl || (!codigo && profile?.itinerary?.id === idParam ? profile?.itinerary?.pdfUrl : null) || null;
 
   const days = rawText ? parseItinerary(rawText) : [];
 
@@ -221,7 +378,7 @@ export default function AppRoteiro() {
     setRouteCoords([]);
 
     // Centro do mapa = cidade de destino (o mapa aparece mesmo sem nenhum ponto achado)
-    if (profile?.destination) geocode(profile.destination).then((c) => { if (!cancelado && c) setCentro(c); });
+    if (destino) geocode(destino).then((c) => { if (!cancelado && c) setCentro(c); });
 
     (async () => {
       const pts: GeoPoint[] = [];
@@ -252,13 +409,15 @@ export default function AppRoteiro() {
   if (days.length === 0) {
     return (
       <div className="px-5 pt-8">
-        <h1 className="m-0 font-display font-extrabold text-2xl tracking-tight">Meus roteiros</h1>
+        <Link to="/app/roteiro" className="inline-flex items-center gap-1 min-h-[44px] -ml-1 text-sm font-bold text-sol-mar no-underline">
+          <ChevronLeft size={20} /> Minhas viagens
+        </Link>
         <Vazio
           icone={<MapIcon size={32} />}
-          titulo="Nenhum roteiro ainda"
-          texto="Quando a Sol terminar seu roteiro personalizado, ele aparece aqui com o dia a dia e o mapa."
+          titulo="Roteiro não encontrado"
+          texto="Não consegui abrir este roteiro agora. Volte para a lista de viagens ou peça à Sol para reenviar."
         >
-          <Link to="/app/chat" className={`${btnPrimario} w-full mt-4`}>Pedir roteiro à Sol</Link>
+          <Link to="/app/chat" className={`${btnPrimario} w-full mt-4`}>Falar com a Sol</Link>
         </Vazio>
       </div>
     );
@@ -268,7 +427,7 @@ export default function AppRoteiro() {
   const chaveAtiv = (ai: number) => `d${activeDay}-${ai}`;
   const feitasHoje = dia.activities.filter((_, ai) => feitas[chaveAtiv(ai)]).length;
   const proxima = dia.activities.findIndex((_, ai) => !feitas[chaveAtiv(ai)]);
-  const periodo = [formatarData(profile?.arrivalDate), formatarData(profile?.departureDate)].filter(Boolean).join(" a ");
+  const periodo = [formatarData(chegada), formatarData(saida)].filter(Boolean).join(" a ");
 
   const estadoPonto = (ai: number): PontoMapa["estado"] => (feitas[chaveAtiv(ai)] ? "feita" : ai === proxima ? "proxima" : "depois");
 
@@ -277,11 +436,11 @@ export default function AppRoteiro() {
       {/* Cabeçalho escuro do roteiro */}
       <header className="flex flex-col gap-0.5 px-4 pt-8 pb-2.5 bg-sol-fundo text-white">
         <div className="flex items-center gap-1">
-          <Link to="/app" aria-label="Voltar" className="flex-none flex items-center justify-center w-12 h-12 -ml-2 text-white">
+          <Link to="/app/roteiro" aria-label="Voltar para minhas viagens" className="flex-none flex items-center justify-center w-12 h-12 -ml-2 text-white">
             <ChevronLeft size={24} />
           </Link>
           <h1 className="flex-1 m-0 font-display font-extrabold text-2xl tracking-tight truncate">
-            {profile?.destination || "Seu roteiro"}
+            {destino || "Seu roteiro"}
           </h1>
         </div>
         <span className="text-[13px] text-sol-azul-suave pl-1">
@@ -437,8 +596,8 @@ export default function AppRoteiro() {
           <Link to="/app/chat" className={`${btnSecundario} no-underline`}>
             <MessageCircle size={18} /> Falar com a Sol
           </Link>
-          {profile?.itinerary?.pdfUrl ? (
-            <a href={profile.itinerary.pdfUrl} target="_blank" rel="noopener noreferrer" className={`${btnSecundario} no-underline`}>
+          {pdfUrl ? (
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className={`${btnSecundario} no-underline`}>
               <Download size={18} /> Baixar PDF
             </a>
           ) : (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ExternalLink, FileText, Map as MapIcon, MapPin } from "lucide-react";
+import { ArrowRight, CreditCard, ExternalLink, FileText, Gift, Image as ImageIcon, Map as MapIcon, MapPin, Share2 } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Carregando } from "@/components/app/ui";
 import { DEMO_RESPOSTA_CHAT } from "@/lib/demo";
@@ -23,31 +23,60 @@ function formatar(texto: string) {
 }
 
 // ─── Links viram botões ───────────────────────────────────────────────────────
-// A Sol manda links longos (roteiro interativo, PDF, Google Maps). No app eles
-// aparecem como botões; o roteiro interativo abre dentro do próprio app.
+// A Sol manda links longos (roteiro interativo, PDF, Google Maps, pagamento).
+// No app eles aparecem como botões; roteiro, mural e conta abrem dentro do app.
 
+type Icone = "pdf" | "mapa" | "link" | "pagar" | "roteiro" | "mural" | "conta" | "indicar";
 type Botao =
-  | { tipo: "roteiro" }
-  | { tipo: "externo"; url: string; rotulo: string; icone: "pdf" | "mapa" | "link" };
+  | { tipo: "interno"; para: string; rotulo: string; icone: Icone }
+  | { tipo: "externo"; url: string; rotulo: string; icone: Icone }
+  | { tipo: "compartilhar"; url: string; rotulo: string; icone: Icone };
 
-const URL_RE = /https?:\/\/[^\s<>"')]+/g;
+const URL_RE = /https?:\/\/[^\s<>"]+/g;
+
+// Tira pontuação colada no fim do link e o ")" que fecha o texto, mas mantém
+// parênteses que fazem parte do link (ex.: "(ref:ABC123)" no link de indicação).
+function limparUrl(bruta: string) {
+  let url = bruta.replace(/[.,;:!?]+$/, "");
+  while (url.endsWith(")") && (url.match(/\(/g)?.length ?? 0) < (url.match(/\)/g)?.length ?? 0)) {
+    url = url.slice(0, -1).replace(/[.,;:!?]+$/, "");
+  }
+  return url;
+}
 
 function classificar(url: string): Botao {
-  if (/\/r\/[0-9a-f-]{8,}/i.test(url)) return { tipo: "roteiro" };
+  const roteiro = url.match(/\/r\/([0-9a-f-]{8,})/i);
+  if (roteiro) return { tipo: "interno", para: `/app/roteiro?codigo=${roteiro[1]}`, rotulo: "Abrir o roteiro no app", icone: "roteiro" };
+  if (/\/mural\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/mural", rotulo: "Ver meu mural", icone: "mural" };
+  if (/\/stats\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/creditos", rotulo: "Ver minha conta", icone: "conta" };
   if (/\.pdf(\?|$)/i.test(url) || /travel-pdfs/.test(url)) return { tipo: "externo", url, rotulo: "Baixar o PDF do roteiro", icone: "pdf" };
   if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/.test(url)) return { tipo: "externo", url, rotulo: "Abrir no mapa", icone: "mapa" };
+  if (/abacatepay\.com/.test(url)) return { tipo: "externo", url, rotulo: "Pagar e liberar", icone: "pagar" };
+  if (/wa\.me\/.*ref(%3A|:)/i.test(url)) return { tipo: "compartilhar", url, rotulo: "Compartilhar meu link de indicação", icone: "indicar" };
   let host = "link";
   try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* fica "link" */ }
   return { tipo: "externo", url, rotulo: `Abrir ${host}`, icone: "link" };
 }
 
+async function compartilhar(url: string) {
+  try {
+    if (navigator.share) { await navigator.share({ text: "Monte seu roteiro com a Sol ☀️", url }); return; }
+  } catch { /* cancelou ou não suportado: copia */ }
+  try { await navigator.clipboard.writeText(url); alert("Link copiado."); } catch { window.open(url, "_blank", "noopener"); }
+}
+
 function separar(conteudo: string) {
-  const urls = conteudo.match(URL_RE) ?? [];
-  const texto = conteudo.replace(URL_RE, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  const urls: string[] = [];
+  const semLinks = conteudo.replace(URL_RE, (bruta) => {
+    const url = limparUrl(bruta);
+    urls.push(url);
+    return bruta.slice(url.length); // devolve só a pontuação que não era do link
+  });
+  const texto = semLinks.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   return { texto, botoes: urls.map(classificar) };
 }
 
-const ICONES = { pdf: FileText, mapa: MapPin, link: ExternalLink };
+const ICONES = { pdf: FileText, mapa: MapPin, link: ExternalLink, pagar: CreditCard, roteiro: MapIcon, mural: ImageIcon, conta: Gift, indicar: Share2 };
 
 function Botoes({ botoes }: { botoes: Botao[] }) {
   const navigate = useNavigate();
@@ -56,16 +85,24 @@ function Botoes({ botoes }: { botoes: Botao[] }) {
     <div className="flex flex-col gap-2 mt-2.5">
       {botoes.map((b, i) => {
         const classe = "flex items-center justify-center gap-2 min-h-[44px] px-3 rounded-xl text-sm font-bold no-underline";
-        if (b.tipo === "roteiro") {
+        const Icone = ICONES[b.icone];
+        if (b.tipo === "interno") {
           return (
-            <button key={i} type="button" onClick={() => navigate("/app/roteiro")} className={`${classe} bg-sol-mar text-white`}>
-              <MapIcon size={18} /> Abrir o roteiro no app
+            <button key={i} type="button" onClick={() => navigate(b.para)} className={`${classe} bg-sol-mar text-white`}>
+              <Icone size={18} /> {b.rotulo}
             </button>
           );
         }
-        const Icone = ICONES[b.icone];
+        if (b.tipo === "compartilhar") {
+          return (
+            <button key={i} type="button" onClick={() => compartilhar(b.url)} className={`${classe} bg-white border-[1.5px] border-sol-borda text-sol-fundo`}>
+              <Icone size={18} /> {b.rotulo}
+            </button>
+          );
+        }
+        const destaque = b.icone === "pagar" ? "bg-sol-sun text-sol-fundo" : "bg-white border-[1.5px] border-sol-borda text-sol-fundo";
         return (
-          <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className={`${classe} bg-white border-[1.5px] border-sol-borda text-sol-fundo`}>
+          <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className={`${classe} ${destaque}`}>
             <Icone size={18} /> {b.rotulo}
           </a>
         );
@@ -106,9 +143,13 @@ function Balao({ msg }: { msg: Message }) {
 }
 
 // Respostas rápidas para perguntas de sim/não da Sol (ex.: ativar a Sol Guia).
-function respostasRapidas(ultima?: Message): string[] {
+// "guia" vai direto para o bot (mesmo efeito dos botões do WhatsApp).
+type Rapida = { texto: string; guia?: boolean };
+function respostasRapidas(ultima?: Message): Rapida[] {
   if (!ultima || ultima.role !== "assistant") return [];
-  if (/ativar a sol guia\s*\?/i.test(ultima.content)) return ["Sim, quero ativar", "Agora não"];
+  if (/ativar a sol guia\s*\?/i.test(ultima.content)) {
+    return [{ texto: "Sim, quero ativar", guia: true }, { texto: "Agora não", guia: false }];
+  }
   return [];
 }
 
@@ -173,7 +214,7 @@ export default function AppChat() {
     scrollToBottom();
   }, [messages, sending, scrollToBottom]);
 
-  async function sendMessage(textoDireto?: string) {
+  async function sendMessage(textoDireto?: string, guia?: boolean) {
     const text = (textoDireto ?? input).trim();
     if (!text || sending) return;
 
@@ -192,17 +233,21 @@ export default function AppChat() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/app/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: text }),
-      });
+      const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+      let res: Response | null = null;
+      if (guia !== undefined) {
+        res = await fetch(`${API_URL}/api/app/guia`, { method: "POST", headers, body: JSON.stringify({ aceitar: guia }) });
+        if (res.status === 404) res = null; // bot antigo: manda como mensagem comum
+      }
+      if (!res) {
+        res = await fetch(`${API_URL}/api/app/chat`, { method: "POST", headers, body: JSON.stringify({ message: text }) });
+      }
       const data = await res.json();
-      const reply = data.reply ?? "Tive um problema. Tenta de novo?";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      const reply: string = data.reply ?? "Tive um problema. Tenta de novo?";
+      // A conversa salva no banco é a fonte: inclui todas as mensagens que a Sol mandou
+      const historico = res.ok ? await carregarHistorico().catch(() => null) : null;
+      const salvo = historico?.slice(-8).some((m) => m.role === "assistant" && reply.startsWith(m.content.slice(0, 40)));
+      setMessages((prev) => (historico && salvo ? historico : [...prev, { role: "assistant", content: reply }]));
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -242,12 +287,12 @@ export default function AppChat() {
           <div className="self-start flex flex-wrap gap-2">
             {rapidas.map((r) => (
               <button
-                key={r}
+                key={r.texto}
                 type="button"
-                onClick={() => sendMessage(r)}
+                onClick={() => sendMessage(r.texto, r.guia)}
                 className="min-h-[44px] px-4 rounded-full border-[1.5px] border-sol-mar bg-white text-sol-mar text-sm font-extrabold"
               >
-                {r}
+                {r.texto}
               </button>
             ))}
           </div>
