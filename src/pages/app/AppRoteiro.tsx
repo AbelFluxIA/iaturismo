@@ -1,20 +1,12 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { Check, ChevronLeft, Crosshair, Download, Map as MapIcon, MapPin, MessageCircle } from "lucide-react";
+import { Check, ChevronLeft, Download, Map as MapIcon, MapPin, MessageCircle } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Carregando, Vazio, btnPrimario, btnSecundario, formatarData } from "@/components/app/ui";
 import { DEMO_ROTEIRO } from "@/lib/demo";
+import type { PontoMapa } from "@/components/app/MapaRoteiro";
 
-// Fix leaflet default icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+const MapaRoteiro = lazy(() => import("@/components/app/MapaRoteiro"));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,24 +103,37 @@ function rotuloCurto(label: string, i: number) {
 
 // ─── Geocoding ────────────────────────────────────────────────────────────────
 
-const geoCache = new Map<string, { lat: number; lng: number } | null>();
+// O Nominatim (OpenStreetMap) aceita no máximo 1 consulta por segundo; rajadas
+// eram bloqueadas e o mapa ficava vazio. Fila única + memória no aparelho.
+type Coord = { lat: number; lng: number };
+const GEO_CHAVE = "sol_geo_v1";
+const geoCache: Record<string, Coord | null> = (() => {
+  try { return JSON.parse(localStorage.getItem(GEO_CHAVE) || "{}"); } catch { return {}; }
+})();
+let filaGeo: Promise<unknown> = Promise.resolve();
 
-async function geocode(query: string) {
-  if (geoCache.has(query)) return geoCache.get(query)!;
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-      { headers: { "Accept-Language": "pt-BR" } }
-    );
-    const data = await res.json();
-    if (data[0]) {
-      const pt = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-      geoCache.set(query, pt);
-      return pt;
-    }
-  } catch { /* ignore */ }
-  geoCache.set(query, null);
-  return null;
+function geocode(query: string): Promise<Coord | null> {
+  if (query in geoCache) return Promise.resolve(geoCache[query]);
+  const tarefa = filaGeo.then(async () => {
+    if (query in geoCache) return geoCache[query];
+    let pt: Coord | null = null;
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=br`,
+        { headers: { "Accept-Language": "pt-BR" } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data[0]) pt = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        geoCache[query] = pt; // só memoriza respostas válidas (erro de rede tenta de novo depois)
+        try { localStorage.setItem(GEO_CHAVE, JSON.stringify(geoCache)); } catch { /* sem armazenamento */ }
+      }
+    } catch { /* tenta de novo numa próxima abertura */ }
+    await new Promise((r) => setTimeout(r, 1100));
+    return pt;
+  });
+  filaGeo = tarefa.catch(() => null);
+  return tarefa;
 }
 
 function extractQuery(mapUrl: string) {
@@ -150,59 +155,6 @@ async function fetchRoadRoute(points: { lat: number; lng: number }[]): Promise<[
     }
   } catch { /* fallback to straight line */ }
   return points.map((p) => [p.lat, p.lng]);
-}
-
-// ─── Markers ──────────────────────────────────────────────────────────────────
-
-const MAR = "#0B5F8A";
-const FUNDO = "#0E2F45";
-const SUN = "#F5B40F";
-const OK = "#1E6B4F";
-
-// Feita = verde, próxima = amarelo, depois = branco (legenda do protótipo)
-function numberedIcon(n: number, estado: "feita" | "proxima" | "depois") {
-  const bg = estado === "feita" ? OK : estado === "proxima" ? SUN : "#FFFFFF";
-  const fg = estado === "feita" ? "#FFFFFF" : FUNDO;
-  const borda = estado === "feita" ? "#FFFFFF" : FUNDO;
-  const size = estado === "proxima" ? 34 : 28;
-  return L.divIcon({
-    className: "",
-    html: `<div style="background:${bg};color:${fg};width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:3px solid ${borda};box-shadow:0 2px 8px rgba(14,47,69,0.25)">${n}</div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -18],
-  });
-}
-
-function userLocationIcon() {
-  return L.divIcon({
-    className: "",
-    html: `<div style="position:relative;width:20px;height:20px">
-      <div style="position:absolute;inset:0;background:${MAR};border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(11,95,138,0.5)"></div>
-      <div style="position:absolute;inset:-6px;background:rgba(11,95,138,0.18);border-radius:50%;animation:pulse 2s infinite"></div>
-    </div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-  });
-}
-
-// ─── Map helpers ──────────────────────────────────────────────────────────────
-
-function FitBounds({ points }: { points: GeoPoint[] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (points.length === 0) return;
-    map.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lng])), { padding: [48, 48] });
-  }, [points, map]); // eslint-disable-line react-hooks/exhaustive-deps
-  return null;
-}
-
-function FlyTo({ latlng }: { latlng: [number, number] | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (latlng) map.flyTo(latlng, 15, { duration: 1.2 });
-  }, [latlng, map]);
-  return null;
 }
 
 // ─── Marcações "feita" (guardadas só neste aparelho) ─────────────────────────
@@ -239,9 +191,7 @@ export default function AppRoteiro() {
   const [geoPoints, setGeoPoints] = useState<GeoPoint[]>([]);
   const [geocoding, setGeocoding] = useState(false);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
-  const [userPos, setUserPos] = useState<[number, number] | null>(null);
-  const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
-  const watchRef = useRef<number | null>(null);
+  const [centro, setCentro] = useState<Coord | null>(null);
   const { feitas, alternar } = useFeitas(itineraryId ? `sol_feitas_${itineraryId}` : null);
 
   // Fetch itinerary text
@@ -258,19 +208,6 @@ export default function AppRoteiro() {
       .finally(() => setLoading(false));
   }, [token, isDemo]);
 
-  // Localização só enquanto o mapa estiver aberto
-  useEffect(() => {
-    if (aba !== "mapa" || !navigator.geolocation) return;
-    watchRef.current = navigator.geolocation.watchPosition(
-      (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 5000 }
-    );
-    return () => {
-      if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
-    };
-  }, [aba]);
-
   const days = rawText ? parseItinerary(rawText) : [];
 
   // Geocodifica o dia só quando o mapa é aberto
@@ -278,35 +215,31 @@ export default function AppRoteiro() {
     if (aba !== "mapa") return;
     const day = days[activeDay];
     if (!day) return;
+    let cancelado = false;
     setGeocoding(true);
     setGeoPoints([]);
     setRouteCoords([]);
 
-    const tasks = day.activities.map(async (act, ai) => {
-      if (!act.mapUrl) return null;
-      const q = extractQuery(act.mapUrl);
-      if (!q) return null;
-      const pt = await geocode(q);
-      return pt ? { ...pt, name: act.name, actIndex: ai } : null;
-    });
+    // Centro do mapa = cidade de destino (o mapa aparece mesmo sem nenhum ponto achado)
+    if (profile?.destination) geocode(profile.destination).then((c) => { if (!cancelado && c) setCentro(c); });
 
-    Promise.all(tasks).then(async (results) => {
-      const pts = results.filter(Boolean) as GeoPoint[];
-      setGeoPoints(pts);
+    (async () => {
+      const pts: GeoPoint[] = [];
+      for (const [ai, act] of day.activities.entries()) {
+        const q = act.mapUrl ? extractQuery(act.mapUrl) : null;
+        if (!q) continue;
+        const pt = await geocode(q);
+        if (cancelado) return;
+        if (pt) { pts.push({ ...pt, name: act.name, actIndex: ai }); setGeoPoints([...pts]); }
+      }
       setGeocoding(false);
       if (pts.length >= 2) {
         const route = await fetchRoadRoute(pts);
-        setRouteCoords(route);
+        if (!cancelado) setRouteCoords(route);
       }
-    });
+    })();
+    return () => { cancelado = true; };
   }, [activeDay, rawText, aba]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const locateMe = useCallback(() => {
-    if (userPos) { setFlyTo(userPos); setTimeout(() => setFlyTo(null), 100); }
-    else navigator.geolocation?.getCurrentPosition(
-      (p) => { const pos: [number, number] = [p.coords.latitude, p.coords.longitude]; setUserPos(pos); setFlyTo(pos); setTimeout(() => setFlyTo(null), 100); }
-    );
-  }, [userPos]);
 
   const trocarAba = (nova: Aba) => {
     const p = new URLSearchParams(params);
@@ -337,7 +270,7 @@ export default function AppRoteiro() {
   const proxima = dia.activities.findIndex((_, ai) => !feitas[chaveAtiv(ai)]);
   const periodo = [formatarData(profile?.arrivalDate), formatarData(profile?.departureDate)].filter(Boolean).join(" a ");
 
-  const estadoPonto = (ai: number) => (feitas[chaveAtiv(ai)] ? "feita" : ai === proxima ? "proxima" : "depois");
+  const estadoPonto = (ai: number): PontoMapa["estado"] => (feitas[chaveAtiv(ai)] ? "feita" : ai === proxima ? "proxima" : "depois");
 
   return (
     <div className="flex flex-col">
@@ -452,55 +385,25 @@ export default function AppRoteiro() {
           </>
         ) : (
           <>
-            <div className="relative -mx-5 overflow-hidden bg-[#E6EEE9]" style={{ height: 380 }}>
-              <style>{`@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.8)}}`}</style>
-              {geoPoints.length > 0 ? (
-                <MapContainer
-                  style={{ height: "100%", width: "100%" }}
-                  center={[geoPoints[0].lat, geoPoints[0].lng]}
-                  zoom={13}
-                  zoomControl={false}
-                  attributionControl={false}
-                >
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                  <FitBounds points={geoPoints} />
-                  {flyTo && <FlyTo latlng={flyTo} />}
-                  {routeCoords.length > 1 && (
-                    <Polyline positions={routeCoords} color={MAR} weight={5} opacity={0.9} dashArray="2 10" />
-                  )}
-                  {geoPoints.map((pt, i) => (
-                    <Marker key={i} position={[pt.lat, pt.lng]} icon={numberedIcon(i + 1, estadoPonto(pt.actIndex))}>
-                      <Popup><span className="text-xs font-semibold">{pt.name}</span></Popup>
-                    </Marker>
-                  ))}
-                  {userPos && (
-                    <>
-                      <Circle center={userPos} radius={40} color={MAR} fillColor={MAR} fillOpacity={0.15} weight={0} />
-                      <Marker position={userPos} icon={userLocationIcon()} />
-                    </>
-                  )}
-                </MapContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  {geocoding ? (
-                    <div className="flex items-center gap-2 text-sol-texto2 text-sm">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-sol-mar" />
-                      Carregando o mapa...
-                    </div>
-                  ) : (
-                    <p className="text-sm text-sol-texto2 px-6 text-center">Não consegui localizar os pontos deste dia no mapa.</p>
-                  )}
+            <div className="relative -mx-5 overflow-hidden bg-[#E6EEE9]" style={{ height: 420 }}>
+              <Suspense fallback={<div className="h-full flex items-center justify-center text-sm text-sol-texto2">Carregando o mapa...</div>}>
+                <MapaRoteiro
+                  pontos={geoPoints.map((pt, i): PontoMapa => ({ lat: pt.lat, lng: pt.lng, nome: pt.name, numero: i + 1, estado: estadoPonto(pt.actIndex) }))}
+                  rota={routeCoords}
+                  centro={centro}
+                />
+              </Suspense>
+              {geocoding && (
+                <div className="absolute left-3 top-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 text-xs font-bold text-sol-texto2 shadow">
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-sol-mar" />
+                  Localizando os lugares do dia...
                 </div>
               )}
-              <button
-                type="button"
-                onClick={locateMe}
-                aria-label="Centralizar na minha posição"
-                className="absolute right-3.5 bottom-3.5 z-[1000] w-12 h-12 rounded-full bg-white text-sol-mar flex items-center justify-center shadow-[0_2px_8px_rgba(14,47,69,0.2)]"
-              >
-                <Crosshair size={22} />
-              </button>
-              <div className="absolute bottom-1 left-2 z-[999] text-[9px] text-gray-500 pointer-events-none">© OpenStreetMap · CARTO</div>
+              {!geocoding && geoPoints.length === 0 && (
+                <div className="absolute left-3 right-16 top-3 z-10 px-3 py-2 rounded-xl bg-white/95 text-xs text-sol-texto2 shadow">
+                  Não achei os lugares deste dia no mapa. Use o botão "Abrir rota" de cada atividade.
+                </div>
+              )}
             </div>
 
             {proxima >= 0 && (

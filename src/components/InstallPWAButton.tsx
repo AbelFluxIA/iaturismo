@@ -64,14 +64,14 @@ export function InstallPWAButton() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-2xl border border-border bg-card p-4 shadow-lg sm:bottom-6">
+    <div className="fixed top-[max(12px,env(safe-area-inset-top))] left-4 right-4 z-[60] mx-auto max-w-md rounded-2xl border border-border bg-card p-4 shadow-lg">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
           <Download className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-foreground">
-            Instalar Sol Turismo
+            Instalar o app Sol
           </h3>
           {showIosHint ? (
             <p className="mt-1 text-xs text-muted-foreground">

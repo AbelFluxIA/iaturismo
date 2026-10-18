@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import CentralBugs from "@/components/app/CentralBugs";
@@ -44,11 +45,29 @@ export default function AppLayout() {
   const segAtiva = caminho === "/app/seguranca";
   const { isDemo, logout } = useClientAuth();
   const navigate = useNavigate();
+  const telaCheia = caminho === "/app/chat"; // o chat ocupa a altura exata da tela
+
+  // Altura real da faixa de demonstração e da barra de abas (variam por aparelho)
+  const faixaRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const [medidas, setMedidas] = useState({ topo: 0, nav: 88 });
+  useEffect(() => {
+    const medir = () => setMedidas({
+      topo: faixaRef.current?.offsetHeight ?? 0,
+      nav: navRef.current?.offsetHeight ?? 88,
+    });
+    medir();
+    const obs = new ResizeObserver(medir);
+    if (faixaRef.current) obs.observe(faixaRef.current);
+    if (navRef.current) obs.observe(navRef.current);
+    return () => obs.disconnect();
+  }, [isDemo]);
+  const variaveis = { "--sol-topo": `${medidas.topo}px`, "--sol-nav": `${medidas.nav}px` } as CSSProperties;
 
   return (
-    <div className="flex flex-col min-h-screen bg-sol-areia font-corpo text-sol-fundo">
+    <div style={variaveis} className="flex flex-col min-h-screen bg-sol-areia font-corpo text-sol-fundo">
       {isDemo && (
-        <div role="status" className="sticky top-0 z-40 flex items-center gap-2 px-4 py-2 bg-sol-creme text-sol-creme-texto text-[13px]">
+        <div ref={faixaRef} role="status" className="sticky top-0 z-40 flex items-center gap-2 px-4 py-2 bg-sol-creme text-sol-creme-texto text-[13px]">
           <span className="flex-1"><strong>Modo demonstração</strong> · viagem de exemplo, nada é salvo</span>
           <button
             type="button"
@@ -59,12 +78,13 @@ export default function AppLayout() {
           </button>
         </div>
       )}
-      <main className="flex-1 pb-[100px]">
+      <main className={telaCheia ? "flex-1" : "flex-1 pb-[calc(var(--sol-nav)+16px)]"}>
         <Outlet />
       </main>
       <CentralBugs />
 
       <nav
+        ref={navRef}
         aria-label="Navegação principal"
         className="fixed bottom-0 inset-x-0 z-50 grid grid-cols-5 items-end bg-white border-t border-sol-linha px-1 pt-1.5 pb-[max(14px,env(safe-area-inset-bottom))]"
       >
