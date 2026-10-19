@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronRight, LogOut } from "lucide-react";
+import { ChevronRight, LogOut, RefreshCw } from "lucide-react";
+import { procurarAtualizacao, versaoDoApp } from "@/lib/atualizacao";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { Selo, mascararTelefone } from "@/components/app/ui";
 
@@ -17,6 +19,26 @@ export default function AppPerfil() {
     { to: "/app/mural", label: "Álbum e mural" },
     { to: "/app/seguranca", label: "Segurança e telefones úteis" },
   ];
+
+  const [procurando, setProcurando] = useState(false);
+  const [resultado, setResultado] = useState<string | null>(null);
+
+  async function procurar() {
+    setProcurando(true);
+    setResultado(null);
+    try {
+      const r = await procurarAtualizacao();
+      setResultado(
+        r === "nova" ? "Versão nova baixada: toque em Atualizar no aviso do topo."
+        : r === "atual" ? "Você já está na versão mais nova."
+        : "Este navegador não instala atualizações. Feche e abra o app de novo."
+      );
+    } catch {
+      setResultado("Sem conexão agora. Tente de novo em instantes.");
+    } finally {
+      setProcurando(false);
+    }
+  }
 
   function sair() {
     logout();
@@ -62,6 +84,20 @@ export default function AppPerfil() {
       >
         <LogOut size={18} /> Sair deste aparelho
       </button>
+
+      <div className="flex flex-col items-center gap-1.5 mt-3 mb-2">
+        <span className="text-xs text-sol-texto2">Versão do app: {versaoDoApp() || "local"}</span>
+        <button
+          type="button"
+          onClick={procurar}
+          disabled={procurando}
+          className="flex items-center gap-1.5 min-h-[44px] px-3 text-sm font-bold text-sol-mar disabled:opacity-60"
+        >
+          <RefreshCw size={16} className={procurando ? "animate-spin" : ""} />
+          {procurando ? "Procurando..." : "Procurar atualização"}
+        </button>
+        {resultado && <span role="status" className="text-xs text-center text-sol-texto2">{resultado}</span>}
+      </div>
     </div>
   );
 }

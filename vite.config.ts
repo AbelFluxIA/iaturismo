@@ -6,6 +6,13 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Versão mostrada no Perfil do app (data da publicação e commit da Vercel)
+  define: {
+    __VERSAO_APP__: JSON.stringify({
+      data: new Date().toISOString(),
+      commit: (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7),
+    }),
+  },
   server: {
     host: "::",
     port: 8080,

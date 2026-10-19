@@ -59,6 +59,32 @@ export function aoTerNovaVersao(f: Ouvinte) {
   return () => { ouvintes.delete(f); };
 }
 
+// Versão deste app: data/hora da publicação e commit (ver vite.config.ts)
+export function versaoDoApp() {
+  const data = new Date(__VERSAO_APP__.data);
+  const quando = Number.isNaN(data.getTime())
+    ? ""
+    : data.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return [quando, __VERSAO_APP__.commit].filter(Boolean).join(" · ");
+}
+
+// Botão "Procurar atualização" do Perfil
+export async function procurarAtualizacao(): Promise<"nova" | "atual" | "sem-suporte"> {
+  if (pronta) return "nova";
+  if (!registro) return "sem-suporte";
+  await registro.update();
+  const novo = registro.installing || registro.waiting;
+  if (!novo) return "atual";
+  if (novo.state !== "installed") {
+    await new Promise<void>((ok) => {
+      const fim = () => { if (novo.state === "installed" || novo.state === "activated" || novo.state === "redundant") ok(); };
+      novo.addEventListener("statechange", fim);
+      window.setTimeout(ok, 60000);
+    });
+  }
+  return pronta || registro.waiting ? (avisar(), "nova") : "atual";
+}
+
 export async function atualizarAgora() {
   pedida = true;
   // Versão nova já ativa (sem nada esperando): basta recarregar
