@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { iniciarAtualizacao } from "./lib/atualizacao";
 
 // PWA: Prevent service worker from running in iframes or preview environments
 const isInIframe = (() => {
@@ -20,14 +21,8 @@ if (isPreviewHost || isInIframe) {
     registrations.forEach((r) => r.unregister());
   });
 } else if ("serviceWorker" in navigator) {
-  // Register PWA service worker in production
-  import("virtual:pwa-register")
-    .then(({ registerSW }) => {
-      registerSW({ immediate: true });
-    })
-    .catch(() => {
-      // virtual module unavailable — safe to ignore
-    });
+  // Register PWA service worker in production (com aviso de versão nova)
+  iniciarAtualizacao();
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

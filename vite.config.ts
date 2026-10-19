@@ -14,11 +14,15 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt": a versão nova espera o toque em "Atualizar" (src/components/AvisoAtualizacao.tsx)
+      registerType: "prompt",
       devOptions: {
         enabled: false,
       },
       workbox: {
+        // Já na primeira visita o service worker assume a página (sem isso o botão
+        // "Atualizar" não tinha quem trocar na primeira abertura do app)
+        clientsClaim: true,
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [

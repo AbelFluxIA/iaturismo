@@ -11,6 +11,7 @@ import ItineraryPage from "./pages/ItineraryPage";
 import StatsPage from "./pages/StatsPage";
 import Login from "./pages/Login";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
+import { AvisoAtualizacao } from "@/components/AvisoAtualizacao";
 import { ClientAuthProvider, useClientAuth } from "@/contexts/ClientAuthContext";
 import AppLayout from "@/components/app/AppLayout";
 import Entrar from "./pages/app/Entrar";
@@ -140,6 +141,7 @@ const App = () => (
       <Sonner />
       <RouterProvider router={router} />
       <InstallPWAButton />
+      <AvisoAtualizacao />
     </TooltipProvider>
   </QueryClientProvider>
 );
