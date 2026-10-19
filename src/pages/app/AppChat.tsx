@@ -10,6 +10,7 @@ interface Message {
   content: string;
   createdAt?: string;
   fotoLocal?: string; // prévia da foto enquanto ela é enviada
+  local?: boolean; // só nesta tela (ainda não salvo na conversa): a atualização automática não apaga
 }
 
 // Escapa o HTML antes de aplicar *negrito* e quebras de linha,
@@ -262,9 +263,10 @@ export default function AppChat() {
         const msgs = await carregarHistorico();
         if (!msgs || msgs.length === 0) return;
         setMessages((atual) => {
-          const reais = atual.filter((m) => m !== BOAS_VINDAS);
+          const reais = atual.filter((m) => m !== BOAS_VINDAS && !m.local);
+          const locais = atual.filter((m) => m.local);
           const igual = reais.length === msgs.length && reais[reais.length - 1]?.content === msgs[msgs.length - 1]?.content;
-          return igual ? atual : msgs;
+          return igual ? atual : [...msgs, ...locais];
         });
       } catch { /* tenta de novo no próximo ciclo */ }
     }, INTERVALO_ATUALIZACAO);
@@ -281,18 +283,18 @@ export default function AppChat() {
     const historico = res.ok ? await carregarHistorico().catch(() => null) : null;
     const salvo = !reply || historico?.slice(-8).some((m) => m.role === "assistant" && reply.startsWith(m.content.slice(0, 40)));
     if (historico && salvo) setMessages(historico);
-    else if (reply) setMessages((prev) => [...prev.filter((m) => !m.fotoLocal), { role: "assistant", content: reply }]);
+    else if (reply) setMessages((prev) => [...prev.filter((m) => !m.fotoLocal), { role: "assistant", content: reply, local: true }]);
   }
 
   function avisoNoChat(texto: string) {
-    setMessages((prev) => [...prev.filter((m) => !m.fotoLocal), { role: "assistant", content: texto }]);
+    setMessages((prev) => [...prev.filter((m) => !m.fotoLocal), { role: "assistant", content: texto, local: true }]);
   }
 
   async function enviarFoto(arquivo: File) {
     if (sending) return;
     const foto = await reduzirFoto(arquivo);
     const previa = URL.createObjectURL(foto);
-    setMessages((prev) => [...prev.filter((m) => m !== BOAS_VINDAS), { role: "user", content: "", fotoLocal: previa }]);
+    setMessages((prev) => [...prev.filter((m) => m !== BOAS_VINDAS), { role: "user", content: "", fotoLocal: previa, local: true }]);
     setSending(true);
     enviando.current = true;
     try {
@@ -322,8 +324,11 @@ export default function AppChat() {
   }
 
   async function enviarAudio(audio: Blob) {
-    if (audio.size < 1000) return; // toque sem fala
-    setMessages((prev) => [...prev.filter((m) => m !== BOAS_VINDAS), { role: "user", content: "🎤 Áudio" }]);
+    if (audio.size < 1000) {
+      avisoNoChat("O áudio saiu vazio. Toque no microfone, fale e depois toque na seta para enviar.");
+      return;
+    }
+    setMessages((prev) => [...prev.filter((m) => m !== BOAS_VINDAS), { role: "user", content: "🎤 Áudio", local: true }]);
     setSending(true);
     enviando.current = true;
     try {
@@ -372,7 +377,17 @@ export default function AppChat() {
       gravador.current = null;
       setGravando(false);
       if (descartar.current) return;
-      enviarAudio(new Blob(pedacos.current, { type: (rec.mimeType || tipo || "audio/webm").split(";")[0] }));
+      // Alguns celulares (iPhone) entregam o último pedaço do áudio logo depois do "stop"
+      window.setTimeout(() => {
+        enviarAudio(new Blob(pedacos.current, { type: (rec.mimeType || tipo || "audio/webm").split(";")[0] }));
+      }, 400);
+    };
+    rec.onerror = () => {
+      descartar.current = true;
+      stream.getTracks().forEach((t) => t.stop());
+      gravador.current = null;
+      setGravando(false);
+      avisoNoChat("A gravação falhou neste celular. Tente de novo ou escreva a mensagem.");
     };
     rec.start(250);
     gravador.current = rec;
@@ -382,7 +397,11 @@ export default function AppChat() {
 
   function pararGravacao(enviar: boolean) {
     descartar.current = !enviar;
-    if (gravador.current?.state === "recording") gravador.current.stop();
+    const rec = gravador.current;
+    if (rec?.state === "recording") {
+      try { rec.requestData(); } catch { /* nem todo celular aceita */ }
+      rec.stop();
+    }
   }
 
   // Contador da gravação; para sozinho no limite
@@ -405,7 +424,7 @@ export default function AppChat() {
     if (!text || sending) return;
 
     if (!textoDireto) setInput("");
-    setMessages((prev) => [...prev.filter((m) => m !== BOAS_VINDAS), { role: "user", content: text }]);
+    setMessages((prev) => [...prev.filter((m) => m !== BOAS_VINDAS), { role: "user", content: text, local: true }]);
     setSending(true);
     enviando.current = true;
 
@@ -433,7 +452,7 @@ export default function AppChat() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sem conexão agora. Confira sua internet e tente de novo. Em emergência, use o SOS ou ligue 190." },
+        { role: "assistant", content: "Sem conexão agora. Confira sua internet e tente de novo. Em emergência, use o SOS ou ligue 190.", local: true },
       ]);
     } finally {
       setSending(false);
