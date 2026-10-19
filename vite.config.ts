@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => ({
         // Já na primeira visita o service worker assume a página (sem isso o botão
         // "Atualizar" não tinha quem trocar na primeira abertura do app)
         clientsClaim: true,
+        // Passagem do app antigo (sem botão "Atualizar") para o atual
+        importScripts: ["/sol-sw-versao.js"],
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
