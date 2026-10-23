@@ -4,8 +4,8 @@ import { AlertTriangle, Camera, ChevronRight, ClipboardCheck, Gift, Languages, M
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
 import { BotaoSOS, Carregando, btnPrimario, cartao, formatarData } from "@/components/app/ui";
-import { CAPITAL, DESTINOS } from "@/lib/destinos";
-import { distanciaKm, geocode, posicaoSePermitida, previsao, type Coord, type PrevisaoDia } from "@/lib/geo";
+import { geocode, previsao, type PrevisaoDia } from "@/lib/geo";
+import { CORES_TIPO, useSugestoes } from "@/lib/sugestoes";
 import {
   ITENS_CHECKLIST, chaveAtividade, diaDaViagem, horaInicio, hojeISO, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, situacao, type Viagem,
 } from "@/lib/roteiro";
@@ -111,12 +111,7 @@ function CartaoViagem({ viagem }: { viagem: Viagem }) {
 }
 
 function ParaOndeIr() {
-  const [origem, setOrigem] = useState<{ c: Coord; deVoce: boolean }>({ c: CAPITAL, deVoce: false });
-  useEffect(() => { posicaoSePermitida().then((c) => { if (c) setOrigem({ c, deVoce: true }); }); }, []);
-  const lista = DESTINOS.map((d) => ({ d, km: Math.round(distanciaKm(origem.c, d)) }))
-    .sort((a, b) => a.km - b.km)
-    .slice(0, 6);
-
+  const { base, lista, recomendado } = useSugestoes();
   return (
     <section aria-label="Para onde ir" className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between">
@@ -124,17 +119,24 @@ function ParaOndeIr() {
         <Link to="/app/destinos" className="text-sm font-bold text-sol-mar underline">Ver todos</Link>
       </div>
       <div className="flex gap-2.5 overflow-x-auto no-scrollbar -mx-5 px-5 pb-1">
-        {lista.map(({ d, km }) => (
-          <Link key={d.slug} to={`/app/destinos/${d.slug}`} className={`${cartao} flex-none w-[136px] p-1.5 flex flex-col gap-1 text-sol-fundo no-underline`}>
-            <span className="h-[62px] rounded-xl flex items-center justify-center" style={{ background: d.cor }}>
-              <MapPin size={22} className="text-sol-fundo/60" />
-            </span>
-            <span className="px-1 text-[15px] font-extrabold leading-tight">{d.nome}</span>
-            <span className="px-1 pb-1 text-xs text-sol-texto2">{km < 1 ? "aqui" : `${km} km`} · {d.tipo.toLowerCase()}</span>
-          </Link>
-        ))}
+        {lista === null
+          ? [0, 1, 2].map((i) => <span key={i} className={`${cartao} flex-none w-[150px] h-[150px] animate-pulse`} />)
+          : lista.map((d) => (
+              <Link key={d.slug} to={`/app/destinos/${d.slug}`} className={`${cartao} flex-none w-[150px] p-1.5 flex flex-col gap-1 text-sol-fundo no-underline`}>
+                <span className="h-[62px] rounded-xl flex items-center justify-center" style={{ background: CORES_TIPO[d.tipo] ?? "#EDE7DC" }}>
+                  <MapPin size={22} className="text-sol-fundo/60" />
+                </span>
+                <span className="px-1 text-[15px] font-extrabold leading-tight truncate">{d.nome}</span>
+                <span className="px-1 text-xs text-sol-texto2">{d.km === null ? d.tipo : d.km < 2 ? `aqui · ${d.tipo.toLowerCase()}` : `${d.km} km · ${d.tipo.toLowerCase()}`}</span>
+                {d.motivo && <span className="self-start mx-1 mb-1 text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-sol-claro text-sol-claro-texto">Combina com você</span>}
+              </Link>
+            ))}
       </div>
-      {!origem.deVoce && <p className="m-0 text-xs text-sol-texto2">Distâncias a partir de João Pessoa.</p>}
+      {lista !== null && (
+        <p className="m-0 text-xs text-sol-texto2">
+          {recomendado ? `Escolhidos pela Sol para você, perto de ${base}.` : "Sugestões gerais da Paraíba."}
+        </p>
+      )}
     </section>
   );
 }
