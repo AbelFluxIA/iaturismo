@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, Camera, CreditCard, ExternalLink, FileText, Gift, Image as ImageIcon, Map as MapIcon, MapPin, Mic, Share2, Trash2 } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
-import { Carregando } from "@/components/app/ui";
+import { BotaoSOS, Carregando } from "@/components/app/ui";
+import { posicaoAtual } from "@/lib/geo";
 import { DEMO_RESPOSTA_CHAT } from "@/lib/demo";
 
 interface Message {
@@ -153,7 +154,8 @@ function Imagens({ urls, local }: { urls: string[]; local?: string }) {
 }
 
 function Balao({ msg }: { msg: Message }) {
-  const { texto, imagens, botoes } = separar(msg.content);
+  const conteudo = msg.content.replace(/\[LOCALIZAÇÃO:[^\]]*\]\n?/g, "📍 Minha localização\n");
+  const { texto, imagens, botoes } = separar(conteudo);
   const temImagem = imagens.length > 0 || !!msg.fotoLocal;
   if (msg.role === "user") {
     return (
@@ -216,10 +218,23 @@ const BOAS_VINDAS: Message = {
 
 const INTERVALO_ATUALIZACAO = 5000;
 
+// Atalhos da Guia Sol: perguntas prontas (Por perto manda a localização junto)
+const ATALHOS_GUIA: { rotulo: string; texto: string; local?: boolean }[] = [
+  { rotulo: "Por perto", texto: "O que tem de bom perto de mim agora?", local: true },
+  { rotulo: "Está aberto?", texto: "Quero confirmar se este lugar está aberto agora: " },
+  { rotulo: "Reorganizar o dia", texto: "Pode reorganizar o meu dia de hoje? " },
+  { rotulo: "Já visitei", texto: "Já visitei: " },
+];
+
 export default function AppChat() {
   const { token, profile, isDemo } = useClientAuth();
+  const [busca, setBusca] = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(() => busca.get("texto") ?? "");
+  const navegar = useNavigate();
+  useEffect(() => {
+    if (busca.has("texto")) setBusca({}, { replace: true }); // texto já foi para o campo
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const logRef = useRef<HTMLDivElement>(null);
@@ -465,12 +480,22 @@ export default function AppChat() {
   const guiaAtiva = !!profile?.hasCompanion;
   const rapidas = sending ? [] : respostasRapidas(messages[messages.length - 1]);
 
+  async function usarAtalho(a: (typeof ATALHOS_GUIA)[number]) {
+    if (!a.local) {
+      setInput(a.texto);
+      document.getElementById("msg")?.focus();
+      return;
+    }
+    const c = await posicaoAtual(8000);
+    sendMessage(c ? `[LOCALIZAÇÃO: lat=${c.lat.toFixed(6)}, lng=${c.lng.toFixed(6)}]\n${a.texto}` : a.texto);
+  }
+
   return (
     <div className="flex flex-col h-[calc(100dvh-var(--sol-topo,0px)-var(--sol-nav,88px))]">
       <header className="flex-none flex items-center gap-2.5 px-5 pt-6 pb-3 bg-white border-b border-sol-linha">
         <img src="/sol-mark.png" alt="" className="w-10 h-10 object-contain" />
-        <div className="flex flex-col">
-          <h1 className="m-0 font-display font-extrabold text-[22px]">Guia Sol</h1>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <h1 className="m-0 font-display font-extrabold text-[22px]">{guiaAtiva ? "Guia Sol" : "Sol"}</h1>
           {guiaAtiva ? (
             <span className="flex items-center gap-1.5 text-[13px] font-bold text-sol-ok">
               <span className="w-2 h-2 rounded-full bg-sol-ok" />Ativa na sua viagem
@@ -479,7 +504,18 @@ export default function AppChat() {
             <span className="text-[13px] font-semibold text-sol-texto2">A mesma conversa do seu WhatsApp</span>
           )}
         </div>
+        <BotaoSOS />
       </header>
+      {guiaAtiva && (
+        <nav aria-label="Atalhos da Guia Sol" className="flex-none flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 bg-white border-b border-sol-linha">
+          {ATALHOS_GUIA.map((a) => (
+            <button key={a.rotulo} type="button" disabled={sending} onClick={() => usarAtalho(a)} className="flex-none min-h-[38px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold disabled:opacity-50">
+              {a.rotulo}
+            </button>
+          ))}
+          <button type="button" onClick={() => navegar("/app/tradutor")} className="flex-none min-h-[38px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold">Tradutor</button>
+        </nav>
+      )}
 
       <div ref={logRef} role="log" aria-label="Conversa com a Sol" className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col gap-3.5 px-4 py-4">
         <RolarAoCarregar.Provider value={scrollToBottom}>

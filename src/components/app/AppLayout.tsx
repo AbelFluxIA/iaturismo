@@ -1,24 +1,34 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { ViagensProvider, useViagens } from "@/contexts/ViagensContext";
 import CentralBugs from "@/components/app/CentralBugs";
-import { Home, Map, MessageCircle, User, type LucideIcon } from "lucide-react";
+import { Home, Languages, Map, MessageCircle, Plus, Sun, type LucideIcon } from "lucide-react";
+
+// Abas do protótipo: Início · Roteiros · [Hoje ou Criar roteiro] · Guia Sol · Tradutor.
+// SOS fica no topo de cada tela; Perfil abre pelo avatar no Início.
 
 interface Aba {
   to: string;
   label: string;
   Icon: LucideIcon;
-  // Outras rotas que também acendem esta aba (ex.: álbum faz parte de Roteiros)
-  match: string[];
+  ativa: (caminho: string, busca: URLSearchParams) => boolean;
 }
 
+const temViagemAberta = (busca: URLSearchParams) => busca.has("id") || busca.has("codigo");
+
 const ESQUERDA: Aba[] = [
-  { to: "/app", label: "Início", Icon: Home, match: ["/app"] },
-  { to: "/app/roteiro", label: "Roteiros", Icon: Map, match: ["/app/roteiro", "/app/mural"] },
+  { to: "/app", label: "Início", Icon: Home, ativa: (c) => c === "/app" || c.startsWith("/app/destinos") },
+  {
+    to: "/app/roteiro",
+    label: "Roteiros",
+    Icon: Map,
+    ativa: (c, b) => (c === "/app/roteiro" && !temViagemAberta(b)) || c === "/app/mural",
+  },
 ];
 const DIREITA: Aba[] = [
-  { to: "/app/chat", label: "Guia Sol", Icon: MessageCircle, match: ["/app/chat"] },
-  { to: "/app/perfil", label: "Perfil", Icon: User, match: ["/app/perfil", "/app/creditos", "/app/config"] },
+  { to: "/app/guia", label: "Guia Sol", Icon: MessageCircle, ativa: (c) => c === "/app/guia" || c === "/app/chat" },
+  { to: "/app/tradutor", label: "Tradutor", Icon: Languages, ativa: (c) => c === "/app/tradutor" },
 ];
 
 function ItemAba({ aba, ativo }: { aba: Aba; ativo: boolean }) {
@@ -38,11 +48,46 @@ function ItemAba({ aba, ativo }: { aba: Aba; ativo: boolean }) {
   );
 }
 
+function BarraAbas({ navRef }: { navRef: React.RefObject<HTMLElement> }) {
+  const { pathname, search } = useLocation();
+  const caminho = pathname.replace(/\/+$/, "") || "/app";
+  const busca = new URLSearchParams(search);
+  const { viagens, atual } = useViagens();
+  // Sem viagem em andamento ou próxima, o botão do meio cria um roteiro
+  const criar = viagens !== null && !atual;
+  const centroAtivo = caminho.startsWith("/app/criar") || caminho.startsWith("/app/hoje")
+    || (caminho.startsWith("/app/roteiro") && (temViagemAberta(busca) || caminho !== "/app/roteiro"));
+
+  return (
+    <nav
+      ref={navRef}
+      aria-label="Navegação principal"
+      className="fixed bottom-0 inset-x-0 z-50 grid grid-cols-5 items-end bg-white border-t border-sol-linha px-1 pt-1.5 pb-[max(14px,env(safe-area-inset-bottom))]"
+    >
+      {ESQUERDA.map((a) => <ItemAba key={a.to} aba={a} ativo={a.ativa(caminho, busca)} />)}
+      <Link
+        to={criar ? "/app/criar" : "/app/hoje"}
+        aria-label={criar ? "Criar roteiro" : "Abrir o roteiro de hoje"}
+        aria-current={centroAtivo ? "page" : undefined}
+        className={`flex flex-col items-center justify-end gap-[3px] min-h-[52px] text-xs text-sol-fundo no-underline ${centroAtivo ? "font-extrabold" : "font-semibold"}`}
+      >
+        <span
+          className={`-mt-[22px] w-[58px] h-[58px] rounded-full bg-sol-fundo text-sol-sun flex items-center justify-center shadow-[0_4px_14px_rgba(14,47,69,0.35)] border-[3px] ${
+            centroAtivo ? "border-sol-sun" : "border-white"
+          }`}
+        >
+          {criar ? <Plus size={28} strokeWidth={2.4} /> : <Sun size={28} strokeWidth={2.2} />}
+        </span>
+        {criar ? "Criar" : "Hoje"}
+      </Link>
+      {DIREITA.map((a) => <ItemAba key={a.to} aba={a} ativo={a.ativa(caminho, busca)} />)}
+    </nav>
+  );
+}
+
 export default function AppLayout() {
   const { pathname } = useLocation();
   const caminho = pathname.replace(/\/+$/, "") || "/app";
-  const ativo = (aba: Aba) => aba.match.includes(caminho);
-  const segAtiva = caminho === "/app/seguranca";
   const { isDemo, logout } = useClientAuth();
   const navigate = useNavigate();
   const telaCheia = caminho === "/app/chat"; // o chat ocupa a altura exata da tela
@@ -65,47 +110,26 @@ export default function AppLayout() {
   const variaveis = { "--sol-topo": `${medidas.topo}px`, "--sol-nav": `${medidas.nav}px` } as CSSProperties;
 
   return (
-    <div style={variaveis} className="flex flex-col min-h-screen bg-sol-areia font-corpo text-sol-fundo">
-      {isDemo && (
-        <div ref={faixaRef} role="status" className="sticky top-0 z-40 flex items-center gap-2 px-4 py-2 bg-sol-creme text-sol-creme-texto text-[13px]">
-          <span className="flex-1"><strong>Modo demonstração</strong> · viagem de exemplo, nada é salvo</span>
-          <button
-            type="button"
-            onClick={() => { logout(); navigate("/app/entrar", { replace: true }); }}
-            className="flex-none min-h-[36px] px-3 rounded-lg bg-white font-bold text-sol-fundo"
-          >
-            Entrar de verdade
-          </button>
-        </div>
-      )}
-      <main className={telaCheia ? "flex-1" : "flex-1 pb-[calc(var(--sol-nav)+16px)]"}>
-        <Outlet />
-      </main>
-      <CentralBugs />
-
-      <nav
-        ref={navRef}
-        aria-label="Navegação principal"
-        className="fixed bottom-0 inset-x-0 z-50 grid grid-cols-5 items-end bg-white border-t border-sol-linha px-1 pt-1.5 pb-[max(14px,env(safe-area-inset-bottom))]"
-      >
-        {ESQUERDA.map((a) => <ItemAba key={a.to} aba={a} ativo={ativo(a)} />)}
-        <Link
-          to="/app/seguranca"
-          aria-label="SOS e segurança: telefones de emergência e alertas"
-          aria-current={segAtiva ? "page" : undefined}
-          className={`flex flex-col items-center justify-end gap-[3px] min-h-[52px] text-[11px] text-sol-fundo no-underline ${segAtiva ? "font-extrabold" : "font-semibold"}`}
-        >
-          <span
-            className={`-mt-[22px] w-[58px] h-[58px] rounded-full bg-sol-sos text-white flex items-center justify-center text-[15px] font-extrabold tracking-wide shadow-[0_4px_12px_rgba(180,35,24,0.30)] border-[3px] ${
-              segAtiva ? "border-sol-sun" : "border-white"
-            }`}
-          >
-            SOS
-          </span>
-          Segurança
-        </Link>
-        {DIREITA.map((a) => <ItemAba key={a.to} aba={a} ativo={ativo(a)} />)}
-      </nav>
-    </div>
+    <ViagensProvider>
+      <div style={variaveis} className="flex flex-col min-h-screen bg-sol-areia font-corpo text-sol-fundo">
+        {isDemo && (
+          <div ref={faixaRef} role="status" className="sticky top-0 z-40 flex items-center gap-2 px-4 py-2 bg-sol-creme text-sol-creme-texto text-[13px]">
+            <span className="flex-1"><strong>Modo demonstração</strong> · viagem de exemplo, nada é salvo</span>
+            <button
+              type="button"
+              onClick={() => { logout(); navigate("/app/entrar", { replace: true }); }}
+              className="flex-none min-h-[36px] px-3 rounded-lg bg-white font-bold text-sol-fundo"
+            >
+              Entrar de verdade
+            </button>
+          </div>
+        )}
+        <main className={telaCheia ? "flex-1" : "flex-1 pb-[calc(var(--sol-nav)+16px)]"}>
+          <Outlet />
+        </main>
+        <CentralBugs />
+        <BarraAbas navRef={navRef} />
+      </div>
+    </ViagensProvider>
   );
 }

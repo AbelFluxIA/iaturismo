@@ -9,6 +9,12 @@ export interface ClientProfile {
   destination: string | null;
   arrivalDate: string | null;
   departureDate: string | null;
+  arrivalTime?: string | null;
+  departureTime?: string | null;
+  originCity?: string | null;
+  groupType?: string | null;
+  touristProfile?: string | null;
+  ofertas?: { gratisDuranteTeste: boolean; guiaPreco: string };
   hasPaid: boolean;
   hasCompanion: boolean;
   freeCredits: number;

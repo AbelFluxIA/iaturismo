@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Info, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
 
 // Peças visuais do app do cliente, seguindo o protótipo Sol (185 telas).
 
@@ -10,14 +10,29 @@ export const btnSecundario =
   "flex items-center justify-center gap-2 min-h-[48px] px-4 rounded-[14px] bg-white border-[1.5px] border-sol-borda text-sol-fundo text-[15px] font-bold active:scale-[.98] transition-transform";
 export const cartao = "rounded-2xl bg-white border border-sol-linha";
 
-export function TopBar({ title, step, back }: { title: string; step?: string; back?: string }) {
+// Botão vermelho de SOS presente no topo das telas (leva a Segurança)
+export function BotaoSOS({ claro = false }: { claro?: boolean }) {
+  return (
+    <Link
+      to="/app/seguranca"
+      aria-label="SOS: pedir ajuda e segurança"
+      className="flex-none flex items-center h-11 no-underline"
+    >
+      <span className={`flex items-center gap-1 h-[30px] pl-2 pr-2.5 rounded-full bg-sol-sos text-white text-[13px] font-extrabold tracking-[0.04em] ${claro ? "ring-2 ring-white/20" : ""}`}>
+        <Shield size={14} strokeWidth={2.4} aria-hidden />SOS
+      </span>
+    </Link>
+  );
+}
+
+export function TopBar({ title, step, back, sos = true, aoVoltar }: { title: string; step?: string; back?: string; sos?: boolean; aoVoltar?: () => void }) {
   const navigate = useNavigate();
   return (
     <div className="flex items-center gap-1 px-4 pt-6 pb-1.5">
       <button
         type="button"
         aria-label="Voltar"
-        onClick={() => (back ? navigate(back) : navigate(-1))}
+        onClick={() => (aoVoltar ? aoVoltar() : back ? navigate(back) : navigate(-1))}
         className="flex-none flex items-center justify-center w-12 h-12 -ml-2 text-sol-fundo"
       >
         <ChevronLeft size={24} />
@@ -26,8 +41,63 @@ export function TopBar({ title, step, back }: { title: string; step?: string; ba
         {step && <span className="text-xs font-semibold text-sol-texto2">{step}</span>}
         <h1 className="m-0 font-display font-extrabold text-[21px] leading-tight tracking-tight">{title}</h1>
       </div>
+      {sos && <BotaoSOS />}
     </div>
   );
+}
+
+// Abas em pílula (ex.: Próximos · Já feitos · Álbuns)
+export function Segmentos<T extends string>({ opcoes, valor, aoMudar, rotulo }: {
+  opcoes: [T, string][];
+  valor: T;
+  aoMudar: (v: T) => void;
+  rotulo: string;
+}) {
+  return (
+    <div role="tablist" aria-label={rotulo} className="flex gap-1 p-1 rounded-2xl bg-[#EDE6DA]">
+      {opcoes.map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={valor === id}
+          onClick={() => aoMudar(id)}
+          className={`flex-1 min-h-[40px] rounded-xl text-sm ${valor === id ? "bg-white font-extrabold text-sol-fundo shadow-sm" : "font-semibold text-sol-texto2"}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Linha de menu (Perfil, Informações...)
+export function LinhaMenu({ to, href, onClick, titulo, detalhe, selo, emBreve }: {
+  to?: string;
+  href?: string;
+  onClick?: () => void;
+  titulo: string;
+  detalhe?: string;
+  selo?: string;
+  emBreve?: boolean;
+}) {
+  const conteudo = (
+    <>
+      <span className="flex-1 min-w-0 text-[15px] font-semibold">{titulo}</span>
+      {detalhe && <span className="text-sm text-sol-texto2 truncate max-w-[45%]">{detalhe}</span>}
+      {selo && <span className="flex-none text-xs font-extrabold px-2 py-0.5 rounded-full bg-sol-creme text-sol-creme-texto">{selo}</span>}
+      {emBreve ? <span className="flex-none text-xs font-bold px-2 py-0.5 rounded-full bg-[#ECEFF1] text-sol-texto2">Em breve</span> : <ChevronRight size={18} className="flex-none text-sol-texto2" />}
+    </>
+  );
+  const classe = "flex items-center gap-3 min-h-[52px] px-4 border-b border-[#F0E9DD] last:border-b-0 text-sol-fundo no-underline text-left w-full bg-white";
+  if (emBreve) return <div className={`${classe} opacity-70`} aria-disabled="true">{conteudo}</div>;
+  if (href) return <a href={href} target="_blank" rel="noopener noreferrer" className={classe}>{conteudo}</a>;
+  if (to) return <Link to={to} className={classe}>{conteudo}</Link>;
+  return <button type="button" onClick={onClick} className={classe}>{conteudo}</button>;
+}
+
+export function TituloSecao({ children }: { children: ReactNode }) {
+  return <h2 className="m-0 mt-1 text-xs font-extrabold tracking-[0.06em] uppercase text-sol-texto2">{children}</h2>;
 }
 
 export function TituloTela({ children }: { children: ReactNode }) {

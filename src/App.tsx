@@ -17,7 +17,13 @@ import AppLayout from "@/components/app/AppLayout";
 import Entrar from "./pages/app/Entrar";
 import AppDashboard from "./pages/app/AppDashboard";
 import AppMural from "./pages/app/AppMural";
-import AppRoteiro from "./pages/app/AppRoteiro";
+import AppRoteiro, { AppHoje } from "./pages/app/AppRoteiro";
+import AppAtividade from "./pages/app/AppAtividade";
+import AppChecklist from "./pages/app/AppChecklist";
+import AppCriar from "./pages/app/AppCriar";
+import AppGuia from "./pages/app/AppGuia";
+import AppTradutor from "./pages/app/AppTradutor";
+import { AppDestinos, AppDestino } from "./pages/app/AppDestinos";
 import AppCreditos from "./pages/app/AppCreditos";
 import AppChat from "./pages/app/AppChat";
 import AppConfig from "./pages/app/AppConfig";
@@ -125,6 +131,14 @@ const router = createBrowserRouter([
       { index: true, element: <AppDashboard /> },
       { path: "chat", element: <AppChat /> },
       { path: "roteiro", element: <AppRoteiro /> },
+      { path: "roteiro/atividade", element: <AppAtividade /> },
+      { path: "roteiro/checklist", element: <AppChecklist /> },
+      { path: "hoje", element: <AppHoje /> },
+      { path: "criar", element: <AppCriar /> },
+      { path: "guia", element: <AppGuia /> },
+      { path: "tradutor", element: <AppTradutor /> },
+      { path: "destinos", element: <AppDestinos /> },
+      { path: "destinos/:slug", element: <AppDestino /> },
       { path: "mural", element: <AppMural /> },
       { path: "creditos", element: <AppCreditos /> },
       { path: "config", element: <AppConfig /> },

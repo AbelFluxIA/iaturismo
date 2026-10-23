@@ -1,24 +1,31 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ChevronRight, LogOut, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, RefreshCw } from "lucide-react";
 import { procurarAtualizacao, versaoDoApp } from "@/lib/atualizacao";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
-import { Selo, mascararTelefone } from "@/components/app/ui";
+import { useViagens } from "@/contexts/ViagensContext";
+import { LinhaMenu, Selo, TopBar, mascararTelefone } from "@/components/app/ui";
 
 const SOL_WHATSAPP = import.meta.env.VITE_SOL_PHONE as string | undefined;
 
+// Preferências usadas nos roteiros, lidas do último perfil gravado pela Sol
+function preferencias(perfil: string | null | undefined, grupo: string | null | undefined) {
+  const itens: string[] = [];
+  const foco = perfil?.match(/foco em ([^|]+?)(?:, orçamento|\||$)/i)?.[1];
+  if (foco) itens.push(...foco.split(/,| e /).map((x) => x.trim()).filter(Boolean).slice(0, 3));
+  const orc = perfil?.match(/orçamento ([^,|]+)/i)?.[1]?.trim();
+  if (orc) itens.push(orc.charAt(0).toUpperCase() + orc.slice(1));
+  if (grupo) itens.push(grupo.charAt(0).toUpperCase() + grupo.slice(1));
+  return itens;
+}
+
 export default function AppPerfil() {
   const { profile, name, phone, logout } = useClientAuth();
+  const { viagens } = useViagens();
   const navigate = useNavigate();
   const nome = name || profile?.name || "Viajante";
   const creditos = profile?.freeCredits ?? 0;
-
-  const itens = [
-    { to: "/app/config", label: "Minha conta e viagem", extra: profile?.destination ?? undefined },
-    { to: "/app/creditos", label: "Créditos e indicações", selo: creditos > 0 ? `${creditos} crédito${creditos > 1 ? "s" : ""}` : undefined },
-    { to: "/app/mural", label: "Álbum e mural" },
-    { to: "/app/seguranca", label: "Segurança e telefones úteis" },
-  ];
+  const prefs = preferencias(profile?.touristProfile, profile?.groupType);
 
   const [procurando, setProcurando] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
@@ -46,36 +53,45 @@ export default function AppPerfil() {
   }
 
   return (
-    <div className="flex flex-col gap-2.5 px-5 pt-8">
-      <div className="flex items-center gap-3.5">
-        <div className="flex-none w-16 h-16 rounded-full bg-sol-sun flex items-center justify-center font-display font-extrabold text-2xl">
-          {nome.charAt(0).toUpperCase()}
+    <div className="flex flex-col">
+      <TopBar title="Perfil" back="/app" />
+      <div className="flex flex-col gap-3 px-5">
+        <div className="flex items-center gap-3.5">
+          <div className="flex-none w-16 h-16 rounded-full bg-sol-sun flex items-center justify-center font-display font-extrabold text-2xl">
+            {nome.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="font-display font-extrabold text-2xl truncate">{nome}</span>
+            <span className="flex items-center gap-1.5 text-sm text-sol-texto2">
+              {mascararTelefone(profile?.phone || phone)}
+              <Selo tom="ok">Verificado</Selo>
+            </span>
+          </div>
         </div>
-        <div className="flex flex-col gap-1 min-w-0">
-          <h1 className="m-0 font-display font-extrabold text-2xl truncate">{nome}</h1>
-          <span className="flex items-center gap-1.5 text-sm text-sol-texto2">
-            {mascararTelefone(profile?.phone || phone)}
-            <Selo tom="ok">Verificado</Selo>
-          </span>
-        </div>
-      </div>
 
-      <nav aria-label="Conta" className="flex flex-col rounded-[18px] bg-white border border-sol-linha overflow-hidden">
-        {itens.map((item) => (
-          <Link key={item.to} to={item.to} className="flex items-center gap-3 min-h-[52px] px-4 border-b border-[#F0E9DD] text-sol-fundo no-underline">
-            <span className="flex-1 text-base font-semibold">{item.label}</span>
-            {item.extra && <span className="text-sm text-sol-texto2 truncate max-w-[40%]">{item.extra}</span>}
-            {item.selo && <span className="text-sm font-bold px-2 py-0.5 rounded-full bg-sol-creme text-sol-creme-texto">{item.selo}</span>}
-            <ChevronRight size={18} className="text-sol-texto2" />
-          </Link>
-        ))}
-        {SOL_WHATSAPP && (
-          <a href={`https://wa.me/${SOL_WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-h-[52px] px-4 text-sol-fundo no-underline">
-            <span className="flex-1 text-base font-semibold">Falar com a Sol no WhatsApp</span>
-            <ChevronRight size={18} className="text-sol-texto2" />
-          </a>
+        {prefs.length > 0 && (
+          <section className="flex flex-col gap-2 p-4 rounded-[18px] bg-sol-claro">
+            <h2 className="m-0 text-[15px] font-extrabold">Minhas preferências de viagem</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {prefs.map((p) => <span key={p} className="px-3 py-1.5 rounded-full bg-white text-[13px] font-bold">{p}</span>)}
+            </div>
+            <p className="m-0 text-xs text-sol-claro-texto">Do seu último roteiro. Você muda ao criar o próximo, no app ou no WhatsApp.</p>
+          </section>
         )}
-      </nav>
+
+        <nav aria-label="Conta" className="flex flex-col rounded-[18px] bg-white border border-sol-linha overflow-hidden">
+          <LinhaMenu to="/app/config" titulo="Minha conta e viagem" detalhe={profile?.destination ?? undefined} />
+          <LinhaMenu titulo="WhatsApp associado" detalhe={mascararTelefone(profile?.phone || phone)} emBreve />
+          <LinhaMenu titulo="Idioma" detalhe="Português" emBreve />
+          <LinhaMenu to="/app/creditos" titulo="Créditos e indicações" selo={creditos > 0 ? `${creditos} ${creditos === 1 ? "crédito" : "créditos"}` : undefined} />
+          <LinhaMenu titulo="Compras" emBreve />
+          <LinhaMenu to="/app/roteiro" titulo="Minhas viagens e álbuns" detalhe={viagens ? `${viagens.length} ${viagens.length === 1 ? "viagem" : "viagens"}` : undefined} />
+          <LinhaMenu to="/app/seguranca" titulo="Segurança e contatos de emergência" />
+          <LinhaMenu titulo="Notificações" emBreve />
+          <LinhaMenu titulo="Privacidade e dados" emBreve />
+          {SOL_WHATSAPP && <LinhaMenu href={`https://wa.me/${SOL_WHATSAPP}`} titulo="Falar com a Sol no WhatsApp" />}
+          <LinhaMenu to="/app/chat" titulo="Ajuda e suporte" detalhe="Pergunte à Sol" />
+        </nav>
 
       <button
         type="button"
@@ -97,6 +113,7 @@ export default function AppPerfil() {
           {procurando ? "Procurando..." : "Procurar atualização"}
         </button>
         {resultado && <span role="status" className="text-xs text-center text-sol-texto2">{resultado}</span>}
+      </div>
       </div>
     </div>
   );
