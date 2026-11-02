@@ -7,10 +7,11 @@ import { BotaoSOS, Carregando, btnSecundario, cartao, formatarData } from "@/com
 import { IconeTempo } from "@/components/app/IconeTempo";
 import { useAlbum } from "@/components/app/Album";
 import { useCidade } from "@/lib/cidade";
+import { useLocalizacaoEmUso } from "@/lib/localizacao";
 import { geocode, previsao, tempoAgora, type PrevisaoDia, type TempoAgora } from "@/lib/geo";
 import { CORES_TIPO, useSugestoes } from "@/lib/sugestoes";
 import {
-  ITENS_CHECKLIST, chaveAtividade, diaDaViagem, horaInicio, hojeISO, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, situacao, type Viagem,
+  itensChecklist, chaveAtividade, diaDaViagem, horaInicio, hojeISO, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, situacao, type Viagem,
 } from "@/lib/roteiro";
 
 // "Faltam 5 dias" até a chegada (cartão da próxima viagem, RA-NAV-05)
@@ -107,7 +108,7 @@ function CartaoViagem({ viagem }: { viagem: Viagem }) {
         {[
           { to: `${base}&aba=mapa`, label: "Mapa", Icon: Route },
           { to: "/app/mural", label: "Foto", Icon: Camera },
-          { to: `/app/roteiro/checklist?id=${encodeURIComponent(viagem.id)}`, label: "Checklist", Icon: ClipboardCheck, extra: `${checklist}/${ITENS_CHECKLIST.length}` },
+          { to: `/app/roteiro/checklist?id=${encodeURIComponent(viagem.id)}`, label: "Checklist", Icon: ClipboardCheck, extra: `${checklist}/${itensChecklist(viagem).itens.length}` },
         ].map(({ to, label, Icon, extra }) => (
           <Link key={label} to={to} className="flex items-center justify-center gap-1 min-h-[46px] px-1 rounded-xl bg-white/10 text-white text-[13px] font-bold no-underline whitespace-nowrap">
             <Icon size={18} className="flex-none text-sol-sun" />
@@ -126,7 +127,7 @@ function ParaOndeIr() {
     <section aria-label="Para onde ir" className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between">
         <h2 className="m-0 font-display font-extrabold text-[22px]">Para onde ir</h2>
-        <Link to="/app/destinos" className="text-sm font-bold text-sol-mar underline">Ver todos</Link>
+        <Link to="/app/destinos" className="inline-flex items-center min-h-[44px] text-sm font-bold text-sol-mar underline">Ver todos</Link>
       </div>
       <div className="flex gap-2.5 overflow-x-auto no-scrollbar -mx-5 px-5 pb-1">
         {lista === null
@@ -154,6 +155,7 @@ function ParaOndeIr() {
 export default function AppDashboard() {
   const { profile, profileLoading, name } = useClientAuth();
   const { viagens, atual } = useViagens();
+  const localizacaoEmUso = useLocalizacaoEmUso();
 
   if ((profileLoading && !profile) || viagens === null) return <Carregando />;
 
@@ -174,6 +176,11 @@ export default function AppDashboard() {
           </Link>
         </div>
         <CidadeETempo />
+        {localizacaoEmUso && (
+          <Link to="/app/localizacao" className="self-start flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-sol-ok-claro text-sol-ok-texto text-xs font-bold no-underline">
+            <Navigation size={12} className="fill-current" /> Localização da viagem ligada
+          </Link>
+        )}
       </header>
 
       {atual && <AlertaChuva viagem={atual} />}
@@ -213,11 +220,13 @@ export default function AppDashboard() {
       <section aria-label="Roteiros e Guia Sol" className={`${cartao} flex flex-col gap-3 p-4`}>
         <div className="flex items-center gap-3">
           <span className="flex-1 text-[14px] leading-snug">
-            {gratis
-              ? <><strong>Roteiros grátis</strong> durante o teste</>
-              : regras
-                ? <><strong>{regras.roteirosGratisSemana} grátis por semana</strong> · renova domingo, 21h</>
-                : <strong>Monte seu próximo roteiro</strong>}
+            {profile?.cota
+              ? <><strong>{Math.min(profile.cota.usados, profile.cota.limite)} de {profile.cota.limite} {guiaAtiva ? "roteiros" : "grátis"}</strong> · renova domingo, 21h{gratis ? <span className="block text-xs text-sol-texto2">Durante o teste, sem cobrança</span> : null}</>
+              : gratis
+                ? <><strong>Roteiros grátis</strong> durante o teste</>
+                : regras
+                  ? <><strong>{regras.roteirosGratisSemana} grátis por semana</strong> · renova domingo, 21h</>
+                  : <strong>Monte seu próximo roteiro</strong>}
           </span>
           <Link to="/app/criar" className="flex-none flex items-center gap-1.5 min-h-[44px] px-4 rounded-[14px] border-[1.5px] border-sol-mar text-sol-mar text-sm font-extrabold no-underline">
             <Plus size={18} strokeWidth={2.4} /> Criar
@@ -272,7 +281,7 @@ function MuralDeViagens() {
     <section aria-label="Mural de viagens" className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between">
         <h2 className="m-0 font-display font-extrabold text-[22px]">Mural de viagens</h2>
-        <Link to="/app/mural" className="text-sm font-bold text-sol-mar underline">Ver mural</Link>
+        <Link to="/app/mural" className="inline-flex items-center min-h-[44px] text-sm font-bold text-sol-mar underline">Ver mural</Link>
       </div>
       <Link to="/app/mural" className="grid grid-cols-3 gap-1.5 no-underline">
         {fotos.map((f) => <img key={f.url} src={f.url} alt="" className="w-full aspect-square object-cover rounded-xl bg-sol-claro" />)}

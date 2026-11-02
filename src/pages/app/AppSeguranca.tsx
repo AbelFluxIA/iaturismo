@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CloudRain, MapPin, MessageSquare, Pencil, Phone, Plus, Shield, Trash2, X } from "lucide-react";
-import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { TopBar, TituloSecao, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 import { geocode, posicaoAtual, previsao, type PrevisaoDia } from "@/lib/geo";
@@ -30,7 +30,7 @@ const internacional = (t: string) => { const d = soDigitos(t); return d.length <
 const mascarar = (t: string) => { const d = soDigitos(t); return d.length >= 10 ? `+55 ${d.slice(-11, -9)} *****-${d.slice(-4)}` : t; };
 
 export default function AppSeguranca() {
-  const { profile, name } = useClientAuth();
+  const { profile, name, token, isDemo, refreshProfile } = useClientAuth();
   const { atual } = useViagens();
   const nome = (name || profile?.name || "Uma pessoa").split(" ")[0];
   const padraoMsg = `${nome} precisa de ajuda. Localização: [link]. Ligue ou chame ajuda. Enviado pela Sol.`;
@@ -40,6 +40,21 @@ export default function AppSeguranca() {
   const [novo, setNovo] = useState<Contato | null>(null);
   const [erroNovo, setErroNovo] = useState<string | null>(null);
   const [sos, setSos] = useState(false);
+  const [pedindoAceite, setPedindoAceite] = useState(false);
+  const sosAceito = isDemo || !!profile?.consentimentos?.sos?.aceito || !profile?.consentimentos;
+
+  async function aceitarSos() {
+    try {
+      await fetch(`${API_URL}/api/app/consentimento`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tipo: "sos", versao: VERSAO_SOS, aceito: true }),
+      });
+      await refreshProfile();
+    } catch { /* sem conexão: o SOS abre mesmo assim; o aceite é pedido de novo depois */ }
+    setPedindoAceite(false);
+    setSos(true);
+  }
   const [chuva, setChuva] = useState<PrevisaoDia | null>(null);
 
   useEffect(() => { gravar(CHAVE_CONTATOS, contatos); }, [contatos]);
@@ -63,13 +78,14 @@ export default function AppSeguranca() {
     setErroNovo(null);
   }
 
+  if (pedindoAceite) return <AceiteSOS aceitar={aceitarSos} cancelar={() => setPedindoAceite(false)} />;
   if (sos) return <TelaSOS contatos={contatos} mensagem={mensagem} fechar={() => setSos(false)} />;
 
   return (
     <div className="flex flex-col">
       <TopBar title="Segurança" back="/app" sos={false} />
       <div className="flex flex-col gap-3 px-5">
-        <button type="button" onClick={() => setSos(true)} className="flex items-center gap-4 p-[18px] rounded-[20px] bg-sol-sos text-white text-left">
+        <button type="button" onClick={() => (sosAceito ? setSos(true) : setPedindoAceite(true))} className="flex items-center gap-4 p-[18px] rounded-[20px] bg-sol-sos text-white text-left">
           <span className="flex-none w-16 h-16 rounded-full border-[3px] border-white flex items-center justify-center font-display font-extrabold text-lg">SOS</span>
           <span className="flex flex-col gap-1">
             <span className="text-[17px] font-extrabold">Pedir ajuda</span>
@@ -160,6 +176,30 @@ export default function AppSeguranca() {
         <p className="m-0 text-[13px] leading-snug text-sol-texto2">
           A Sol e a Guia Sol são um apoio informativo. Não prestam atendimento de emergência, não enviam socorro e não substituem a orientação de autoridades.
         </p>
+      </div>
+    </div>
+  );
+}
+
+// Aceite antes do primeiro uso do SOS (RA-SEG-02). Texto provisório do protótipo.
+const VERSAO_SOS = "sos-rascunho-1";
+
+function AceiteSOS({ aceitar, cancelar }: { aceitar: () => void; cancelar: () => void }) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2 px-4 pt-6 pb-1.5">
+        <Shield size={22} className="text-sol-sos" />
+        <h1 className="flex-1 m-0 font-display font-extrabold text-[22px]">Antes de usar o SOS</h1>
+      </div>
+      <div className="flex flex-col gap-3 px-5">
+        <p className="m-0 text-[15px] leading-snug">O SOS avisa seus contatos de emergência e mostra os telefones da polícia e dos bombeiros. A Sol não presta atendimento de emergência nem envia socorro.</p>
+        <p className={`${cartao} m-0 p-4 text-sm leading-snug`}>
+          Ao usar o SOS, você autoriza a Sol a preparar uma mensagem de socorro, com a sua localização atual, para os seus contatos de emergência. A Sol não é um serviço de emergência e não garante atendimento. Em risco imediato, ligue 190, 192 ou 193. Nesta versão, o SOS aciona apenas números do Brasil.
+        </p>
+        <p className="m-0 text-xs text-sol-texto2">Texto provisório, em revisão jurídica.</p>
+        <button type="button" onClick={aceitar} className="flex items-center justify-center min-h-[52px] rounded-[14px] bg-sol-sos text-white text-base font-extrabold">Aceitar e ativar o SOS</button>
+        <button type="button" onClick={cancelar} className={btnSecundario}>Agora não</button>
+        <p className="m-0 text-xs text-sol-texto2 text-center">Sem o aceite, 190 e 193 continuam em Telefones úteis.</p>
       </div>
     </div>
   );

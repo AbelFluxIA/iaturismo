@@ -113,7 +113,9 @@ export function useRoteiro(id: string | null, codigo: string | null = null) {
 
 // ─── Atividades feitas (sincronizadas entre telas abertas) ───────────────────
 
+// Ao marcar como feita, o check-in vai para o servidor (dados de locais visitados)
 export function useFeitas(id: string | null) {
+  const { token, isDemo } = useClientAuth();
   const [feitas, setFeitas] = useState<Record<string, boolean>>(() => lerFeitas(id));
   useEffect(() => {
     setFeitas(lerFeitas(id));
@@ -121,10 +123,17 @@ export function useFeitas(id: string | null) {
     window.addEventListener("sol-feitas", ouvir);
     return () => window.removeEventListener("sol-feitas", ouvir);
   }, [id]);
-  const alternar = (chave: string) => {
+  const alternar = (chave: string, info?: { atividade: string; localBusca?: string | null }) => {
     if (!id) return;
     const novo = { ...lerFeitas(id), [chave]: !lerFeitas(id)[chave] };
     gravarFeitas(id, novo);
+    if (novo[chave] && info && token && !isDemo) {
+      fetch(`${API_URL}/api/app/presenca`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tipo: "checkin", itineraryId: id, atividade: info.atividade, localBusca: info.localBusca ?? undefined }),
+      }).catch(() => { /* sem conexão: o check-in fica só no aparelho */ });
+    }
   };
   return { feitas, alternar };
 }

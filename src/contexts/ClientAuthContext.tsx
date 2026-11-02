@@ -15,6 +15,9 @@ export interface ClientProfile {
   groupType?: string | null;
   touristProfile?: string | null;
   ofertas?: { gratisDuranteTeste: boolean; guiaPreco: string };
+  cota?: { usados: number; limite: number; renovaEm: string };
+  cadastro?: { nascimento: string | null; concluidoEm: string | null };
+  consentimentos?: Record<"termos" | "sos" | "localizacao_viagem", { versao: string; aceito: boolean; em: string } | null>;
   // Parâmetros das regras, vindos do servidor (o app só mostra)
   regras?: {
     roteirosGratisSemana: number;

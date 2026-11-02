@@ -88,7 +88,7 @@ export default function AppAtividade() {
           type="button"
           role="checkbox"
           aria-checked={feita}
-          onClick={() => alternar(chaveAtividade(d, a))}
+          onClick={() => alternar(chaveAtividade(d, a), { atividade: atv.name, localBusca: local })}
           className={`${cartao} flex items-center gap-3 min-h-[56px] px-4 text-left`}
         >
           <span className={`flex-none w-7 h-7 rounded-lg border-2 flex items-center justify-center ${feita ? "bg-sol-ok border-sol-ok" : "bg-white border-[#6F7E83]"}`}>

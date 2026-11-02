@@ -11,7 +11,7 @@ import { AbrirRota } from "@/components/app/AbrirRota";
 import type { PontoMapa } from "@/components/app/MapaRoteiro";
 import { descreverTempo, geocode, previsao, queryDoMapa, rotaPelasRuas, type Coord, type PrevisaoDia } from "@/lib/geo";
 import {
-  ITENS_CHECKLIST, chaveAtividade, diaDaViagem, horaInicio, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, rotuloDia, situacao, type Viagem,
+  itensChecklist, chaveAtividade, diaDaViagem, horaInicio, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, rotuloDia, situacao, type Viagem,
 } from "@/lib/roteiro";
 
 const MapaRoteiro = lazy(() => import("@/components/app/MapaRoteiro"));
@@ -277,7 +277,7 @@ function RoteiroDetalhe() {
                       role="checkbox"
                       aria-checked={feita}
                       aria-label={`Marcar como feito: ${act.name}`}
-                      onClick={() => alternar(chaveAtividade(di, ai))}
+                      onClick={() => alternar(chaveAtividade(di, ai), { atividade: act.name, localBusca: act.mapUrl ? queryDoMapa(act.mapUrl) : null })}
                       className="flex-none w-12 h-[56px] flex items-center justify-center"
                     >
                       <span className={`w-6 h-6 rounded-[7px] border-2 flex items-center justify-center ${feita ? "bg-sol-ok border-sol-ok" : "bg-white border-[#6F7E83]"}`}>
@@ -478,6 +478,7 @@ const TELEFONES = [
 
 function AbaInfo({ destino, chegada, saida, pdfUrl, chave }: { destino: string | null; chegada: string | null; saida: string | null; pdfUrl: string | null; chave: string | null }) {
   const guiaAtiva = !!useClientAuth().profile?.hasCompanion;
+  const { viagens } = useViagens();
   const [tempo, setTempo] = useState<PrevisaoDia[] | null>(null);
   const [checklist] = useState(() => lerChecklist(chave).filter(Boolean).length);
   useEffect(() => {
@@ -521,7 +522,7 @@ function AbaInfo({ destino, chegada, saida, pdfUrl, chave }: { destino: string |
       <div className={`${cartao} flex flex-col overflow-hidden`}>
         <Link to={`/app/roteiro/checklist?id=${encodeURIComponent(chave ?? "")}`} className="flex items-center gap-3 min-h-[52px] px-4 border-b border-[#F0E9DD] text-sol-fundo no-underline">
           <ClipboardCheck size={20} /><span className="flex-1 text-[15px] font-semibold">Checklist da viagem</span>
-          <span className="text-sm text-sol-texto2">{checklist}/{ITENS_CHECKLIST.length}</span><ChevronRight size={18} className="text-sol-texto2" />
+          <span className="text-sm text-sol-texto2">{checklist}/{itensChecklist(viagens?.find((v) => v.id === chave)).itens.length}</span><ChevronRight size={18} className="text-sol-texto2" />
         </Link>
         {pdfUrl && (
           <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-h-[52px] px-4 border-b border-[#F0E9DD] text-sol-fundo no-underline">

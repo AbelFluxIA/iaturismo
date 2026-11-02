@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { ViagensProvider, useViagens } from "@/contexts/ViagensContext";
+import { RastreioViagem } from "@/lib/localizacao";
 import CentralBugs from "@/components/app/CentralBugs";
 import { Calendar, Check, Home, Map, MessageCircle, Plus, X, type LucideIcon } from "lucide-react";
 
@@ -126,6 +127,9 @@ export default function AppLayout() {
   }, [isDemo]);
   const variaveis = { "--sol-topo": `${medidas.topo}px`, "--sol-nav": `${medidas.nav}px` } as CSSProperties;
 
+  // Cadastro em etapas ainda não concluído (o perfil do bot novo traz "cadastro")
+  if (!isDemo && profile?.cadastro && !profile.cadastro.concluidoEm) return <Navigate to="/app/cadastro" replace />;
+
   return (
     <ViagensProvider>
       <div style={variaveis} className="flex flex-col min-h-screen bg-sol-areia font-corpo text-sol-fundo">
@@ -145,6 +149,7 @@ export default function AppLayout() {
           <Outlet />
         </main>
         <CentralBugs />
+        <RastreioViagem />
         <BarraAbas navRef={navRef} />
       </div>
     </ViagensProvider>

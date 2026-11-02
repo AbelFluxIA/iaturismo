@@ -22,6 +22,7 @@ export interface Viagem {
   departureDate: string | null;
   days: number;
   pdfUrl: string | null;
+  groupType?: string | null;
 }
 
 // Formato do texto: "DIA N — ...", períodos "Manhã (09:00): Nome", 🚗 deslocamento,
@@ -177,6 +178,19 @@ export const ITENS_CHECKLIST = [
   "Carregador do celular",
   "Dinheiro e cartão",
 ];
+
+// Lista fixa por tipo de viagem (RA-ROT-22): nacional, internacional, com criança, com pet
+export function itensChecklist(v?: Pick<Viagem, "destination" | "groupType"> | null): { tipo: string; itens: string[] } {
+  const destino = v?.destination ?? "";
+  const nacional = !destino || /\s-\s[A-Z]{2}$/.test(destino) || /brasil/i.test(destino);
+  const grupo = (v?.groupType ?? "").toLowerCase();
+  const itens = [...ITENS_CHECKLIST];
+  const tipos = [nacional ? "nacional" : "internacional"];
+  if (!nacional) itens.push("Passaporte válido", "Seguro viagem", "Internet no exterior (chip ou plano)");
+  if (/crian/.test(grupo)) { tipos.push("com criança"); itens.push("Documento das crianças", "Remédios e itens das crianças"); }
+  if (/\bpet\b/.test(grupo)) { tipos.push("com pet"); itens.push("Carteira de vacinação do pet", "Comida, água e caminha do pet"); }
+  return { tipo: tipos.join(", "), itens };
+}
 
 export const chaveChecklist = (id: string) => `sol_checklist_${id}`;
 

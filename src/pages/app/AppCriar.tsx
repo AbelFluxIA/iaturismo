@@ -440,7 +440,7 @@ function Inicio({ r, set, cota, irPara, rapido }: {
             <Chip key={d.slug} ativo={r.destino === `${d.nome} - PB`} onClick={() => set({ destino: `${d.nome} - PB` })}>{d.nome}</Chip>
           ))}
         </div>
-        <Link to="/app/destinos" className="flex items-center gap-1 text-sm font-bold text-sol-mar no-underline">Ver destinos sugeridos <ChevronRight size={16} /></Link>
+        <Link to="/app/destinos" className="flex items-center gap-1 min-h-[44px] text-sm font-bold text-sol-mar no-underline">Ver destinos sugeridos <ChevronRight size={16} /></Link>
 
         <section className={`${cartao} flex flex-col gap-1.5 p-4`}>
           <div className="flex items-center justify-between">

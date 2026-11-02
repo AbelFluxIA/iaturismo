@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Check } from "lucide-react";
 import { useViagens } from "@/contexts/ViagensContext";
 import { TopBar, cartao, formatarData } from "@/components/app/ui";
-import { ITENS_CHECKLIST, chaveChecklist, lerChecklist } from "@/lib/roteiro";
+import { chaveChecklist, itensChecklist, lerChecklist } from "@/lib/roteiro";
 
 // Checklist antes de sair, uma lista por viagem. Marcações ficam neste aparelho.
 export default function AppChecklist() {
@@ -12,6 +12,7 @@ export default function AppChecklist() {
   const { viagens } = useViagens();
   const viagem = viagens?.find((v) => v.id === id) ?? null;
   const [marcados, setMarcados] = useState<boolean[]>(() => lerChecklist(id));
+  const { tipo, itens: ITENS_CHECKLIST } = itensChecklist(viagem);
 
   const alternar = (i: number) => {
     const novo = ITENS_CHECKLIST.map((_, j) => (j === i ? !marcados[j] : !!marcados[j]));
@@ -54,7 +55,7 @@ export default function AppChecklist() {
             </li>
           ))}
         </ul>
-        <p className="m-0 text-xs text-sol-texto2">As marcações ficam guardadas neste celular. Cada viagem tem a sua lista.</p>
+        <p className="m-0 text-xs text-sol-texto2">Lista para viagem {tipo}. As marcações ficam guardadas neste celular; cada viagem tem a sua.</p>
       </div>
     </div>
   );

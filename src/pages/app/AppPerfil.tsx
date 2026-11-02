@@ -91,6 +91,7 @@ export default function AppPerfil() {
           <LinhaMenu to="/app/guia/comparar" titulo="Com e sem a Guia Sol" />
           <LinhaMenu to="/app/roteiro" titulo="Minhas viagens e álbuns" detalhe={viagens ? `${viagens.length} ${viagens.length === 1 ? "viagem" : "viagens"}` : undefined} />
           <LinhaMenu to="/app/seguranca" titulo="Segurança e contatos de emergência" />
+          <LinhaMenu to="/app/localizacao" titulo="Localização durante a viagem" detalhe={profile?.consentimentos?.localizacao_viagem?.aceito ? "Ligada" : "Desligada"} />
           <LinhaMenu titulo="Configurações e notificações" emBreve />
           <LinhaMenu titulo="Privacidade e dados" emBreve />
           {SOL_WHATSAPP && <LinhaMenu href={`https://wa.me/${SOL_WHATSAPP}`} titulo="Falar com a Sol no WhatsApp" />}
