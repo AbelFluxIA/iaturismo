@@ -68,7 +68,7 @@ export default function AppCadastro() {
   const nascValido = !!nascimento && !Number.isNaN(Date.parse(`${nascimento}T12:00:00Z`)) && nascimento < new Date().toISOString().slice(0, 10) && nascimento > "1900-01-01";
   const n = ETAPAS.indexOf(etapa);
   const voltar = n > 0 ? () => { setErro(null); setEtapa(ETAPAS[n - 1]); } : null;
-  const campo = "h-14 px-4 rounded-xl border-[1.5px] border-sol-borda bg-white text-[18px] font-semibold focus:outline-none focus:border-sol-mar";
+  const campo = "h-14 w-full min-w-0 box-border px-4 rounded-xl border-[1.5px] border-sol-borda bg-white text-[18px] font-semibold focus:outline-none focus:border-sol-mar";
 
   return (
     <div className="min-h-screen flex flex-col bg-sol-areia font-corpo text-sol-fundo">
@@ -138,9 +138,9 @@ export default function AppCadastro() {
           <>
             <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">Qual é a sua data de nascimento?</h1>
             <p className="mt-2 mb-0 text-[15px] text-sol-texto2">Menores de 18 anos usam a Sol com o cadastro de um responsável.</p>
-            <div className="mt-5 grid grid-cols-[1fr_1fr_1.4fr] gap-2">
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] gap-2">
               {([["d", "Dia", "DD", 2], ["m", "Mês", "MM", 2], ["a", "Ano", "AAAA", 4]] as const).map(([k, rot, ph, max]) => (
-                <label key={k} className="flex flex-col gap-1.5"><span className="text-[13px] font-bold">{rot}</span>
+                <label key={k} className="min-w-0 flex flex-col gap-1.5"><span className="text-[13px] font-bold">{rot}</span>
                   <input inputMode="numeric" placeholder={ph} maxLength={max} value={data[k]} onChange={(e) => setData({ ...data, [k]: e.target.value.replace(/\D/g, "") })} className={`${campo} text-center`} />
                 </label>
               ))}

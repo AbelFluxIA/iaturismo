@@ -84,6 +84,11 @@
     @apply scroll-smooth;
   }
 
+  /* No Safari (iPhone) o campo tem largura própria e estoura a tela dentro de grid/flex */
+  input, select, textarea {
+    min-width: 0;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: "Inter", system-ui, sans-serif;
