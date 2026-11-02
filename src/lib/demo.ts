@@ -20,6 +20,10 @@ export function demoProfile(): ClientProfile {
     groupType: "sozinho",
     touristProfile: "Turista de lazer, sozinho, foco em Natureza (praia), Gastronomia, orçamento melhor custo-benefício",
     ofertas: { gratisDuranteTeste: true, guiaPreco: "Grátis durante o teste" },
+    regras: {
+      roteirosGratisSemana: 2, diaRoteiroPreco: 4.9, maxDiasSemGuia: 5, guiaRoteirosSemana: 30, maxDiasComGuia: 7,
+      guiaPrecoDia: 9.9, guiaPrecoMes: 29.9, chatMensagensDia: 30, guiaMensagensDia: 100, tradutorMensagensDia: 50,
+    },
     hasPaid: false,
     hasCompanion: false,
     freeCredits: 1,

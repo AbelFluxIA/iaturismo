@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, createContext, useContext } f
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, Camera, CreditCard, ExternalLink, FileText, Gift, Image as ImageIcon, Map as MapIcon, MapPin, Mic, Share2, Trash2 } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
-import { BotaoSOS, Carregando } from "@/components/app/ui";
+import { Carregando } from "@/components/app/ui";
 import { posicaoAtual } from "@/lib/geo";
 import { DEMO_RESPOSTA_CHAT } from "@/lib/demo";
 
@@ -226,7 +226,9 @@ const ATALHOS_GUIA: { rotulo: string; texto: string; local?: boolean }[] = [
   { rotulo: "Já visitei", texto: "Já visitei: " },
 ];
 
-export default function AppChat() {
+// modo "sol": conversa grátis (aba Sol). modo "guia": a mesma conversa com os
+// atalhos da Guia Sol (aba Guia Sol, com a Guia ativa).
+export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
   const { token, profile, isDemo } = useClientAuth();
   const [busca, setBusca] = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -477,7 +479,8 @@ export default function AppChat() {
 
   if (loadingHistory) return <Carregando />;
 
-  const guiaAtiva = !!profile?.hasCompanion;
+  const guiaAtiva = !!profile?.hasCompanion && modo === "guia";
+  const limiteDia = profile?.regras?.chatMensagensDia;
   const rapidas = sending ? [] : respostasRapidas(messages[messages.length - 1]);
 
   async function usarAtalho(a: (typeof ATALHOS_GUIA)[number]) {
@@ -501,11 +504,19 @@ export default function AppChat() {
               <span className="w-2 h-2 rounded-full bg-sol-ok" />Ativa na sua viagem
             </span>
           ) : (
-            <span className="text-[13px] font-semibold text-sol-texto2">A mesma conversa do seu WhatsApp</span>
+            <span className="text-[13px] font-semibold text-sol-texto2">A mesma conversa do seu WhatsApp · grátis</span>
           )}
         </div>
-        <BotaoSOS />
       </header>
+      {!guiaAtiva && (
+        <nav aria-label="Atalhos" className="flex-none flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 bg-white border-b border-sol-linha">
+          {[["Criar roteiro", "/app/criar"], ["Para onde ir?", "/app/destinos"], ["Meus roteiros", "/app/roteiro"]].map(([rot, para]) => (
+            <button key={rot} type="button" onClick={() => navegar(para)} className="flex-none min-h-[38px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold">
+              {rot}
+            </button>
+          ))}
+        </nav>
+      )}
       {guiaAtiva && (
         <nav aria-label="Atalhos da Guia Sol" className="flex-none flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 bg-white border-b border-sol-linha">
           {ATALHOS_GUIA.map((a) => (
@@ -577,8 +588,11 @@ export default function AppChat() {
       ) : (
         <form
           onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-          className="flex-none flex items-end gap-1.5 px-3 pt-2.5 pb-6 bg-white border-t border-sol-linha"
+          className="flex-none flex flex-wrap items-end gap-1.5 px-3 pt-2.5 pb-6 bg-white border-t border-sol-linha"
         >
+          {!guiaAtiva && limiteDia ? (
+            <span className="basis-full px-1 pb-1 text-[12px] text-sol-texto2">Texto, áudio ou foto · {limiteDia} mensagens por dia, somando app e WhatsApp.</span>
+          ) : null}
           <button
             type="button"
             aria-label="Enviar foto"

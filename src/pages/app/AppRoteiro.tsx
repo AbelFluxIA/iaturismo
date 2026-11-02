@@ -1,12 +1,13 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import {
-  Camera, Check, ChevronLeft, ChevronRight, ClipboardCheck, Download, Map as MapIcon, MapPin, MessageCircle, Pencil, Phone, Plus, Route, Share2, CloudSun,
+  Camera, Check, ChevronLeft, ChevronRight, ClipboardCheck, Download, Lock, Map as MapIcon, MessageCircle, Pencil, Phone, Plus, Route, Share2, CloudSun,
 } from "lucide-react";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
-import { BotaoSOS, Carregando, Segmentos, TituloSecao, Vazio, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
+import { Carregando, Segmentos, TituloSecao, Vazio, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
 import { EnviarFotos, GradeFotos, type GrupoAlbum, useAlbum } from "@/components/app/Album";
+import { AbrirRota } from "@/components/app/AbrirRota";
 import type { PontoMapa } from "@/components/app/MapaRoteiro";
 import { descreverTempo, geocode, previsao, queryDoMapa, rotaPelasRuas, type Coord, type PrevisaoDia } from "@/lib/geo";
 import {
@@ -58,7 +59,6 @@ function MeusRoteiros() {
     <div className="flex flex-col gap-3 px-5 pt-7">
       <header className="flex items-center gap-2">
         <h1 className="flex-1 m-0 font-display font-extrabold text-[28px] tracking-tight">Meus roteiros</h1>
-        <BotaoSOS />
       </header>
       <Segmentos rotulo="Meus roteiros" valor={aba} aoMudar={trocar} opcoes={[["proximos", "Próximos"], ["feitos", "Já feitos"], ["albuns", "Álbuns"]]} />
 
@@ -221,7 +221,6 @@ function RoteiroDetalhe() {
             <ChevronLeft size={24} />
           </Link>
           <h1 className="flex-1 min-w-0 m-0 font-display font-extrabold text-[26px] tracking-tight truncate">{nomeCurto(destino) || "Seu roteiro"}</h1>
-          <BotaoSOS claro />
         </div>
         <span className="text-[13px] text-sol-azul-suave pl-1 pb-2">
           {periodo || "Datas a confirmar"} · {days.length} {days.length === 1 ? "dia" : "dias"}
@@ -307,7 +306,8 @@ function RoteiroDetalhe() {
                 { label: "Rota", Icon: Route, onClick: () => trocarAba("mapa") },
                 { label: "Foto", Icon: Camera, onClick: () => trocarAba("album") },
                 { label: "Enviar", Icon: Share2, onClick: () => compartilharDia(destino, rotuloDia(chegada, di, dia.label), dia.activities.map((a) => `${horaInicio(a)} ${a.name}`), dados?.pdfUrl) },
-                { label: "Alterar", Icon: Pencil, to: `/app/chat?texto=${encodeURIComponent(`Quero alterar meu roteiro de ${destino ?? "viagem"}: `)}` },
+                // Editar só com a Guia (RA-ROT-07); sem ela, mostra o que muda com a Guia
+                { label: "Alterar", Icon: profile?.hasCompanion ? Pencil : Lock, to: profile?.hasCompanion ? `/app/chat?texto=${encodeURIComponent(`Quero alterar meu roteiro de ${destino ?? "viagem"}: `)}` : "/app/guia/comparar" },
               ].map(({ label, Icon, to, onClick }) => {
                 const classe = `${cartao} flex flex-col items-center justify-center gap-1 min-h-[60px] text-[12px] font-bold text-sol-fundo no-underline`;
                 return to
@@ -429,11 +429,7 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
               <span className="text-sm text-sol-texto2">{atividades[proxima].time}{atividades[proxima].travel ? ` · ${atividades[proxima].travel}` : ""}</span>
             </span>
           </div>
-          {atividades[proxima].mapUrl && (
-            <a href={atividades[proxima].mapUrl} target="_blank" rel="noopener noreferrer" className={`${btnPrimario} no-underline`}>
-              <MapPin size={18} /> Abrir rota no navegador
-            </a>
-          )}
+          {atividades[proxima].mapUrl && <AbrirRota mapUrl={atividades[proxima].mapUrl} rotulo="Abrir rota" />}
         </>
       )}
       <div className="flex flex-wrap gap-3.5 text-[13px] text-sol-texto2">
@@ -481,6 +477,7 @@ const TELEFONES = [
 ] as const;
 
 function AbaInfo({ destino, chegada, saida, pdfUrl, chave }: { destino: string | null; chegada: string | null; saida: string | null; pdfUrl: string | null; chave: string | null }) {
+  const guiaAtiva = !!useClientAuth().profile?.hasCompanion;
   const [tempo, setTempo] = useState<PrevisaoDia[] | null>(null);
   const [checklist] = useState(() => lerChecklist(chave).filter(Boolean).length);
   useEffect(() => {
@@ -531,9 +528,15 @@ function AbaInfo({ destino, chegada, saida, pdfUrl, chave }: { destino: string |
             <Download size={20} /><span className="flex-1 text-[15px] font-semibold">Baixar o PDF do roteiro</span><ChevronRight size={18} className="text-sol-texto2" />
           </a>
         )}
-        <Link to={`/app/chat?texto=${encodeURIComponent(`Quero alterar meu roteiro de ${destino ?? "viagem"}: `)}`} className="flex items-center gap-3 min-h-[52px] px-4 text-sol-fundo no-underline">
-          <Pencil size={20} /><span className="flex-1 text-[15px] font-semibold">Pedir alteração à Sol</span><ChevronRight size={18} className="text-sol-texto2" />
-        </Link>
+        {guiaAtiva ? (
+          <Link to={`/app/chat?texto=${encodeURIComponent(`Quero alterar meu roteiro de ${destino ?? "viagem"}: `)}`} className="flex items-center gap-3 min-h-[52px] px-4 text-sol-fundo no-underline">
+            <Pencil size={20} /><span className="flex-1 text-[15px] font-semibold">Alterar o roteiro</span><ChevronRight size={18} className="text-sol-texto2" />
+          </Link>
+        ) : (
+          <Link to="/app/guia/comparar" className="flex items-center gap-3 min-h-[52px] px-4 text-sol-fundo no-underline">
+            <Lock size={20} /><span className="flex-1 flex flex-col"><span className="text-[15px] font-semibold">Alterar o roteiro</span><span className="text-xs text-sol-texto2">Só com a Guia Sol · ver o que muda</span></span><ChevronRight size={18} className="text-sol-texto2" />
+          </Link>
+        )}
       </div>
     </>
   );

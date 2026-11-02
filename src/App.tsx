@@ -22,6 +22,8 @@ import AppAtividade from "./pages/app/AppAtividade";
 import AppChecklist from "./pages/app/AppChecklist";
 import AppCriar from "./pages/app/AppCriar";
 import AppGuia from "./pages/app/AppGuia";
+import AppGuiaComparar from "./pages/app/AppGuiaComparar";
+import AppTempo from "./pages/app/AppTempo";
 import AppTradutor from "./pages/app/AppTradutor";
 import { AppDestinos, AppDestino } from "./pages/app/AppDestinos";
 import AppCreditos from "./pages/app/AppCreditos";
@@ -136,6 +138,8 @@ const router = createBrowserRouter([
       { path: "hoje", element: <AppHoje /> },
       { path: "criar", element: <AppCriar /> },
       { path: "guia", element: <AppGuia /> },
+      { path: "guia/comparar", element: <AppGuiaComparar /> },
+      { path: "tempo", element: <AppTempo /> },
       { path: "tradutor", element: <AppTradutor /> },
       { path: "destinos", element: <AppDestinos /> },
       { path: "destinos/:slug", element: <AppDestino /> },

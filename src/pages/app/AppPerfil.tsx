@@ -5,6 +5,7 @@ import { procurarAtualizacao, versaoDoApp } from "@/lib/atualizacao";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { LinhaMenu, Selo, TopBar, mascararTelefone } from "@/components/app/ui";
+import { lerPreferencias } from "@/pages/app/AppCriar";
 
 const SOL_WHATSAPP = import.meta.env.VITE_SOL_PHONE as string | undefined;
 
@@ -25,7 +26,8 @@ export default function AppPerfil() {
   const navigate = useNavigate();
   const nome = name || profile?.name || "Viajante";
   const creditos = profile?.freeCredits ?? 0;
-  const prefs = preferencias(profile?.touristProfile, profile?.groupType);
+  const salvas = lerPreferencias();
+  const prefs = salvas ? [...salvas.tipos, salvas.custos.charAt(0).toUpperCase() + salvas.custos.slice(1), salvas.quemVai.charAt(0).toUpperCase() + salvas.quemVai.slice(1)] : preferencias(profile?.touristProfile, profile?.groupType);
 
   const [procurando, setProcurando] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export default function AppPerfil() {
             <div className="flex flex-wrap gap-1.5">
               {prefs.map((p) => <span key={p} className="px-3 py-1.5 rounded-full bg-white text-[13px] font-bold">{p}</span>)}
             </div>
-            <p className="m-0 text-xs text-sol-claro-texto">Do seu último roteiro. Você muda ao criar o próximo, no app ou no WhatsApp.</p>
+            <p className="m-0 text-xs text-sol-claro-texto">{salvas ? "Valem para os próximos roteiros. Mude em Criar roteiro, com \"Salvar como preferência\"." : "Do seu último roteiro. Você muda ao criar o próximo."}</p>
           </section>
         )}
 
@@ -83,11 +85,13 @@ export default function AppPerfil() {
           <LinhaMenu to="/app/config" titulo="Minha conta e viagem" detalhe={profile?.destination ?? undefined} />
           <LinhaMenu titulo="WhatsApp associado" detalhe={mascararTelefone(profile?.phone || phone)} emBreve />
           <LinhaMenu titulo="Idioma" detalhe="Português" emBreve />
+          <LinhaMenu titulo="Aparência" detalhe="Automático" emBreve />
           <LinhaMenu to="/app/creditos" titulo="Créditos e indicações" selo={creditos > 0 ? `${creditos} ${creditos === 1 ? "crédito" : "créditos"}` : undefined} />
           <LinhaMenu titulo="Compras" emBreve />
+          <LinhaMenu to="/app/guia/comparar" titulo="Com e sem a Guia Sol" />
           <LinhaMenu to="/app/roteiro" titulo="Minhas viagens e álbuns" detalhe={viagens ? `${viagens.length} ${viagens.length === 1 ? "viagem" : "viagens"}` : undefined} />
           <LinhaMenu to="/app/seguranca" titulo="Segurança e contatos de emergência" />
-          <LinhaMenu titulo="Notificações" emBreve />
+          <LinhaMenu titulo="Configurações e notificações" emBreve />
           <LinhaMenu titulo="Privacidade e dados" emBreve />
           {SOL_WHATSAPP && <LinhaMenu href={`https://wa.me/${SOL_WHATSAPP}`} titulo="Falar com a Sol no WhatsApp" />}
           <LinhaMenu to="/app/chat" titulo="Ajuda e suporte" detalhe="Pergunte à Sol" />

@@ -10,22 +10,20 @@ export const btnSecundario =
   "flex items-center justify-center gap-2 min-h-[48px] px-4 rounded-[14px] bg-white border-[1.5px] border-sol-borda text-sol-fundo text-[15px] font-bold active:scale-[.98] transition-transform";
 export const cartao = "rounded-2xl bg-white border border-sol-linha";
 
-// Botão vermelho de SOS presente no topo das telas (leva a Segurança)
-export function BotaoSOS({ claro = false }: { claro?: boolean }) {
+// SOS: círculo vermelho com escudo, só no cabeçalho do Início (RA-SEG-01)
+export function BotaoSOS() {
   return (
     <Link
       to="/app/seguranca"
       aria-label="SOS: pedir ajuda e segurança"
-      className="flex-none flex items-center h-11 no-underline"
+      className="flex-none flex items-center justify-center w-11 h-11 rounded-full bg-sol-sos text-white no-underline shadow-[0_2px_8px_rgba(180,35,24,0.3)]"
     >
-      <span className={`flex items-center gap-1 h-[30px] pl-2 pr-2.5 rounded-full bg-sol-sos text-white text-[13px] font-extrabold tracking-[0.04em] ${claro ? "ring-2 ring-white/20" : ""}`}>
-        <Shield size={14} strokeWidth={2.4} aria-hidden />SOS
-      </span>
+      <Shield size={20} strokeWidth={2.4} aria-hidden />
     </Link>
   );
 }
 
-export function TopBar({ title, step, back, sos = true, aoVoltar }: { title: string; step?: string; back?: string; sos?: boolean; aoVoltar?: () => void }) {
+export function TopBar({ title, step, back, sos = false, aoVoltar }: { title: string; step?: string; back?: string; sos?: boolean; aoVoltar?: () => void }) {
   const navigate = useNavigate();
   return (
     <div className="flex items-center gap-1 px-4 pt-6 pb-1.5">

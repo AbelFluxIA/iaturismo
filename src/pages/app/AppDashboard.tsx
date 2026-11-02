@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Camera, ChevronRight, ClipboardCheck, Gift, Languages, MapPin, MessageCircle, Plus, Route, X } from "lucide-react";
+import { AlertTriangle, Camera, ChevronRight, ClipboardCheck, Gift, Languages, Lock, MapPin, MessageCircle, Navigation, Plus, Route, X } from "lucide-react";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
-import { BotaoSOS, Carregando, btnPrimario, cartao, formatarData } from "@/components/app/ui";
-import { geocode, previsao, type PrevisaoDia } from "@/lib/geo";
+import { BotaoSOS, Carregando, btnSecundario, cartao, formatarData } from "@/components/app/ui";
+import { IconeTempo } from "@/components/app/IconeTempo";
+import { useAlbum } from "@/components/app/Album";
+import { useCidade } from "@/lib/cidade";
+import { geocode, previsao, tempoAgora, type PrevisaoDia, type TempoAgora } from "@/lib/geo";
 import { CORES_TIPO, useSugestoes } from "@/lib/sugestoes";
 import {
   ITENS_CHECKLIST, chaveAtividade, diaDaViagem, horaInicio, hojeISO, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, situacao, type Viagem,
 } from "@/lib/roteiro";
+
+// "Faltam 5 dias" até a chegada (cartão da próxima viagem, RA-NAV-05)
+function faltam(chegada: string) {
+  const um = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+  const n = Math.round((um(chegada) - um(hojeISO())) / 86400000);
+  return n <= 1 ? "Amanhã" : `Faltam ${n} dias`;
+}
 
 // Alerta de chuva forte na viagem (previsão Open-Meteo), que a pessoa pode fechar
 function AlertaChuva({ viagem }: { viagem: Viagem }) {
@@ -67,11 +77,11 @@ function CartaoViagem({ viagem }: { viagem: Viagem }) {
     <section aria-label="Sua viagem" className="flex flex-col gap-3 p-4 rounded-[20px] bg-sol-fundo text-white">
       <Link to={base} className="flex items-center gap-2 text-white no-underline">
         <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-sol-azul-suave">{sit === "agora" ? "Viagem atual" : "Próxima viagem"}</span>
-        <span className="flex-1 min-w-0 font-display font-extrabold text-[22px] leading-tight truncate">{nomeCurto(viagem.destination) || "Sua viagem"}</span>
+        <span className="flex-1 min-w-0 font-display font-extrabold text-[20px] leading-tight truncate">{nomeCurto(viagem.destination) || "Sua viagem"}</span>
         {andamento?.total ? (
           <span className="flex-none text-xs font-extrabold px-2.5 py-1 rounded-full bg-sol-sun text-sol-fundo">Dia {andamento.dia} de {andamento.total}</span>
         ) : sit === "proxima" && viagem.arrivalDate ? (
-          <span className="flex-none text-xs font-extrabold px-2.5 py-1 rounded-full bg-white/15">{formatarData(viagem.arrivalDate)}</span>
+          <span className="flex-none text-xs font-extrabold px-2.5 py-1 rounded-full bg-white/15">{faltam(viagem.arrivalDate)}</span>
         ) : null}
       </Link>
 
@@ -148,35 +158,34 @@ export default function AppDashboard() {
   if ((profileLoading && !profile) || viagens === null) return <Carregando />;
 
   const primeiroNome = (name || profile?.name || "viajante").split(" ")[0];
-  const cidade = atual?.destination || profile?.destination || "Paraíba";
   const guiaAtiva = !!profile?.hasCompanion;
   const gratis = profile?.ofertas?.gratisDuranteTeste;
-  const creditos = profile?.freeCredits ?? 0;
+  const regras = profile?.regras;
+  const passada = !atual ? (viagens ?? []).find((v) => situacao(v) === "passada") ?? null : null;
 
   return (
     <div className="flex flex-col gap-3 px-5 pt-7">
-      <header className="flex items-start gap-2">
-        <div className="flex-1 min-w-0 flex flex-col">
-          <h1 className="m-0 font-display font-extrabold text-[22px] leading-tight tracking-tight truncate">Olá, {primeiroNome}</h1>
-          <span className="flex items-center gap-1 text-[13px] font-semibold text-sol-texto2 truncate">
-            <MapPin size={13} strokeWidth={2.2} />{cidade}
-          </span>
+      <header className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <h1 className="flex-1 min-w-0 m-0 font-display font-extrabold text-[24px] leading-tight tracking-tight truncate">Olá, {primeiroNome}</h1>
+          <BotaoSOS />
+          <Link to="/app/perfil" aria-label="Perfil" className="flex-none w-11 h-11 rounded-full bg-sol-sun flex items-center justify-center font-display font-extrabold text-lg text-sol-fundo no-underline">
+            {primeiroNome.charAt(0).toUpperCase()}
+          </Link>
         </div>
-        <BotaoSOS />
-        <Link to="/app/perfil" aria-label="Perfil" className="flex-none w-11 h-11 rounded-full bg-sol-sun flex items-center justify-center font-display font-extrabold text-lg text-sol-fundo no-underline">
-          {primeiroNome.charAt(0).toUpperCase()}
-        </Link>
+        <CidadeETempo />
       </header>
 
       {atual && <AlertaChuva viagem={atual} />}
 
       <nav aria-label="Atalhos" className="grid grid-cols-3 gap-2">
         {[
-          { to: "/app/tradutor", label: "Tradutor", Icon: Languages },
-          { to: "/app/mural", label: "Álbum", Icon: Camera },
-          { to: "/app/creditos", label: "Convide e ganhe", Icon: Gift },
-        ].map(({ to, label, Icon }) => (
-          <Link key={to} to={to} className={`${cartao} flex flex-col items-center justify-center gap-1 min-h-[64px] p-2 text-sol-fundo no-underline text-center`}>
+          { to: "/app/tradutor", label: "Tradutor", Icon: Languages, cadeado: !guiaAtiva },
+          { to: "/app/mural", label: "Álbum", Icon: Camera, cadeado: false },
+          { to: "/app/creditos", label: "Convide e ganhe", Icon: Gift, cadeado: false },
+        ].map(({ to, label, Icon, cadeado }) => (
+          <Link key={to} to={to} className={`${cartao} relative flex flex-col items-center justify-center gap-1 min-h-[64px] p-2 text-sol-fundo no-underline text-center`}>
+            {cadeado && <span className="absolute top-1.5 right-1.5 w-[22px] h-[22px] rounded-full bg-sol-sun flex items-center justify-center" aria-label="Só com a Guia Sol"><Lock size={12} strokeWidth={2.6} /></span>}
             <Icon size={22} />
             <span className="text-xs font-extrabold leading-tight">{label}</span>
           </Link>
@@ -185,6 +194,15 @@ export default function AppDashboard() {
 
       {atual ? (
         <CartaoViagem viagem={atual} />
+      ) : passada ? (
+        <section className={`${cartao} flex flex-col gap-2.5 p-[18px]`}>
+          <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-sol-texto2">Última viagem</span>
+          <span className="font-display font-extrabold text-[22px] leading-tight">{nomeCurto(passada.destination) || "Sua viagem"}</span>
+          <div className="grid grid-cols-2 gap-2">
+            <Link to={`/app/roteiro?id=${encodeURIComponent(passada.id)}`} className={`${btnSecundario} !min-h-[44px] !text-sm no-underline`}>Rever roteiro</Link>
+            <Link to="/app/mural" className={`${btnSecundario} !min-h-[44px] !text-sm no-underline`}>Ver fotos</Link>
+          </div>
+        </section>
       ) : (
         <section className={`${cartao} flex flex-col gap-2 p-[18px]`}>
           <span className="font-display font-extrabold text-[22px] leading-tight">Para onde vamos?</span>
@@ -192,26 +210,74 @@ export default function AppDashboard() {
         </section>
       )}
 
-      <section aria-label="Roteiros e Guia Sol" className={`${cartao} flex flex-col gap-2.5 p-4`}>
-        <span className="text-[15px] font-extrabold">
-          {gratis ? "Roteiros grátis durante o teste" : creditos > 0 ? `${creditos} ${creditos === 1 ? "roteiro grátis" : "roteiros grátis"} para usar` : "Monte seu próximo roteiro"}
-        </span>
-        <div className="grid grid-cols-2 gap-2">
-          <Link to="/app/criar" className={`${btnPrimario} !min-h-[46px] !text-sm no-underline`}>
-            <Plus size={18} strokeWidth={2.4} /> Criar roteiro
-          </Link>
-          <Link
-            to="/app/guia"
-            className={`flex items-center justify-center gap-1.5 min-h-[46px] px-2 rounded-[14px] text-sm font-bold no-underline ${
-              guiaAtiva ? "bg-sol-ok-claro text-sol-ok-texto border-[1.5px] border-[#B9DCCB]" : "bg-sol-creme text-sol-fundo border-[1.5px] border-[#F2D98A]"
-            }`}
-          >
-            <MessageCircle size={18} /> {guiaAtiva ? "Falar com a Guia" : "Guia Sol"}
+      <section aria-label="Roteiros e Guia Sol" className={`${cartao} flex flex-col gap-3 p-4`}>
+        <div className="flex items-center gap-3">
+          <span className="flex-1 text-[14px] leading-snug">
+            {gratis
+              ? <><strong>Roteiros grátis</strong> durante o teste</>
+              : regras
+                ? <><strong>{regras.roteirosGratisSemana} grátis por semana</strong> · renova domingo, 21h</>
+                : <strong>Monte seu próximo roteiro</strong>}
+          </span>
+          <Link to="/app/criar" className="flex-none flex items-center gap-1.5 min-h-[44px] px-4 rounded-[14px] border-[1.5px] border-sol-mar text-sol-mar text-sm font-extrabold no-underline">
+            <Plus size={18} strokeWidth={2.4} /> Criar
           </Link>
         </div>
+        <Link
+          to="/app/guia"
+          className={`flex items-center gap-3 min-h-[56px] px-4 rounded-[14px] no-underline ${guiaAtiva ? "bg-sol-ok-claro text-sol-ok-texto" : "bg-sol-sun text-sol-fundo"}`}
+        >
+          <MessageCircle size={22} className="flex-none" />
+          <span className="flex-1 flex flex-col">
+            <span className="text-[16px] font-extrabold leading-tight">{guiaAtiva ? "Guia Sol ativa" : "Contratar Guia Sol"}</span>
+            <span className="text-[13px] font-semibold">{guiaAtiva ? "Falar com a Guia" : profile?.ofertas?.guiaPreco ?? "Uma guia em tempo real na viagem"}</span>
+          </span>
+          <ChevronRight size={20} className="flex-none" />
+        </Link>
       </section>
+
+      <MuralDeViagens />
 
       <ParaOndeIr />
     </div>
+  );
+}
+
+// Cidade do cabeçalho e o tempo de agora (abre a previsão)
+function CidadeETempo() {
+  const cidade = useCidade();
+  const [agora, setAgora] = useState<TempoAgora | null>(null);
+  useEffect(() => { if (cidade.coord) tempoAgora(cidade.coord).then(setAgora); }, [cidade.coord?.lat, cidade.coord?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex-1 min-w-0 flex items-center gap-1.5 text-[14px] font-semibold text-sol-texto2 truncate">
+        {cidade.origem === "posicao" ? <Navigation size={13} strokeWidth={2.4} className="flex-none fill-current" /> : <MapPin size={14} strokeWidth={2.2} className="flex-none" />}
+        {cidade.carregando ? "…" : cidade.nome ? nomeCurto(cidade.nome) : "Escolher cidade"}
+      </span>
+      {agora && (
+        <Link to="/app/tempo" aria-label={`Tempo agora: ${agora.temp} graus. Ver a previsão`} className="flex-none flex items-center gap-1.5 h-9 px-3 rounded-full bg-white border border-sol-linha text-sol-fundo text-[15px] font-extrabold no-underline">
+          <IconeTempo codigo={agora.codigo} size={18} className="text-sol-mar" />{agora.temp}°
+        </Link>
+      )}
+    </div>
+  );
+}
+
+// Faixa com as últimas fotos do álbum
+function MuralDeViagens() {
+  const { album } = useAlbum();
+  const fotos = (album?.grupos ?? []).flatMap((g) => g.fotos).slice(-3).reverse();
+  if (!fotos.length) return null;
+  return (
+    <section aria-label="Mural de viagens" className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between">
+        <h2 className="m-0 font-display font-extrabold text-[22px]">Mural de viagens</h2>
+        <Link to="/app/mural" className="text-sm font-bold text-sol-mar underline">Ver mural</Link>
+      </div>
+      <Link to="/app/mural" className="grid grid-cols-3 gap-1.5 no-underline">
+        {fotos.map((f) => <img key={f.url} src={f.url} alt="" className="w-full aspect-square object-cover rounded-xl bg-sol-claro" />)}
+      </Link>
+      <span className="text-[13px] text-sol-texto2">{album?.total} {album?.total === 1 ? "foto" : "fotos"} das suas viagens</span>
+    </section>
   );
 }

@@ -1,5 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { Check, MapPin, MessageCircle, Route } from "lucide-react";
+import { Check, Lock, MapPin, MessageCircle, Route } from "lucide-react";
+import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { AbrirRota } from "@/components/app/AbrirRota";
 import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
 import { Carregando, TopBar, Vazio, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 import { queryDoMapa } from "@/lib/geo";
@@ -16,6 +18,7 @@ export default function AppAtividade() {
   const { dados, loading } = useRoteiro(id, codigo);
   const { viagens } = useViagens();
   const { feitas, alternar } = useFeitas(id || codigo);
+  const { profile } = useClientAuth();
 
   if (loading) return <Carregando />;
   const dias = dados ? parseItinerary(dados.texto) : [];
@@ -65,13 +68,20 @@ export default function AppAtividade() {
 
         <div className="grid grid-cols-2 gap-2">
           {atv.mapUrl ? (
-            <a href={atv.mapUrl} target="_blank" rel="noopener noreferrer" className={`${btnPrimario} no-underline`}><Route size={18} /> Ver rota</a>
+            <AbrirRota mapUrl={atv.mapUrl} />
           ) : (
             <Link to={`${voltar}&aba=mapa`} className={`${btnPrimario} no-underline`}><Route size={18} /> Ver no mapa</Link>
           )}
-          <Link to={`/app/chat?texto=${encodeURIComponent(pedirOutra)}`} className={`${btnSecundario} no-underline`}>
-            <MessageCircle size={18} /> Outra opção
-          </Link>
+          {/* "Pedir outra opção" só com a Guia (RA-ROT-07) */}
+          {profile?.hasCompanion ? (
+            <Link to={`/app/chat?texto=${encodeURIComponent(pedirOutra)}`} className={`${btnSecundario} no-underline`}>
+              <MessageCircle size={18} /> Outra opção
+            </Link>
+          ) : (
+            <Link to="/app/guia/comparar" className={`${btnSecundario} no-underline`}>
+              <Lock size={18} /> Outra opção
+            </Link>
+          )}
         </div>
 
         <button

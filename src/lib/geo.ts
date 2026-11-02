@@ -116,6 +116,49 @@ export function previsao(c: Coord, dias = 7): Promise<PrevisaoDia[] | null> {
   return prevCache.get(chave)!;
 }
 
+export interface TempoAgora {
+  temp: number;
+  codigo: number;
+  horas: { hora: string; temp: number; chuva: number; codigo: number }[]; // próximas 12 h
+}
+
+const agoraCache = new Map<string, Promise<TempoAgora | null>>();
+
+export function tempoAgora(c: Coord): Promise<TempoAgora | null> {
+  const chave = `${c.lat.toFixed(2)},${c.lng.toFixed(2)}`;
+  if (!agoraCache.has(chave)) {
+    agoraCache.set(chave, (async () => {
+      try {
+        const r = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lng}` +
+          `&current=temperature_2m,weathercode&hourly=temperature_2m,precipitation_probability,weathercode&forecast_hours=12&timezone=America%2FSao_Paulo`
+        );
+        if (!r.ok) return null;
+        const d = await r.json();
+        return {
+          temp: Math.round(d.current?.temperature_2m),
+          codigo: d.current?.weathercode ?? 0,
+          horas: (d.hourly?.time ?? []).map((t: string, i: number) => ({
+            hora: t.slice(11, 16),
+            temp: Math.round(d.hourly.temperature_2m[i]),
+            chuva: d.hourly.precipitation_probability[i] ?? 0,
+            codigo: d.hourly.weathercode[i] ?? 0,
+          })),
+        };
+      } catch { return null; }
+    })());
+  }
+  return agoraCache.get(chave)!;
+}
+
+export function tipoDeTempo(codigo: number): "sol" | "nuvens" | "nublado" | "chuva" | "trovoada" {
+  if (codigo === 0) return "sol";
+  if (codigo <= 3) return "nuvens";
+  if (codigo <= 48) return "nublado";
+  if (codigo >= 95) return "trovoada";
+  return "chuva";
+}
+
 export function descreverTempo(p: PrevisaoDia) {
   const c = p.codigo;
   const ceu = c === 0 ? "sol" : c <= 3 ? "parcialmente nublado" : c <= 48 ? "nublado" : c <= 67 || (c >= 80 && c <= 82) ? "chuva" : c >= 95 ? "trovoadas" : "nublado";

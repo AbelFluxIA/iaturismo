@@ -3,15 +3,17 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { ViagensProvider, useViagens } from "@/contexts/ViagensContext";
 import CentralBugs from "@/components/app/CentralBugs";
-import { Home, Languages, Map, MessageCircle, Plus, Sun, type LucideIcon } from "lucide-react";
+import { Calendar, Check, Home, Map, MessageCircle, Plus, X, type LucideIcon } from "lucide-react";
 
-// Abas do protótipo: Início · Roteiros · [Hoje ou Criar roteiro] · Guia Sol · Tradutor.
-// SOS fica no topo de cada tela; Perfil abre pelo avatar no Início.
+// Barra (RA-NAV-01): Início · Roteiros · [Hoje ou Criar roteiro] · Guia Sol · Sol.
+// O Tradutor abre pelo Início e pela conversa da Guia; o SOS fica no cabeçalho
+// do Início; o Perfil abre pelo avatar.
 
 interface Aba {
   to: string;
   label: string;
-  Icon: LucideIcon;
+  Icon?: LucideIcon;
+  imagem?: string;
   ativa: (caminho: string, busca: URLSearchParams) => boolean;
 }
 
@@ -26,22 +28,26 @@ const ESQUERDA: Aba[] = [
     ativa: (c, b) => (c === "/app/roteiro" && !temViagemAberta(b)) || c === "/app/mural",
   },
 ];
-const DIREITA: Aba[] = [
-  { to: "/app/guia", label: "Guia Sol", Icon: MessageCircle, ativa: (c) => c === "/app/guia" || c === "/app/chat" },
-  { to: "/app/tradutor", label: "Tradutor", Icon: Languages, ativa: (c) => c === "/app/tradutor" },
-];
+const GUIA: Aba = { to: "/app/guia", label: "Guia Sol", Icon: MessageCircle, ativa: (c) => c.startsWith("/app/guia") || c === "/app/tradutor" };
+const SOL: Aba = { to: "/app/chat", label: "Sol", imagem: "/sol-mark.png", ativa: (c) => c === "/app/chat" };
 
-function ItemAba({ aba, ativo }: { aba: Aba; ativo: boolean }) {
+function ItemAba({ aba, ativo, marcador, rotulo }: { aba: Aba; ativo: boolean; marcador?: "sim" | "nao"; rotulo?: string }) {
   return (
     <Link
       to={aba.to}
       aria-current={ativo ? "page" : undefined}
+      aria-label={rotulo}
       className={`flex flex-col items-center justify-center gap-1 min-h-[52px] text-xs no-underline ${
         ativo ? "text-sol-fundo font-extrabold" : "text-[#4E5F66] font-semibold"
       }`}
     >
-      <span className={`flex px-3.5 py-[3px] rounded-full ${ativo ? "bg-sol-sun" : "bg-transparent"}`}>
-        <aba.Icon size={22} strokeWidth={1.9} />
+      <span className={`relative flex px-3.5 py-[3px] rounded-full ${ativo ? "bg-sol-sun" : "bg-transparent"}`}>
+        {aba.imagem ? <img src={aba.imagem} alt="" className="w-[22px] h-[22px] object-contain" /> : aba.Icon && <aba.Icon size={22} strokeWidth={1.9} />}
+        {marcador && (
+          <span className={`absolute -top-1 right-1.5 w-[15px] h-[15px] rounded-full flex items-center justify-center text-white border-2 border-white ${marcador === "sim" ? "bg-sol-ok" : "bg-[#8A9599]"}`}>
+            {marcador === "sim" ? <Check size={9} strokeWidth={4} /> : <X size={9} strokeWidth={4} />}
+          </span>
+        )}
       </span>
       {aba.label}
     </Link>
@@ -53,6 +59,8 @@ function BarraAbas({ navRef }: { navRef: React.RefObject<HTMLElement> }) {
   const caminho = pathname.replace(/\/+$/, "") || "/app";
   const busca = new URLSearchParams(search);
   const { viagens, atual } = useViagens();
+  const { profile } = useClientAuth();
+  const guiaAtiva = !!profile?.hasCompanion;
   // Sem viagem em andamento ou próxima, o botão do meio cria um roteiro
   const criar = viagens !== null && !atual;
   const centroAtivo = caminho.startsWith("/app/criar") || caminho.startsWith("/app/hoje")
@@ -76,11 +84,19 @@ function BarraAbas({ navRef }: { navRef: React.RefObject<HTMLElement> }) {
             centroAtivo ? "border-sol-sun" : "border-white"
           }`}
         >
-          {criar ? <Plus size={28} strokeWidth={2.4} /> : <Sun size={28} strokeWidth={2.2} />}
+          {criar ? (
+            <Plus size={28} strokeWidth={2.4} />
+          ) : (
+            <span className="relative flex">
+              <Calendar size={30} strokeWidth={1.9} />
+              <span className="absolute inset-x-0 bottom-[3px] text-center text-[10px] font-extrabold leading-none">{String(new Date().getDate()).padStart(2, "0")}</span>
+            </span>
+          )}
         </span>
-        {criar ? "Criar" : "Hoje"}
+        {criar ? "Criar roteiro" : "Hoje"}
       </Link>
-      {DIREITA.map((a) => <ItemAba key={a.to} aba={a} ativo={a.ativa(caminho, busca)} />)}
+      <ItemAba aba={GUIA} ativo={GUIA.ativa(caminho, busca)} marcador={guiaAtiva ? "sim" : "nao"} rotulo={`Guia Sol, ${guiaAtiva ? "ativa" : "não ativa"}`} />
+      <ItemAba aba={SOL} ativo={SOL.ativa(caminho, busca)} rotulo="Sol, conversa grátis" />
     </nav>
   );
 }
@@ -88,9 +104,10 @@ function BarraAbas({ navRef }: { navRef: React.RefObject<HTMLElement> }) {
 export default function AppLayout() {
   const { pathname } = useLocation();
   const caminho = pathname.replace(/\/+$/, "") || "/app";
-  const { isDemo, logout } = useClientAuth();
+  const { isDemo, logout, profile } = useClientAuth();
   const navigate = useNavigate();
-  const telaCheia = caminho === "/app/chat"; // o chat ocupa a altura exata da tela
+  // A conversa ocupa a altura exata da tela (aba Sol e aba Guia Sol com a Guia ativa)
+  const telaCheia = caminho === "/app/chat" || (caminho === "/app/guia" && !!profile?.hasCompanion);
 
   // Altura real da faixa de demonstração e da barra de abas (variam por aparelho)
   const faixaRef = useRef<HTMLDivElement>(null);

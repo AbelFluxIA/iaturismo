@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeftRight, Copy, Mic, Play, QrCode, Square, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowLeftRight, Copy, Lock, Mic, Play, QrCode, Square, Users } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { TopBar, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 
@@ -18,7 +19,32 @@ const nomeDe = (c: string) => IDIOMAS.find(([k]) => k === c)?.[1] ?? "Idioma det
 const vozDe = (c: string) => IDIOMAS.find(([k]) => k === c)?.[2] ?? "pt-BR";
 const TIPOS_AUDIO = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
 
+// Tradutor e criar sala só com a Guia ativa (RA-TRA-01)
 export default function AppTradutor() {
+  const { profile } = useClientAuth();
+  if (!profile?.hasCompanion) return <TradutorBloqueado />;
+  return <Tradutor />;
+}
+
+function TradutorBloqueado() {
+  return (
+    <div className="flex flex-col">
+      <TopBar title="Tradutor" back="/app" />
+      <div className="flex flex-col items-center text-center gap-3 px-6 pt-8">
+        <span className="w-[72px] h-[72px] rounded-[22px] bg-sol-creme flex items-center justify-center"><Lock size={32} /></span>
+        <h2 className="m-0 font-display font-extrabold text-[22px] leading-tight">O tradutor faz parte da Guia Sol</h2>
+        <p className="m-0 max-w-[300px] text-sm leading-snug text-sol-texto2">Com a Guia ativa você traduz por texto e voz e cria salas de conversa traduzida, cada um no seu celular.</p>
+        <Link to="/app/guia/comparar" className={`${btnPrimario} w-full no-underline mt-2`}>Ver o que muda com a Guia Sol</Link>
+        <div className={`${cartao} w-full flex items-center gap-3 p-4 text-left opacity-80`} aria-disabled="true">
+          <QrCode size={24} className="flex-none" />
+          <span className="flex-1 flex flex-col"><span className="text-[15px] font-extrabold">Entrar na sala de outra pessoa</span><span className="text-xs text-sol-texto2">Com QR ou código · em breve</span></span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Tradutor() {
   const { token, isDemo } = useClientAuth();
   const [de, setDe] = useState("auto");
   const [para, setPara] = useState("en");

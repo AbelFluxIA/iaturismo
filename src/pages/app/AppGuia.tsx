@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import AppChat from "@/pages/app/AppChat";
 import { CalendarClock, Camera, Check, CloudRain, MapPin, MessageCircle, Plus, Search, UtensilsCrossed } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
-import { Aviso, BotaoSOS, Carregando, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
+import { Aviso, Carregando, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 import { nomeCurto } from "@/lib/roteiro";
 
 // Aba Guia Sol: com a Guia ativa abre a conversa; sem ela, mostra a oferta.
@@ -22,7 +23,7 @@ export default function AppGuia() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState<{ carregando: boolean; pagar?: string; erro?: string }>({ carregando: false });
 
-  if (profile?.hasCompanion) return <Navigate to="/app/chat" replace />;
+  if (profile?.hasCompanion) return <AppChat modo="guia" />;
   if ((profileLoading && !profile) || viagens === null) return <Carregando />;
 
   async function ativar() {
@@ -53,7 +54,6 @@ export default function AppGuia() {
     <div className="flex flex-col gap-3 px-5 pt-7">
       <header className="flex items-center gap-2">
         <h1 className="flex-1 m-0 font-display font-extrabold text-[28px] tracking-tight">Guia Sol</h1>
-        <BotaoSOS />
       </header>
 
       <section className="flex flex-col gap-2 p-5 rounded-[22px] bg-sol-fundo text-white">
@@ -88,6 +88,7 @@ export default function AppGuia() {
       )}
       {estado.erro && <p role="status" className="m-0 text-sm text-sol-sos">{estado.erro}</p>}
 
+      <Link to="/app/guia/comparar" className={`${btnSecundario} no-underline`}>Com e sem a Guia Sol</Link>
       <Link to="/app/chat" className={`${btnSecundario} no-underline`}>
         <MessageCircle size={18} /> Conversar com a Sol
       </Link>

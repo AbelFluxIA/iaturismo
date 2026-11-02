@@ -164,10 +164,10 @@ export default function Entrar() {
             </div>
             <div className="flex flex-col gap-3.5">
               <h1 className="m-0 font-display font-extrabold text-[30px] leading-[1.02] tracking-[-0.03em]">
-                Sua viagem pela Paraíba, organizada.
+                Sua viagem inteligente
               </h1>
               <p className="m-0 text-[15px] leading-snug text-sol-texto2">
-                Roteiro, mapa, álbum e segurança no mesmo lugar. A Sol também atende você no WhatsApp.
+                Roteiro, mapa, álbum e segurança no mesmo lugar, para qualquer destino. A Sol também atende você no WhatsApp.
               </p>
             </div>
             <div className="mt-auto pt-8 flex flex-col gap-3">

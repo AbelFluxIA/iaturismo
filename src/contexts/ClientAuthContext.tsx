@@ -15,6 +15,19 @@ export interface ClientProfile {
   groupType?: string | null;
   touristProfile?: string | null;
   ofertas?: { gratisDuranteTeste: boolean; guiaPreco: string };
+  // Parâmetros das regras, vindos do servidor (o app só mostra)
+  regras?: {
+    roteirosGratisSemana: number;
+    diaRoteiroPreco: number;
+    maxDiasSemGuia: number;
+    guiaRoteirosSemana: number;
+    maxDiasComGuia: number;
+    guiaPrecoDia: number;
+    guiaPrecoMes: number;
+    chatMensagensDia: number;
+    guiaMensagensDia: number;
+    tradutorMensagensDia: number;
+  };
   hasPaid: boolean;
   hasCompanion: boolean;
   freeCredits: number;

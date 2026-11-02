@@ -12,7 +12,7 @@ import { hojeISO } from "@/lib/roteiro";
 // O pedido vai para o bot (/api/app/roteiros/criar), que gera em segundo plano.
 
 type Etapa = "inicio" | "dados" | "hospedagem" | "revisao" | "gerando";
-type QuemVai = "sozinho" | "casal" | "família" | "amigos";
+type QuemVai = "sozinho" | "casal" | "família";
 type Custos = "econômico" | "melhor custo-benefício" | "conforto";
 
 interface Rascunho {
@@ -22,16 +22,29 @@ interface Rascunho {
   saida: string;
   horaVolta: string;
   quemVai: QuemVai;
-  pessoas: number;
+  adultos: number;
   criancas: number;
+  pet: { tipo: string; porte: string } | null;
+  salvarPreferencia: boolean;
   tipos: string[];
   custos: Custos;
   temHospedagem: "sim" | "nao" | null;
   hospedagem: string;
 }
 
-const TIPOS = ["Natureza (praia)", "Gastronomia", "Cultura e história", "Aventura", "Compras", "Vida noturna", "Bem-estar", "Com crianças"];
-const QUEM: [QuemVai, string][] = [["sozinho", "Sozinho"], ["casal", "Casal"], ["família", "Família"], ["amigos", "Amigos"]];
+// Tipos de roteiro (RA-ROT-11) e quem vai (RA-ROT-12)
+const TIPOS = ["Natureza (inclui praia)", "Gastronomia", "Cultura", "Aventura", "Bares e pubs", "Negócios", "Inovação e tech"];
+const QUEM: [QuemVai, string][] = [["sozinho", "Sozinho"], ["casal", "Casal"], ["família", "Família"]];
+const PETS = ["Cachorro", "Gato", "Outro"];
+const PORTES = ["Pequeno", "Médio", "Grande"];
+const CHAVE_PREF = "sol_preferencias";
+
+interface Preferencias { tipos: string[]; custos: Custos; quemVai: QuemVai }
+
+// Preferências padrão (Perfil ou "Salvar como preferência" na revisão, RA-ROT-10)
+export function lerPreferencias(): Preferencias | null {
+  try { return JSON.parse(localStorage.getItem(CHAVE_PREF) || "null"); } catch { return null; }
+}
 const CUSTOS: [Custos, string][] = [["econômico", "Econômico"], ["melhor custo-benefício", "Melhor custo-benefício"], ["conforto", "Conforto"]];
 const CHAVE = "sol_rascunho_roteiro";
 
@@ -50,25 +63,40 @@ function daquiAUmaHora() {
 function tiposDoPerfil(perfil: string | null | undefined) {
   const m = perfil?.match(/foco em ([^|]+?)(?:, orçamento|\||$)/i);
   const achados = m ? TIPOS.filter((t) => m[1].toLowerCase().includes(t.toLowerCase().split(" ")[0])) : [];
-  return achados.length ? achados.slice(0, 3) : ["Natureza (praia)", "Gastronomia"];
+  return achados.length ? achados.slice(0, 3) : ["Natureza (inclui praia)", "Gastronomia"];
 }
 
+// Roteiro rápido (RA-ROT-09): sai em 1 hora e volta hoje às 22h. Tarde da noite,
+// fica para amanhã de manhã.
 function padrao(destino: string, perfil?: string | null): Rascunho {
-  const hoje = hojeISO();
+  const prefs = lerPreferencias();
+  const tarde = new Date(Date.now() + 60 * 60 * 1000).getHours() >= 21 || new Date().getHours() < 5;
+  const dia = tarde && new Date().getHours() >= 5 ? somarDias(hojeISO(), 1) : hojeISO();
   return {
     destino,
-    chegada: hoje,
-    horaChegada: daquiAUmaHora(),
-    saida: somarDias(hoje, 1),
+    chegada: dia,
+    horaChegada: tarde ? "09:00" : daquiAUmaHora(),
+    saida: dia,
     horaVolta: "22:00",
-    quemVai: "sozinho",
-    pessoas: 2,
-    criancas: 1,
-    tipos: tiposDoPerfil(perfil),
-    custos: "melhor custo-benefício",
+    quemVai: prefs?.quemVai ?? "sozinho",
+    adultos: 2,
+    criancas: 0,
+    pet: null,
+    tipos: prefs?.tipos?.length ? prefs.tipos : tiposDoPerfil(perfil),
+    custos: prefs?.custos ?? "melhor custo-benefício",
     temHospedagem: null,
     hospedagem: "",
+    salvarPreferencia: false,
   };
+}
+
+const diasEntre = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000) + 1;
+
+function textoQuemVai(r: Rascunho) {
+  const base = r.quemVai === "família"
+    ? `Família · ${r.adultos} ${r.adultos === 1 ? "adulto" : "adultos"}${r.criancas ? ` e ${r.criancas} ${r.criancas === 1 ? "criança" : "crianças"}` : ""}`
+    : r.quemVai === "casal" ? "Casal" : "Sozinho";
+  return r.pet ? `${base} · com pet (${r.pet.tipo.toLowerCase()}, ${r.pet.porte.toLowerCase()})` : base;
 }
 
 function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -99,7 +127,7 @@ export default function AppCriar() {
     const vindo = params.get("destino");
     try {
       const salvo = JSON.parse(sessionStorage.getItem(CHAVE) || "null") as Rascunho | null;
-      if (salvo && (!vindo || salvo.destino === vindo)) return salvo;
+      if (salvo && "adultos" in salvo && (!vindo || salvo.destino === vindo)) return salvo;
     } catch { /* sem rascunho */ }
     return padrao(vindo ?? "", profile?.touristProfile);
   });
@@ -108,8 +136,15 @@ export default function AppCriar() {
   useEffect(() => { window.scrollTo(0, 0); }, [etapa]);
 
   const gratis = profile?.ofertas?.gratisDuranteTeste;
-  const creditos = profile?.freeCredits ?? 0;
-  const cota = gratis ? "Roteiros grátis durante o teste." : creditos > 0 ? `Usa 1 dos seus ${creditos} roteiros grátis.` : "Sem roteiros grátis: a Sol envia o link de pagamento antes de gerar.";
+  const regras = profile?.regras;
+  const comGuia = !!profile?.hasCompanion;
+  const maxDias = (comGuia ? regras?.maxDiasComGuia : regras?.maxDiasSemGuia) ?? (comGuia ? 7 : 5);
+  const pernoite = r.saida > r.chegada;
+  const cota = gratis
+    ? "Roteiros grátis durante o teste."
+    : comGuia
+      ? `Com a Guia: até ${regras?.guiaRoteirosSemana ?? 30} roteiros por semana, sem cobrança por dia.`
+      : `Sem a Guia: ${regras?.roteirosGratisSemana ?? 2} roteiros grátis por semana, 1 dia cada. Cada dia a mais custa R$ ${(regras?.diaRoteiroPreco ?? 4.9).toFixed(2).replace(".", ",")}.`;
 
   // ─── Gerando ───
   const [gerando, setGerando] = useState<{ estado: "enviando" | "esperando" | "pronto" | "pagar" | "demorou" | "erro"; id?: string; texto?: string }>({ estado: "enviando" });
@@ -119,6 +154,9 @@ export default function AppCriar() {
   async function gerar() {
     setEtapa("gerando");
     setGerando({ estado: "enviando" });
+    if (r.salvarPreferencia) {
+      try { localStorage.setItem(CHAVE_PREF, JSON.stringify({ tipos: r.tipos, custos: r.custos, quemVai: r.quemVai })); } catch { /* ok */ }
+    }
     if (isDemo) {
       await new Promise((ok) => setTimeout(ok, 1800));
       setGerando({ estado: "pronto", id: "demo" });
@@ -135,11 +173,12 @@ export default function AppCriar() {
           horaChegada: r.horaChegada,
           horaVolta: r.horaVolta,
           quemVai: r.quemVai,
-          pessoas: r.quemVai === "amigos" ? r.pessoas : undefined,
+          adultos: r.quemVai === "família" ? r.adultos : undefined,
           criancas: r.quemVai === "família" ? r.criancas : undefined,
+          pet: r.pet ?? undefined,
           tipos: r.tipos,
           custos: r.custos,
-          hospedagem: r.temHospedagem === "sim" ? r.hospedagem : undefined,
+          hospedagem: pernoite && r.temHospedagem === "sim" ? r.hospedagem : undefined,
         }),
       });
       if (res.status === 404) {
@@ -223,10 +262,11 @@ export default function AppCriar() {
     );
   }
 
-  if (etapa === "inicio") return <Inicio r={r} set={set} cota={cota} irPara={setEtapa} rapido={() => { set({ ...padrao(r.destino, profile?.touristProfile), destino: r.destino }); setEtapa("revisao"); }} />;
+  if (etapa === "inicio") return <Inicio r={r} set={set} cota={cota} irPara={setEtapa} rapido={() => { set({ ...padrao(r.destino, profile?.touristProfile), destino: r.destino, tipos: r.tipos, custos: r.custos, quemVai: r.quemVai }); setEtapa("revisao"); }} />;
 
   if (etapa === "dados") {
-    const valido = r.destino.trim().length >= 2 && r.chegada && r.saida && r.saida >= r.chegada && r.tipos.length > 0;
+    const dias = r.chegada && r.saida ? diasEntre(r.chegada, r.saida) : 0;
+    const valido = r.destino.trim().length >= 2 && r.chegada && r.saida && r.saida >= r.chegada && r.tipos.length > 0 && dias <= maxDias;
     return (
       <div className="flex flex-col">
         <TopBar title="Dados desta viagem" step="Criar roteiro" aoVoltar={() => setEtapa("inicio")} />
@@ -251,21 +291,24 @@ export default function AppCriar() {
 
           <fieldset className="flex flex-col gap-2 border-0 p-0 m-0"><legend className={`${rotuloCampo} mb-2`}>Quem vai com você</legend>
             <div className="flex flex-wrap gap-2">{QUEM.map(([v, l]) => <Chip key={v} ativo={r.quemVai === v} onClick={() => set({ quemVai: v })}>{l}</Chip>)}</div>
-            {(r.quemVai === "família" || r.quemVai === "amigos") && (
-              <div className="flex items-center gap-3 mt-1">
-                <span className="flex-1 text-sm">{r.quemVai === "família" ? "Crianças (até 12 anos)" : "Pessoas no grupo"}</span>
-                {(() => {
-                  const k = r.quemVai === "família" ? "criancas" : "pessoas";
-                  const v = r[k];
-                  const min = k === "criancas" ? 0 : 2;
-                  return (
-                    <span className="flex items-center gap-2">
-                      <button type="button" aria-label="Menos" onClick={() => set({ [k]: Math.max(min, v - 1) } as Partial<Rascunho>)} className="w-11 h-11 rounded-full border-[1.5px] border-sol-borda bg-white flex items-center justify-center"><Minus size={18} /></button>
-                      <span className="w-6 text-center font-extrabold">{v}</span>
-                      <button type="button" aria-label="Mais" onClick={() => set({ [k]: Math.min(k === "criancas" ? 6 : 20, v + 1) } as Partial<Rascunho>)} className="w-11 h-11 rounded-full border-[1.5px] border-sol-borda bg-white flex items-center justify-center"><Plus size={18} /></button>
-                    </span>
-                  );
-                })()}
+            {r.quemVai === "família" && ([["adultos", "Adultos", 1], ["criancas", "Crianças (até 12 anos)", 0]] as const).map(([k, rot, min]) => (
+              <div key={k} className="flex items-center gap-3 mt-1">
+                <span className="flex-1 text-sm">{rot}</span>
+                <span className="flex items-center gap-2">
+                  <button type="button" aria-label={`Menos ${rot.toLowerCase()}`} onClick={() => set({ [k]: Math.max(min, r[k] - 1) } as Partial<Rascunho>)} className="w-11 h-11 rounded-full border-[1.5px] border-sol-borda bg-white flex items-center justify-center"><Minus size={18} /></button>
+                  <span className="w-6 text-center font-extrabold">{r[k]}</span>
+                  <button type="button" aria-label={`Mais ${rot.toLowerCase()}`} onClick={() => set({ [k]: Math.min(6, r[k] + 1) } as Partial<Rascunho>)} className="w-11 h-11 rounded-full border-[1.5px] border-sol-borda bg-white flex items-center justify-center"><Plus size={18} /></button>
+                </span>
+              </div>
+            ))}
+            <label className="flex items-center gap-3 mt-1 min-h-[44px]">
+              <input type="checkbox" checked={!!r.pet} onChange={(e) => set({ pet: e.target.checked ? { tipo: PETS[0], porte: PORTES[1] } : null })} className="w-5 h-5 accent-[#0B5F8A]" />
+              <span className="text-sm font-semibold">Vai levar pet</span>
+            </label>
+            {r.pet && (
+              <div className="grid grid-cols-2 gap-2">
+                <select aria-label="Tipo do pet" className={campo} value={r.pet.tipo} onChange={(e) => set({ pet: { ...r.pet!, tipo: e.target.value } })}>{PETS.map((p) => <option key={p}>{p}</option>)}</select>
+                <select aria-label="Porte do pet" className={campo} value={r.pet.porte} onChange={(e) => set({ pet: { ...r.pet!, porte: e.target.value } })}>{PORTES.map((p) => <option key={p}>{p}</option>)}</select>
               </div>
             )}
           </fieldset>
@@ -285,8 +328,14 @@ export default function AppCriar() {
             <div className="flex flex-wrap gap-2">{CUSTOS.map(([v, l]) => <Chip key={v} ativo={r.custos === v} onClick={() => set({ custos: v })}>{l}</Chip>)}</div>
           </fieldset>
 
-          <button type="button" disabled={!valido} onClick={() => setEtapa("hospedagem")} className={btnPrimario}>Continuar</button>
-          {!valido && <span className="text-xs text-sol-texto2 -mt-2">Preencha destino, datas e pelo menos um tipo de roteiro.</span>}
+          <button type="button" disabled={!valido} onClick={() => setEtapa(pernoite ? "hospedagem" : "revisao")} className={btnPrimario}>Continuar</button>
+          {!valido && (
+            <span className="text-xs text-sol-texto2 -mt-2">
+              {dias > maxDias
+                ? `Até ${maxDias} dias por roteiro${comGuia ? "" : " sem a Guia Sol (com a Guia, até 7)"}.`
+                : "Preencha destino, datas e pelo menos um tipo de roteiro."}
+            </span>
+          )}
         </div>
         <ListaDestinos />
       </div>
@@ -321,10 +370,10 @@ export default function AppCriar() {
     ["Destino", r.destino || "Escolha o destino", "inicio"],
     ["Chegada", `${formatarData(r.chegada, { weekday: "short", day: "2-digit", month: "2-digit" })}, ${r.horaChegada}`, "dados"],
     ["Volta", `${formatarData(r.saida, { weekday: "short", day: "2-digit", month: "2-digit" })}, ${r.horaVolta}`, "dados"],
-    ["Quem vai", r.quemVai === "família" ? `Família · ${r.criancas} ${r.criancas === 1 ? "criança" : "crianças"}` : r.quemVai === "amigos" ? `Amigos · ${r.pessoas} pessoas` : r.quemVai === "casal" ? "Casal" : "Sozinho", "dados"],
+    ["Quem vai", textoQuemVai(r), "dados"],
     ["Tipos", r.tipos.join(", "), "dados"],
     ["Custos", CUSTOS.find(([v]) => v === r.custos)?.[1] ?? r.custos, "dados"],
-    ["Hospedagem", r.temHospedagem === "sim" ? r.hospedagem : "Sem hospedagem definida", "hospedagem"],
+    ...(pernoite ? [["Hospedagem", r.temHospedagem === "sim" ? r.hospedagem : "Sem hospedagem definida", "hospedagem"] as [string, string, Etapa]] : []),
   ];
   return (
     <div className="flex flex-col">
@@ -339,8 +388,12 @@ export default function AppCriar() {
             </button>
           ))}
         </div>
+        <label className="flex items-center gap-3 min-h-[44px]">
+          <input type="checkbox" checked={r.salvarPreferencia} onChange={(e) => set({ salvarPreferencia: e.target.checked })} className="w-5 h-5 accent-[#0B5F8A]" />
+          <span className="text-sm font-semibold">Salvar tipos, custos e quem vai como preferência</span>
+        </label>
         <Aviso>{cota}</Aviso>
-        <button type="button" disabled={r.destino.trim().length < 2 || r.saida < r.chegada} onClick={gerar} className={btnPrimario}>
+        <button type="button" disabled={r.destino.trim().length < 2 || r.saida < r.chegada || diasEntre(r.chegada, r.saida) > maxDias} onClick={gerar} className={btnPrimario}>
           <Sparkles size={18} /> Gerar roteiro
         </button>
         <button type="button" onClick={() => setEtapa("inicio")} className={btnSecundario}>Outro destino</button>
@@ -379,7 +432,7 @@ function Inicio({ r, set, cota, irPara, rapido }: {
       <div className="flex flex-col gap-3 px-5">
         <label className="flex flex-col gap-1.5">
           <span className="font-display font-extrabold text-xl">Para onde você vai?</span>
-          <input className={campo} value={r.destino} placeholder="Cidade da Paraíba ou outro destino" onChange={(e) => set({ destino: e.target.value })} list="sol-destinos" />
+          <input className={campo} value={r.destino} placeholder="Cidade, estado ou país" onChange={(e) => set({ destino: e.target.value })} list="sol-destinos" />
         </label>
         <ListaDestinos />
         <div className="flex flex-wrap gap-2">
@@ -389,9 +442,22 @@ function Inicio({ r, set, cota, irPara, rapido }: {
         </div>
         <Link to="/app/destinos" className="flex items-center gap-1 text-sm font-bold text-sol-mar no-underline">Ver destinos sugeridos <ChevronRight size={16} /></Link>
 
+        <section className={`${cartao} flex flex-col gap-1.5 p-4`}>
+          <div className="flex items-center justify-between">
+            <h2 className="m-0 text-xs font-extrabold tracking-[0.06em] uppercase text-sol-texto2">Suas preferências</h2>
+            <button type="button" onClick={() => irPara("dados")} className="text-sm font-bold text-sol-mar min-h-[36px]">Editar</button>
+          </div>
+          <dl className="m-0 grid grid-cols-[88px_1fr] gap-x-2 gap-y-1 text-sm">
+            <dt className="text-sol-texto2">Tipos</dt><dd className="m-0 font-bold">{r.tipos.join(", ")}</dd>
+            <dt className="text-sol-texto2">Custos</dt><dd className="m-0 font-bold">{CUSTOS.find(([v]) => v === r.custos)?.[1] ?? r.custos}</dd>
+            <dt className="text-sol-texto2">Quem vai</dt><dd className="m-0 font-bold">{textoQuemVai(r)}</dd>
+          </dl>
+          <p className="m-0 text-xs text-sol-texto2">Padrão do seu perfil. Editar aqui muda só esta busca.</p>
+        </section>
+
         <h2 className="m-0 mt-1 text-base font-extrabold">Como você quer montar?</h2>
         {[
-          { titulo: "Roteiro rápido", texto: "A Sol completa com padrões: sai em 1 hora, volta amanhã às 22h, sozinho. Você revisa antes de gerar.", Icon: Sparkles, acao: rapido },
+          { titulo: "Roteiro rápido", texto: "A Sol completa com padrões: sai em 1 hora e volta hoje às 22h, com as preferências acima. Você revisa antes de gerar.", Icon: Sparkles, acao: rapido },
           { titulo: "Personalizar", texto: "Escolha datas, quem vai, tipos de passeio e custos.", Icon: SlidersHorizontal, acao: () => irPara("dados") },
         ].map(({ titulo, texto, Icon, acao }) => (
           <button key={titulo} type="button" disabled={!temDestino} onClick={acao} className={`${cartao} flex items-start gap-3 p-4 text-left disabled:opacity-50`}>
