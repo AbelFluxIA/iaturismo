@@ -9,7 +9,8 @@ import { useAlbum } from "@/components/app/Album";
 import { useCidade } from "@/lib/cidade";
 import { useLocalizacaoEmUso } from "@/lib/localizacao";
 import { geocode, previsao, tempoAgora, type PrevisaoDia, type TempoAgora } from "@/lib/geo";
-import { CORES_TIPO, useSugestoes } from "@/lib/sugestoes";
+import { useSugestoes } from "@/lib/sugestoes";
+import { ImagemLugar } from "@/components/app/ImagemLugar";
 import {
   itensChecklist, chaveAtividade, diaDaViagem, horaInicio, hojeISO, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, situacao, type Viagem,
 } from "@/lib/roteiro";
@@ -134,9 +135,7 @@ function ParaOndeIr() {
           ? [0, 1, 2].map((i) => <span key={i} className={`${cartao} flex-none w-[150px] h-[150px] animate-pulse`} />)
           : lista.map((d) => (
               <Link key={d.slug} to={`/app/destinos/${d.slug}`} className={`${cartao} flex-none w-[150px] p-1.5 flex flex-col gap-1 text-sol-fundo no-underline`}>
-                <span className="h-[62px] rounded-xl flex items-center justify-center" style={{ background: CORES_TIPO[d.tipo] ?? "#EDE7DC" }}>
-                  <MapPin size={22} className="text-sol-fundo/60" />
-                </span>
+                <ImagemLugar nome={d.nome} uf={d.uf} tipo={d.tipo} className="h-[84px] rounded-xl" />
                 <span className="px-1 text-[15px] font-extrabold leading-tight truncate">{d.nome}</span>
                 <span className="px-1 text-xs text-sol-texto2">{d.km === null ? d.tipo : d.km < 2 ? `aqui · ${d.tipo.toLowerCase()}` : `${d.km} km · ${d.tipo.toLowerCase()}`}</span>
                 {d.motivo && <span className="self-start mx-1 mb-1 text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-sol-claro text-sol-claro-texto">Combina com você</span>}

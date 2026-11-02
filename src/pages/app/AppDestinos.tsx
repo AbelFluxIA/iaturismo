@@ -3,7 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { ChevronRight, CloudSun, MapPin, MessageCircle, Plus, Star } from "lucide-react";
 import { Carregando, TopBar, Vazio, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
 import { descreverTempo, previsao, type PrevisaoDia } from "@/lib/geo";
-import { CORES_TIPO, useSugestoes } from "@/lib/sugestoes";
+import { useSugestoes } from "@/lib/sugestoes";
+import { ImagemLugar } from "@/components/app/ImagemLugar";
 
 // Lista "Para onde ir": destinos recomendados pela Sol para a pessoa
 export function AppDestinos() {
@@ -36,9 +37,7 @@ export function AppDestinos() {
             )}
             {lista.filter((d) => filtro === "Todos" || d.tipo === filtro).map((d) => (
               <Link key={d.slug} to={`/app/destinos/${d.slug}`} className={`${cartao} flex items-center gap-3 p-2.5 text-sol-fundo no-underline`}>
-                <span className="flex-none w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: CORES_TIPO[d.tipo] ?? "#EDE7DC" }}>
-                  <MapPin size={22} className="text-sol-fundo/60" />
-                </span>
+                <ImagemLugar nome={d.nome} uf={d.uf} tipo={d.tipo} className="flex-none w-16 h-16 rounded-xl" />
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                   <span className="text-base font-extrabold">{d.nome}{d.uf ? ` · ${d.uf}` : ""}</span>
                   <span className="text-[13px] text-sol-texto2">{d.tipo}{d.km !== null ? ` · ${d.km} km` : ""}</span>
@@ -82,9 +81,7 @@ export function AppDestino() {
     <div className="flex flex-col">
       <TopBar title={d.nome} step={`Destino sugerido${d.uf ? ` · ${d.uf}` : ""}`} back="/app/destinos" />
       <div className="flex flex-col gap-3 px-5">
-        <div className="h-28 rounded-2xl flex items-center justify-center" style={{ background: CORES_TIPO[d.tipo] ?? "#EDE7DC" }}>
-          <MapPin size={36} className="text-sol-fundo/50" />
-        </div>
+        <ImagemLugar nome={d.nome} uf={d.uf} tipo={d.tipo} className="h-48 rounded-2xl" icone={36} credito />
         <span className="self-start text-[13px] font-extrabold px-2.5 py-1 rounded-full bg-sol-claro text-sol-claro-texto">{d.tipo}</span>
         {d.motivo && (
           <section className={`${cartao} flex flex-col gap-1 p-4`}>
