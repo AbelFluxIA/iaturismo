@@ -2,6 +2,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Check, Lock, MapPin, MessageCircle, Route } from "lucide-react";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { AbrirRota } from "@/components/app/AbrirRota";
+import { FotoParada, localDaParada } from "@/components/app/FotoParada";
 import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
 import { Carregando, TopBar, Vazio, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 import { queryDoMapa } from "@/lib/geo";
@@ -44,6 +45,7 @@ export default function AppAtividade() {
     <div className="flex flex-col">
       <TopBar title={atv.name} step={`${rotuloDia(chegada, d, dias[d].label)}${destino ? ` · ${destino}` : ""}`} back={voltar} />
       <div className="flex flex-col gap-3 px-5">
+        <FotoParada local={localDaParada(atv)} cidade={destino} />
         <div className="flex flex-wrap gap-2">
           {atv.time && <span className="text-[13px] font-extrabold px-2.5 py-1 rounded-full bg-sol-creme text-sol-creme-texto">{atv.time}</span>}
           {atv.period && <span className="text-[13px] font-extrabold px-2.5 py-1 rounded-full bg-sol-claro text-sol-claro-texto">{atv.period}</span>}

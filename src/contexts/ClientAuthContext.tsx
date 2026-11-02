@@ -31,6 +31,8 @@ export interface ClientProfile {
     guiaMensagensDia: number;
     tradutorMensagensDia: number;
   };
+  // Recursos ligados no servidor (ex.: fotos dos locais pelo Google Maps)
+  recursos?: { fotosLocais: boolean };
   hasPaid: boolean;
   hasCompanion: boolean;
   freeCredits: number;

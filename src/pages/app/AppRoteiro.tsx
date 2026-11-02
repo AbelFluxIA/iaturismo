@@ -8,6 +8,7 @@ import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
 import { Carregando, Segmentos, TituloSecao, Vazio, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
 import { EnviarFotos, GradeFotos, type GrupoAlbum, useAlbum } from "@/components/app/Album";
 import { AbrirRota } from "@/components/app/AbrirRota";
+import { MiniFotoParada, localDaParada, useFotosLocaisLigadas } from "@/components/app/FotoParada";
 import type { PontoMapa } from "@/components/app/MapaRoteiro";
 import { descreverTempo, geocode, previsao, queryDoMapa, rotaPelasRuas, type Coord, type PrevisaoDia } from "@/lib/geo";
 import {
@@ -184,6 +185,7 @@ function RoteiroDetalhe() {
   const [activeDay, setActiveDay] = useState<number | null>(null);
 
   const destino = dados?.destino || viagem?.destination || null;
+  const fotosLigadas = useFotosLocaisLigadas();
   const chegada = dados?.chegada ?? viagem?.arrivalDate ?? null;
   const saida = dados?.saida ?? viagem?.departureDate ?? null;
   const di = activeDay ?? indiceDoDia(chegada, days.length);
@@ -293,12 +295,14 @@ function RoteiroDetalhe() {
                         <span className={`text-[15px] font-bold leading-tight ${feita ? "line-through text-sol-texto2" : ""}`}>{act.name}</span>
                         {act.travel && <span className="text-xs text-sol-texto2 truncate">{act.travel}</span>}
                       </span>
+                      <MiniFotoParada local={localDaParada(act)} cidade={destino ?? ""} />
                       <ChevronRight size={18} className="flex-none text-sol-texto2" />
                     </Link>
                   </li>
                 );
               })}
             </ol>
+            {fotosLigadas && <p className="m-0 -mt-1 text-[11px] text-sol-texto2">Fotos dos locais: Google Maps</p>}
 
             <div className="grid grid-cols-5 gap-1.5">
               {[
