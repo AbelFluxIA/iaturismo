@@ -60,7 +60,7 @@ export function Segmentos<T extends string>({ opcoes, valor, aoMudar, rotulo }: 
           role="tab"
           aria-selected={valor === id}
           onClick={() => aoMudar(id)}
-          className={`flex-1 min-h-[40px] rounded-xl text-sm ${valor === id ? "bg-white font-extrabold text-sol-fundo shadow-sm" : "font-semibold text-sol-texto2"}`}
+          className={`flex-1 min-h-[44px] rounded-xl text-sm ${valor === id ? "bg-white font-extrabold text-sol-fundo shadow-sm" : "font-semibold text-sol-texto2"}`}
         >
           {label}
         </button>
@@ -82,7 +82,7 @@ export function LinhaMenu({ to, href, onClick, titulo, detalhe, selo, emBreve }:
   const conteudo = (
     <>
       <span className="flex-1 min-w-0 text-[15px] font-semibold">{titulo}</span>
-      {detalhe && <span className="text-sm text-sol-texto2 truncate max-w-[45%]">{detalhe}</span>}
+      {detalhe && <span className="flex-none ml-2 text-sm text-sol-texto2 truncate max-w-[45%]">{detalhe}</span>}
       {selo && <span className="flex-none text-xs font-extrabold px-2 py-0.5 rounded-full bg-sol-creme text-sol-creme-texto">{selo}</span>}
       {emBreve ? <span className="flex-none text-xs font-bold px-2 py-0.5 rounded-full bg-[#ECEFF1] text-sol-texto2">Em breve</span> : <ChevronRight size={18} className="flex-none text-sol-texto2" />}
     </>

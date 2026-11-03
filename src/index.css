@@ -105,3 +105,6 @@
     font-family: inherit;
   }
 }
+
+/* Botões do mapa com alvo de toque de 44px */
+.maplibregl-ctrl-group button { width: 44px; height: 44px; }

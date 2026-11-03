@@ -11,6 +11,7 @@ import { AbrirRota } from "@/components/app/AbrirRota";
 import { MiniFotoParada, localDaParada, useFotosLocaisLigadas } from "@/components/app/FotoParada";
 import type { PontoMapa, TrechoMapa } from "@/components/app/MapaRoteiro";
 import { descreverTempo, distanciaKm, geocode, previsao, queryDoMapa, rotaPorTrechos, type Coord, type PrevisaoDia } from "@/lib/geo";
+import { urlSegura } from "@/lib/utils";
 import {
   itensChecklist, chaveAtividade, diaDaViagem, horaInicio, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, rotuloDia, situacao, type Viagem,
 } from "@/lib/roteiro";
@@ -183,12 +184,18 @@ function RoteiroDetalhe() {
   const { feitas, alternar } = useFeitas(chave);
   const days = dados ? parseItinerary(dados.texto) : [];
   const [activeDay, setActiveDay] = useState<number | null>(null);
+  // Trocou de viagem na mesma tela: volta para o dia de hoje dela
+  useEffect(() => { setActiveDay(null); }, [chave]);
 
   const destino = dados?.destino || viagem?.destination || null;
   const fotosLigadas = useFotosLocaisLigadas();
   const chegada = dados?.chegada ?? viagem?.arrivalDate ?? null;
   const saida = dados?.saida ?? viagem?.departureDate ?? null;
   const di = activeDay ?? indiceDoDia(chegada, days.length);
+  // O chip do dia escolhido entra na tela (no 3º dia em diante ele ficava escondido à direita)
+  useEffect(() => {
+    document.querySelector('[role="tab"][aria-selected="true"]')?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [di, aba]);
 
   const trocarAba = (nova: Aba) => {
     const p = new URLSearchParams(params);
@@ -228,13 +235,13 @@ function RoteiroDetalhe() {
           {periodo || "Datas a confirmar"} · {days.length} {days.length === 1 ? "dia" : "dias"}
         </span>
         <nav aria-label="Seções do roteiro" className="grid grid-cols-4 -mx-4 px-1">
-          {([["dia", "Dia a dia"], ["mapa", "Mapa"], ["album", "Álbum"], ["info", "Informações"]] as [Aba, string][]).map(([id, label]) => (
+          {([["dia", "Dia a dia"], ["mapa", "Mapa"], ["album", "Álbum"], ["info", "Info"]] as [Aba, string][]).map(([id, label]) => (
             <button
               key={id}
               type="button"
               aria-current={aba === id ? "page" : undefined}
               onClick={() => trocarAba(id)}
-              className={`min-h-[48px] text-[13px] border-b-4 ${aba === id ? "font-extrabold text-white border-sol-sun" : "font-semibold text-sol-azul-suave border-transparent"}`}
+              className={`min-h-[48px] min-w-0 px-0.5 text-[13px] whitespace-nowrap border-b-4 ${aba === id ? "font-extrabold text-white border-sol-sun" : "font-semibold text-sol-azul-suave border-transparent"}`}
             >
               {label}
             </button>
@@ -616,8 +623,8 @@ function AbaInfo({ destino, chegada, saida, pdfUrl, chave }: { destino: string |
           <ClipboardCheck size={20} /><span className="flex-1 text-[15px] font-semibold">Checklist da viagem</span>
           <span className="text-sm text-sol-texto2">{checklist}/{itensChecklist(viagens?.find((v) => v.id === chave)).itens.length}</span><ChevronRight size={18} className="text-sol-texto2" />
         </Link>
-        {pdfUrl && (
-          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-h-[52px] px-4 border-b border-[#F0E9DD] text-sol-fundo no-underline">
+        {urlSegura(pdfUrl) && (
+          <a href={urlSegura(pdfUrl)!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 min-h-[52px] px-4 border-b border-[#F0E9DD] text-sol-fundo no-underline">
             <Download size={20} /><span className="flex-1 text-[15px] font-semibold">Baixar o PDF do roteiro</span><ChevronRight size={18} className="text-sol-texto2" />
           </a>
         )}

@@ -72,14 +72,14 @@ export function versaoDoApp() {
 export async function procurarAtualizacao(): Promise<"nova" | "atual" | "sem-suporte"> {
   if (pronta) return "nova";
   if (!registro) return "sem-suporte";
-  await registro.update();
+  try { await registro.update(); } catch { return "atual"; } // sem rede: fica na versão de agora
   const novo = registro.installing || registro.waiting;
   if (!novo) return "atual";
   if (novo.state !== "installed") {
     await new Promise<void>((ok) => {
-      const fim = () => { if (novo.state === "installed" || novo.state === "activated" || novo.state === "redundant") ok(); };
+      const fim = () => { if (novo.state === "installed" || novo.state === "activated" || novo.state === "redundant") { novo.removeEventListener("statechange", fim); ok(); } };
       novo.addEventListener("statechange", fim);
-      window.setTimeout(ok, 60000);
+      window.setTimeout(() => { novo.removeEventListener("statechange", fim); ok(); }, 60000);
     });
   }
   return pronta || registro.waiting ? (avisar(), "nova") : "atual";

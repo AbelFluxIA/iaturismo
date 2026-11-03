@@ -65,7 +65,14 @@ export default function AppCadastro() {
   }
 
   const nascimento = data.a.length === 4 && data.m && data.d ? `${data.a}-${data.m.padStart(2, "0")}-${data.d.padStart(2, "0")}` : "";
-  const nascValido = !!nascimento && !Number.isNaN(Date.parse(`${nascimento}T12:00:00Z`)) && nascimento < new Date().toISOString().slice(0, 10) && nascimento > "1900-01-01";
+  // Data de verdade (31/02 não passa), no passado e com até 120 anos
+  const nascValido = (() => {
+    if (!nascimento) return false;
+    const t = Date.parse(`${nascimento}T12:00:00Z`);
+    if (Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== nascimento) return false;
+    const hoje = new Date().toISOString().slice(0, 10);
+    return nascimento < hoje && nascimento > `${new Date().getUTCFullYear() - 120}-01-01`;
+  })();
   const n = ETAPAS.indexOf(etapa);
   const voltar = n > 0 ? () => { setErro(null); setEtapa(ETAPAS[n - 1]); } : null;
   const campo = "h-14 w-full min-w-0 box-border px-4 rounded-xl border-[1.5px] border-sol-borda bg-white text-[18px] font-semibold focus:outline-none focus:border-sol-mar";

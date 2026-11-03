@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ClipboardPaste, MessageCircle } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, btnPrimario } from "@/components/app/ui";
@@ -29,6 +29,9 @@ export default function Entrar() {
   const [error, setError] = useState("");
   const { login } = useClientAuth();
   const navigate = useNavigate();
+  // Veio de um link protegido (ex.: /r/código)? Volta para lá depois de entrar
+  const de = (useLocation().state as { de?: string } | null)?.de;
+  const destino = de && de.startsWith("/app") ? de : "/app";
 
   const digitos = phone.replace(/\D/g, "");
 
@@ -76,7 +79,7 @@ export default function Entrar() {
       if (!res.ok) { setError(data.error || "Código incorreto."); return; }
       try { sessionStorage.removeItem(CHAVE_PEDIDO); } catch { /* ok */ }
       login(data.token, data.phone, data.name);
-      navigate("/app", { replace: true });
+      navigate(destino, { replace: true });
     } catch {
       setError("Sem conexão. Tente de novo.");
     } finally {
@@ -89,7 +92,7 @@ export default function Entrar() {
   // Temporário: entra com uma viagem de exemplo, sem código
   function pularDemonstracao() {
     login(DEMO_TOKEN, "", "Visitante");
-    navigate("/app", { replace: true });
+    navigate(destino, { replace: true });
   }
 
   const pular = (
@@ -135,7 +138,7 @@ export default function Entrar() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Código incorreto."); return; }
       login(data.token, data.phone, data.name);
-      navigate("/app", { replace: true });
+      navigate(destino, { replace: true });
     } catch {
       setError("Sem conexão. Tente de novo.");
     } finally {

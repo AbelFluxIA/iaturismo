@@ -33,22 +33,16 @@ const MuralGallery = () => {
   useEffect(() => {
     const fetchMural = async () => {
       if (!shareCode) return;
-      const { data: muralData, error } = await supabase
-        .from("photo_murals")
-        .select("*")
-        .eq("share_code", shareCode)
-        .maybeSingle();
+      // Funções públicas do banco: só o mural desse código, sem dados do dono
+      const { data: murais, error } = await (supabase as any).rpc("mural_publico", { codigo: shareCode });
+      const muralData = Array.isArray(murais) ? murais[0] : null;
 
       if (error || !muralData) { setNotFound(true); setLoading(false); return; }
-      setMural(muralData);
+      setMural({ ...muralData, pdf_url: null });
 
-      const { data: photosData } = await supabase
-        .from("mural_photos")
-        .select("*")
-        .eq("mural_id", muralData.id)
-        .order("order_index", { ascending: true });
+      const { data: photosData } = await (supabase as any).rpc("mural_fotos_publicas", { codigo: shareCode });
 
-      setPhotos(photosData || []);
+      setPhotos(Array.isArray(photosData) ? photosData : []);
       setLoading(false);
     };
     fetchMural();

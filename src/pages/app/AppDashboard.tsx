@@ -54,7 +54,7 @@ function AlertaChuva({ viagem }: { viagem: Viagem }) {
         type="button"
         aria-label="Fechar aviso"
         onClick={() => { setFechado(true); try { sessionStorage.setItem(chave, "1"); } catch { /* ok */ } }}
-        className="flex-none w-9 h-9 -mt-1 -mr-1 flex items-center justify-center"
+        className="flex-none w-11 h-11 -mt-2 -mr-2 flex items-center justify-center"
       >
         <X size={18} />
       </button>
@@ -79,7 +79,7 @@ function CartaoViagem({ viagem }: { viagem: Viagem }) {
     <section aria-label="Sua viagem" className="flex flex-col gap-3 p-4 rounded-[20px] bg-sol-fundo text-white">
       <Link to={base} className="flex items-center gap-2 text-white no-underline">
         <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-sol-azul-suave">{sit === "agora" ? "Viagem atual" : "Próxima viagem"}</span>
-        <span className="flex-1 min-w-0 font-display font-extrabold text-[20px] leading-tight truncate">{nomeCurto(viagem.destination) || "Sua viagem"}</span>
+        <span className="flex-1 min-w-0 font-display font-extrabold text-[18px] leading-tight truncate">{nomeCurto(viagem.destination) || "Sua viagem"}</span>
         {andamento?.total ? (
           <span className="flex-none text-xs font-extrabold px-2.5 py-1 rounded-full bg-sol-sun text-sol-fundo">Dia {andamento.dia} de {andamento.total}</span>
         ) : sit === "proxima" && viagem.arrivalDate ? (
@@ -263,7 +263,7 @@ function CidadeETempo() {
         {cidade.carregando ? "…" : cidade.nome ? nomeCurto(cidade.nome) : "Escolher cidade"}
       </span>
       {agora && (
-        <Link to="/app/tempo" aria-label={`Tempo agora: ${agora.temp} graus. Ver a previsão`} className="flex-none flex items-center gap-1.5 h-9 px-3 rounded-full bg-white border border-sol-linha text-sol-fundo text-[15px] font-extrabold no-underline">
+        <Link to="/app/tempo" aria-label={`Tempo agora: ${agora.temp} graus. Ver a previsão`} className="flex-none flex items-center gap-1.5 h-11 px-3 rounded-full bg-white border border-sol-linha text-sol-fundo text-[15px] font-extrabold no-underline">
           <IconeTempo codigo={agora.codigo} size={18} className="text-sol-mar" />{agora.temp}°
         </Link>
       )}

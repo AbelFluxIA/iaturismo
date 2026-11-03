@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { queryDoMapa } from "@/lib/geo";
+import { urlSegura } from "@/lib/utils";
 
 // Foto de um local do roteiro, do Google Maps (só a foto, sem nota). O servidor
 // busca; o app só pede quando a parada aparece na tela e guarda a resposta só
@@ -77,9 +78,9 @@ export function FotoParada({ local, cidade }: { local: string | null; cidade: st
       <img src={foto.url} alt={local ?? ""} decoding="async" onError={() => setFalhou(true)} className="w-full h-52 rounded-2xl object-cover bg-sol-creme" />
       <figcaption className="text-[11px] text-sol-texto2 truncate">
         Foto:{" "}
-        {foto.autorUrl ? <a href={foto.autorUrl} target="_blank" rel="noopener noreferrer" className="text-sol-texto2">{foto.autor}</a> : foto.autor}
+        {urlSegura(foto.autorUrl) ? <a href={urlSegura(foto.autorUrl)!} target="_blank" rel="noopener noreferrer" className="text-sol-texto2">{foto.autor}</a> : foto.autor}
         {" · "}
-        {foto.mapsUrl ? <a href={foto.mapsUrl} target="_blank" rel="noopener noreferrer" className="text-sol-texto2">Google Maps</a> : "Google Maps"}
+        {urlSegura(foto.mapsUrl) ? <a href={urlSegura(foto.mapsUrl)!} target="_blank" rel="noopener noreferrer" className="text-sol-texto2">Google Maps</a> : "Google Maps"}
       </figcaption>
     </figure>
   );

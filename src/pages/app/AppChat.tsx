@@ -76,7 +76,8 @@ function separar(conteudo: string) {
   const urls: string[] = [];
   const semLinks = conteudo.replace(URL_RE, (bruta) => {
     const url = limparUrl(bruta);
-    (IMAGEM_RE.test(url) ? imagens : urls).push(url);
+    // Só vira <img> se for foto nossa (armazenamento do Supabase); link de fora fica como link
+    (IMAGEM_RE.test(url) && /^https:\/\/[^/]+\.supabase\.co\//i.test(url) ? imagens : urls).push(url);
     return bruta.slice(url.length); // devolve só a pontuação que não era do link
   });
   let texto = semLinks.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
@@ -281,9 +282,11 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
         if (!msgs || msgs.length === 0) return;
         setMessages((atual) => {
           const reais = atual.filter((m) => m !== BOAS_VINDAS && !m.local);
-          const locais = atual.filter((m) => m.local);
+          // Mensagem local que já chegou ao histórico sai da lista (senão aparece em dobro)
+          const jaSalva = (m: Message) => msgs.slice(-12).some((r) => r.role === m.role && r.content.slice(0, 40) === m.content.slice(0, 40));
+          const locais = atual.filter((m) => m.local && !jaSalva(m));
           const igual = reais.length === msgs.length && reais[reais.length - 1]?.content === msgs[msgs.length - 1]?.content;
-          return igual ? atual : [...msgs, ...locais];
+          return igual && locais.length === atual.filter((m) => m.local).length ? atual : [...msgs, ...locais];
         });
       } catch { /* tenta de novo no próximo ciclo */ }
     }, INTERVALO_ATUALIZACAO);
@@ -481,7 +484,8 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
 
   const guiaAtiva = !!profile?.hasCompanion && modo === "guia";
   const limiteDia = profile?.regras?.chatMensagensDia;
-  const rapidas = sending ? [] : respostasRapidas(messages[messages.length - 1]);
+  // Com a Guia já ativa, os botões "ativar / agora não" não fazem sentido
+  const rapidas = sending ? [] : respostasRapidas(messages[messages.length - 1]).filter((r) => r.guia === undefined || !profile?.hasCompanion);
 
   async function usarAtalho(a: (typeof ATALHOS_GUIA)[number]) {
     if (!a.local) {
@@ -511,7 +515,7 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
       {!guiaAtiva && (
         <nav aria-label="Atalhos" className="flex-none flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 bg-white border-b border-sol-linha">
           {[["Criar roteiro", "/app/criar"], ["Para onde ir?", "/app/destinos"], ["Meus roteiros", "/app/roteiro"]].map(([rot, para]) => (
-            <button key={rot} type="button" onClick={() => navegar(para)} className="flex-none min-h-[38px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold">
+            <button key={rot} type="button" onClick={() => navegar(para)} className="flex-none min-h-[44px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold">
               {rot}
             </button>
           ))}
@@ -520,11 +524,11 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
       {guiaAtiva && (
         <nav aria-label="Atalhos da Guia Sol" className="flex-none flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 bg-white border-b border-sol-linha">
           {ATALHOS_GUIA.map((a) => (
-            <button key={a.rotulo} type="button" disabled={sending} onClick={() => usarAtalho(a)} className="flex-none min-h-[38px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold disabled:opacity-50">
+            <button key={a.rotulo} type="button" disabled={sending} onClick={() => usarAtalho(a)} className="flex-none min-h-[44px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold disabled:opacity-50">
               {a.rotulo}
             </button>
           ))}
-          <button type="button" onClick={() => navegar("/app/tradutor")} className="flex-none min-h-[38px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold">Tradutor</button>
+          <button type="button" onClick={() => navegar("/app/tradutor")} className="flex-none min-h-[44px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-[13px] font-bold">Tradutor</button>
         </nav>
       )}
 

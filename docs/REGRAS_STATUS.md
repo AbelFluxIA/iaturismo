@@ -40,7 +40,7 @@ Contagem feita por script sobre as linhas abaixo; as 141 regras do documento est
 | RA-GER-01 Regras iguais no app e no WhatsApp | 🟡 | Mesma conversa e limite diário somando os dois ✅. Cota semanal ainda só é mostrada, não bloqueia. |
 | RA-GER-02 App só mostra; servidor decide | 🟡 | Preços, limites e cota vêm do servidor (`config.regras`). A cobrança do roteiro ainda usa os créditos antigos. |
 | RA-GER-03 Valores por parâmetro, com histórico | 🟡 | Parâmetros no servidor por variável de ambiente. Falta o backoffice com histórico de alteração. |
-| RA-GER-04 Conversa não libera pagamento/ativação | ✅ | Ativação só pelo servidor; regra no prompt da Sol. |
+| RA-GER-04 Conversa não libera pagamento/ativação | ✅ | Ativação só pelo servidor; sem link de pagamento configurado a conversa avisa e não ativa (só o modo teste ativa direto). |
 | RA-GER-05 Permissão só na hora do uso | ✅ | Localização no cadastro com motivo; câmera e microfone só ao tocar. |
 | RA-GER-06 App nativo em Flutter | 🔒 | Trocado por PWA + Capacitor (decisão de 31/10). Atualizar o documento. |
 | RA-GER-07 Tom: sem travessão, 1 emoji | ✅ | Prompt e mensagens fixas revisados (bot df11018). |
@@ -69,7 +69,7 @@ Contagem feita por script sobre as linhas abaixo; as 141 regras do documento est
 
 | Regra | Status | Onde / o que falta |
 |---|---|---|
-| RA-MEN-01 Conta restrita até o responsável | 🟡 | Menor de 18 vê "Conta restrita" com SOS. Falta bloquear em todo o app e o fluxo do responsável. |
+| RA-MEN-01 Conta restrita até o responsável | 🟡 | Menor de 18 vê "Conta restrita" com SOS (a tela Segurança abre mesmo sem concluir). Servidor recusa concluir o cadastro de menor (403). Falta o fluxo do responsável. |
 | RA-MEN-02 Dados do responsável | ⬜ | |
 | RA-MEN-03 ACEITO no WhatsApp e documento em 5 dias | ⬜ | |
 | RA-MEN-04 Documento aceito e conferência | 🔒 | TODO-74 a 76. |
@@ -106,7 +106,7 @@ Contagem feita por script sobre as linhas abaixo; as 141 regras do documento est
 
 | Regra | Status | Onde / o que falta |
 |---|---|---|
-| RA-ROT-01 2 grátis por semana | 🟡 | Contagem e "1 de 2 · renova domingo, 21h" ✅. Bloqueio desligado no modo teste. |
+| RA-ROT-01 2 grátis por semana | ✅ | Contagem e "1 de 2 · renova domingo, 21h". Servidor recusa acima da cota (429); no modo teste e com a Guia vale o teto da Guia (30). |
 | RA-ROT-02 R$ 4,90 por dia extra, cobrado antes | 🔒 | Depende de pagamentos (AbacatePay). |
 | RA-ROT-03 Com a Guia: 30 por semana, até 7 dias | 🟡 | 7 dias ✅; contagem ✅; bloqueio não. |
 | RA-ROT-04 Cota só depois de mostrado | 🟡 | Conta só roteiros gerados ✅. Falta "Tentar de novo" do mesmo pedido. |
@@ -251,3 +251,11 @@ Contagem feita por script sobre as linhas abaixo; as 141 regras do documento est
 - `sol_cadastro`: data de nascimento e conclusão do cadastro.
 - Tabelas com RLS ligado e sem políticas: só o servidor lê e grava.
 - Falta: prazo de guarda (jurídico), agregação anônima e painel do TripGov.
+
+## Auditoria de 2026-11-03 (segurança e bugs)
+
+Corrigido no servidor: rotas internas e de teste exigem `X-Admin-Secret` (`ZYNK_ADMIN_SECRET`); webhooks de pagamento exigem o segredo da AbacatePay (`?webhookSecret=`); webhook do WhatsApp confere a assinatura da Meta quando `META_APP_SECRET` existe; `JWT_SECRET` e `META_VERIFY_TOKEN` obrigatórios; corpo JSON limitado a 200 kB; limites por IP, por telefone (OTP, chat, criar roteiro) e por dia (tradutor, áudio, sugestões); cota semanal aplicada; mensagem do chat até 2.000 caracteres; `days` do roteiro contado pelas datas; status do roteiro vira `generated`/`sent`; `phone` gravado em `generated_itineraries`; prompts sem travessão e com períodos fixos (Manhã/Tarde/Noite).
+
+Corrigido no app: páginas públicas (`/r/código`, `/mural/código`) leem o banco por funções `security definer` (`roteiro_publico`, `mural_publico`, `mural_fotos_publicas`) e as tabelas `customers`, `generated_itineraries`, `customer_photos`, `photo_murals` e `mural_photos` ficaram fechadas para a chave anônima; parser do roteiro aceita Almoço/Jantar e traslados; links externos só http(s); sair apaga tudo `sol_*`; service worker não guarda mais `/rest` do Supabase; cadastro valida data real e até 120 anos; botão "Criar conta" do painel admin removido; alvos de toque ≥ 44 px; abas e chips do roteiro cabem no iPhone SE.
+
+Pendente (precisa de ação fora do código): `META_APP_SECRET` no `.env` do bot; URL do webhook da AbacatePay com `?webhookSecret=`; desligar "Enable sign ups" no Supabase Auth; republicar a edge function `manage-customers` com checagem de login; RA-CAD-03 (bloqueio de 5 h), RA-CAD-06 (nova versão dos termos), RA-SEG-04 (contatos no servidor), RA-SEG-05 (conferir DDI 55), RA-ROT-05/06, RA-SOL-02 (1 imagem por viagem), RA-VER-01, RA-ALE-*.

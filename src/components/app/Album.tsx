@@ -3,6 +3,7 @@ import { Camera, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { btnPrimario, formatarData } from "@/components/app/ui";
+import { urlSegura } from "@/lib/utils";
 
 // Álbum: todas as fotos que a pessoa mandou para a Sol (WhatsApp ou app), por
 // viagem. As que entraram no mural trazem o comentário da Sol.
@@ -30,12 +31,9 @@ const VAZIO: Album = { grupos: [], total: 0, mural: null };
 
 // Bot antigo (sem /api/app/album): só as fotos do mural
 async function albumDoMural(mural: { id: string; share_code: string; title: string | null }): Promise<Album> {
-  const { data } = await supabase
-    .from("mural_photos")
-    .select("photo_url, caption, created_at")
-    .eq("mural_id", mural.id)
-    .order("order_index", { ascending: true });
-  const fotos = (data ?? []).map((f) => ({ url: f.photo_url, legenda: f.caption ?? null, data: f.created_at }));
+  const { data } = await (supabase as any).rpc("mural_fotos_publicas", { codigo: mural.share_code });
+  const fotos = ((Array.isArray(data) ? data : []) as { photo_url: string; caption: string | null; created_at: string }[])
+    .map((f) => ({ url: f.photo_url, legenda: f.caption ?? null, data: f.created_at }));
   return {
     grupos: fotos.length ? [{ titulo: mural.title ?? "Mural", inicio: fotos[0].data, fim: fotos[fotos.length - 1].data, fotos }] : [],
     total: fotos.length,
@@ -199,7 +197,7 @@ function Visualizador({ fotos, inicial, fechar }: { fotos: Foto[]; inicial: numb
           <button type="button" aria-label="Foto anterior" disabled={i === 0} onClick={() => setI(i - 1)} className="w-12 h-12 flex items-center justify-center disabled:opacity-30">
             <ChevronLeft size={28} />
           </button>
-          <a href={foto.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-white/90 underline">Abrir original</a>
+          {urlSegura(foto.url) && <a href={urlSegura(foto.url)!} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-white/90 underline">Abrir original</a>}
           <button type="button" aria-label="Próxima foto" disabled={i === fotos.length - 1} onClick={() => setI(i + 1)} className="w-12 h-12 flex items-center justify-center disabled:opacity-30">
             <ChevronRight size={28} />
           </button>

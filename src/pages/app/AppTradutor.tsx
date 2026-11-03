@@ -139,7 +139,7 @@ function Tradutor() {
         <div className="flex items-center gap-2">
           <label className={seletor}>
             <span className="text-xs font-bold text-sol-texto2">De</span>
-            <select value={de} onChange={(e) => setDe(e.target.value)} className="bg-transparent text-[15px] font-extrabold text-sol-fundo focus:outline-none">
+            <select value={de} onChange={(e) => setDe(e.target.value)} className="bg-transparent min-h-[44px] text-[15px] font-extrabold text-sol-fundo focus:outline-none">
               <option value="auto">{resultado && de === "auto" ? `Detectar: ${nomeDe(resultado.origem).toLowerCase()}` : "Detectar"}</option>
               {IDIOMAS.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
             </select>
@@ -154,7 +154,7 @@ function Tradutor() {
           </button>
           <label className={seletor}>
             <span className="text-xs font-bold text-sol-texto2">Para</span>
-            <select value={para} onChange={(e) => { setPara(e.target.value); setResultado(null); }} className="bg-transparent text-[15px] font-extrabold text-sol-fundo focus:outline-none">
+            <select value={para} onChange={(e) => { setPara(e.target.value); setResultado(null); }} className="bg-transparent min-h-[44px] text-[15px] font-extrabold text-sol-fundo focus:outline-none">
               {IDIOMAS.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
             </select>
           </label>

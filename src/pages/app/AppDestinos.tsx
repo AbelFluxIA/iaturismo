@@ -28,7 +28,7 @@ export function AppDestinos() {
                     type="button"
                     aria-pressed={filtro === f}
                     onClick={() => setFiltro(f)}
-                    className={`flex-none min-h-[40px] px-4 rounded-full border-[1.5px] text-sm font-bold ${filtro === f ? "bg-sol-fundo text-white border-sol-fundo" : "bg-white border-sol-borda"}`}
+                    className={`flex-none min-h-[44px] px-4 rounded-full border-[1.5px] text-sm font-bold ${filtro === f ? "bg-sol-fundo text-white border-sol-fundo" : "bg-white border-sol-borda"}`}
                   >
                     {f}
                   </button>

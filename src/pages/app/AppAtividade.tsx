@@ -53,12 +53,12 @@ export default function AppAtividade() {
 
         <dl className={`${cartao} m-0 flex flex-col gap-2.5 p-4 text-[15px]`}>
           {local && (
-            <div className="flex gap-3"><dt className="flex-none w-[104px] font-extrabold">Local</dt><dd className="m-0">{local}</dd></div>
+            <div className="flex gap-3"><dt className="flex-none w-[96px] font-extrabold">Local</dt><dd className="m-0 min-w-0 flex-1 break-words">{local}</dd></div>
           )}
           {atv.travel && (
-            <div className="flex gap-3"><dt className="flex-none w-[104px] font-extrabold">Deslocamento</dt><dd className="m-0">{atv.travel}</dd></div>
+            <div className="flex gap-3"><dt className="flex-none w-[96px] font-extrabold">Deslocamento</dt><dd className="m-0 min-w-0 flex-1 break-words">{atv.travel}</dd></div>
           )}
-          <div className="flex gap-3"><dt className="flex-none w-[104px] font-extrabold">Horário</dt><dd className="m-0">{atv.time || "Livre"}</dd></div>
+          <div className="flex gap-3"><dt className="flex-none w-[96px] font-extrabold">Horário</dt><dd className="m-0">{atv.time || "Livre"}</dd></div>
         </dl>
 
         {atv.description && (

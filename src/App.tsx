@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider, createBrowserRouter, ScrollRestoration, Outlet, Navigate, useParams } from "react-router-dom";
+import { RouterProvider, createBrowserRouter, ScrollRestoration, Outlet, Navigate, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -38,7 +38,9 @@ const queryClient = new QueryClient();
 
 const ClientProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token } = useClientAuth();
-  if (!token) return <Navigate to="/app/entrar" replace />;
+  const location = useLocation();
+  // Guarda aonde a pessoa ia (ex.: link /r/código) para voltar lá depois de entrar
+  if (!token) return <Navigate to="/app/entrar" replace state={{ de: `${location.pathname}${location.search}` }} />;
   return <>{children}</>;
 };
 

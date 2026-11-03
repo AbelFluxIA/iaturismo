@@ -125,13 +125,7 @@ const Login = () => {
             </button>
           </form>
 
-          <button
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition mt-4"
-          >
-            {isSignUp ? "Já tem conta? Fazer login" : "Primeiro acesso? Criar conta"}
-          </button>
+          {/* Cadastro de administrador só pelo painel do Supabase (nunca aberto ao público) */}
         </div>
       </div>
     </div>

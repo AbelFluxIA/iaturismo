@@ -32,7 +32,8 @@ export function parseItinerary(text: string): Day[] {
   let currentDay: Day | null = null;
   let currentActivity: Partial<Activity> | null = null;
   let descBuffer: string[] = [];
-  let inIntro = true;
+  // Texto sem nenhuma linha "DIA N": tudo vira o Dia 1 em vez de sumir
+  let inIntro = /DIA\s*\d+/i.test(text);
 
   const flush = () => {
     if (currentActivity && currentDay) {
@@ -61,12 +62,22 @@ export function parseItinerary(text: string): Day[] {
       continue;
     }
     if (inIntro || line.startsWith("⚠️")) continue;
+    // Início de parada: "Manhã (09:00): Nome". A Sol às vezes escreve "Almoço (12:30)"
+    // ou "Jantar (19:30)", e põe 🚗 na frente de um traslado: tudo isso é parada também.
+    const pm = s.match(/^(Manh[aã]|Tarde|Noite|P[oô]r\s*do\s*Sol|Dia\s*Inteiro|Almo[cç]o|Jantar|Caf[eé](?:\s*da\s*manh[aã])?|Lanche|Madrugada)\s*\(([^)]+)\)[:\s-]+(.+)/i);
+    if (pm) {
+      flush();
+      if (!currentDay) { currentDay = { label: "Dia 1", activities: [] }; days.push(currentDay); }
+      currentActivity = { period: pm[1], time: pm[2].trim(), name: pm[3].trim(), travel: "", mapUrl: "" };
+      continue;
+    }
     if (line.startsWith("🚗") || /^~\s*\d+/i.test(s)) {
       if (currentActivity) currentActivity.travel = line.replace(/^🚗\s*/, "").trim();
       continue;
     }
     if (line.startsWith("📍") || /^https?:\/\//i.test(s)) {
-      if (currentActivity) {
+      // Mais de um link na mesma parada: fica o primeiro (é o do local)
+      if (currentActivity && !currentActivity.mapUrl) {
         const url = line.replace(/^📍\s*/, "").trim();
         if (/^https?:\/\//i.test(url)) currentActivity.mapUrl = url;
       }
@@ -74,12 +85,6 @@ export function parseItinerary(text: string): Day[] {
     }
     if (line.startsWith("💬")) {
       if (currentActivity) descBuffer.push(line.replace(/^💬\s*/, "").trim());
-      continue;
-    }
-    const pm = s.match(/^(Manh[aã]|Tarde|Noite|P[oô]r\s*do\s*Sol|Dia\s*Inteiro)\s*\(([^)]+)\)[:\s-]+(.+)/i);
-    if (pm) {
-      flush();
-      currentActivity = { period: pm[1], time: pm[2].trim(), name: pm[3].trim(), travel: "", mapUrl: "" };
       continue;
     }
     if (currentActivity && !currentActivity.name) currentActivity.name = s;

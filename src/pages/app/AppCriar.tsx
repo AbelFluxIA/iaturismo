@@ -4,6 +4,7 @@ import { Check, ChevronRight, MessageCircle, Minus, Pencil, Plus, Sparkles, Slid
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { Aviso, TopBar, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
+import { urlSegura } from "@/lib/utils";
 import { CAPITAL, DESTINOS } from "@/lib/destinos";
 import { distanciaKm, posicaoSePermitida } from "@/lib/geo";
 import { hojeISO } from "@/lib/roteiro";
@@ -238,7 +239,7 @@ export default function AppCriar() {
             <>
               <h2 className="m-0 font-display font-extrabold text-2xl">Falta liberar o roteiro</h2>
               <p className="m-0 text-[15px] text-sol-texto2">Seus roteiros grátis acabaram. Depois do pagamento, a Sol gera e o roteiro aparece aqui.</p>
-              <a href={gerando.texto} target="_blank" rel="noopener noreferrer" className={`${btnPrimario} w-full !bg-sol-sun !text-sol-fundo no-underline`}>Pagar e liberar</a>
+              {urlSegura(gerando.texto) && <a href={urlSegura(gerando.texto)!} target="_blank" rel="noopener noreferrer" className={`${btnPrimario} w-full !bg-sol-sun !text-sol-fundo no-underline`}>Pagar e liberar</a>}
               <Link to="/app/roteiro" className={`${btnSecundario} w-full no-underline`}>Agora não</Link>
             </>
           )}
@@ -445,7 +446,7 @@ function Inicio({ r, set, cota, irPara, rapido }: {
         <section className={`${cartao} flex flex-col gap-1.5 p-4`}>
           <div className="flex items-center justify-between">
             <h2 className="m-0 text-xs font-extrabold tracking-[0.06em] uppercase text-sol-texto2">Suas preferências</h2>
-            <button type="button" onClick={() => irPara("dados")} className="text-sm font-bold text-sol-mar min-h-[36px]">Editar</button>
+            <button type="button" onClick={() => irPara("dados")} className="text-sm font-bold text-sol-mar min-h-[44px] px-2">Editar</button>
           </div>
           <dl className="m-0 grid grid-cols-[88px_1fr] gap-x-2 gap-y-1 text-sm">
             <dt className="text-sol-texto2">Tipos</dt><dd className="m-0 font-bold">{r.tipos.join(", ")}</dd>

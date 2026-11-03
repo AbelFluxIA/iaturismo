@@ -94,7 +94,7 @@ function BarraAbas({ navRef }: { navRef: React.RefObject<HTMLElement> }) {
             </span>
           )}
         </span>
-        {criar ? "Criar roteiro" : "Hoje"}
+        {criar ? "Criar" : "Hoje"}
       </Link>
       <ItemAba aba={GUIA} ativo={GUIA.ativa(caminho, busca)} marcador={guiaAtiva ? "sim" : "nao"} rotulo={`Guia Sol, ${guiaAtiva ? "ativa" : "não ativa"}`} />
       <ItemAba aba={SOL} ativo={SOL.ativa(caminho, busca)} rotulo="Sol, conversa grátis" />
@@ -128,7 +128,8 @@ export default function AppLayout() {
   const variaveis = { "--sol-topo": `${medidas.topo}px`, "--sol-nav": `${medidas.nav}px` } as CSSProperties;
 
   // Cadastro em etapas ainda não concluído (o perfil do bot novo traz "cadastro")
-  if (!isDemo && profile?.cadastro && !profile.cadastro.concluidoEm) return <Navigate to="/app/cadastro" replace />;
+  // (Segurança/SOS fica liberada mesmo sem concluir: é o que a conta restrita de menor pode usar)
+  if (!isDemo && profile?.cadastro && !profile.cadastro.concluidoEm && !location.pathname.startsWith("/app/seguranca")) return <Navigate to="/app/cadastro" replace />;
 
   return (
     <ViagensProvider>
@@ -139,7 +140,7 @@ export default function AppLayout() {
             <button
               type="button"
               onClick={() => { logout(); navigate("/app/entrar", { replace: true }); }}
-              className="flex-none min-h-[36px] px-3 rounded-lg bg-white font-bold text-sol-fundo"
+              className="flex-none min-h-[44px] px-3 rounded-lg bg-white font-bold text-sol-fundo"
             >
               Entrar de verdade
             </button>

@@ -36,7 +36,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            // Só arquivos públicos (fotos, PDFs); nunca dados de /rest ou /auth
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-api",

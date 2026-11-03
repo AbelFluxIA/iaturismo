@@ -78,9 +78,12 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem("sol_client_token");
-    localStorage.removeItem("sol_client_phone");
-    localStorage.removeItem("sol_client_name");
+    // Apaga tudo que é da pessoa (sessão, feitas, checklist, contatos de emergência...):
+    // num celular emprestado, quem entra depois não vê nada de quem saiu
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith("sol_")) localStorage.removeItem(k);
+      sessionStorage.clear();
+    } catch { /* sem armazenamento */ }
     setToken(null);
     setPhone(null);
     setName(null);

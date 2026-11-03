@@ -25,7 +25,12 @@ export function ViagensProvider({ children }: { children: ReactNode }) {
     try {
       const r = await fetch(`${API_URL}/api/app/roteiros`, { headers: { Authorization: `Bearer ${token}` } });
       if (r.ok) {
-        const lista = ((await r.json()).roteiros ?? []) as Viagem[];
+        // Datas só como AAAA-MM-DD (se vierem com hora, as contas de "hoje" quebram)
+        const lista = (((await r.json()).roteiros ?? []) as Viagem[]).map((v) => ({
+          ...v,
+          arrivalDate: v.arrivalDate ? String(v.arrivalDate).slice(0, 10) : v.arrivalDate,
+          departureDate: v.departureDate ? String(v.departureDate).slice(0, 10) : v.departureDate,
+        }));
         setViagens(lista);
         return lista;
       }
@@ -39,7 +44,7 @@ export function ViagensProvider({ children }: { children: ReactNode }) {
   // Bot antigo (sem a lista): usa o roteiro mais recente do perfil
   const lista = viagens?.length || !profile?.itinerary
     ? viagens
-    : [{ id: profile.itinerary.id, destination: profile.destination, arrivalDate: profile.arrivalDate, departureDate: profile.departureDate, days: profile.itinerary.days, pdfUrl: profile.itinerary.pdfUrl }];
+    : [{ id: profile.itinerary.id, destination: profile.destination, arrivalDate: profile.arrivalDate?.slice(0, 10) ?? null, departureDate: profile.departureDate?.slice(0, 10) ?? null, days: profile.itinerary.days, pdfUrl: profile.itinerary.pdfUrl }];
 
   return (
     <ViagensContext.Provider value={{ viagens: lista, atual: lista ? escolherAtual(lista) : null, recarregar }}>
@@ -84,11 +89,9 @@ export function useRoteiro(id: string | null, codigo: string | null = null) {
         return { texto: DEMO_ROTEIRO, destino: v.destination, chegada: v.arrivalDate, saida: v.departureDate, pdfUrl: null };
       }
       if (codigo) {
-        const { data } = await (supabase as any)
-          .from("generated_itineraries")
-          .select("destination,pdf_url,text_content")
-          .eq("share_code", codigo)
-          .maybeSingle();
+        // Função pública do banco: devolve só o roteiro desse código (a tabela não é aberta)
+        const { data: linhas } = await (supabase as any).rpc("roteiro_publico", { codigo });
+        const data = Array.isArray(linhas) ? linhas[0] : null;
         return data?.text_content
           ? { texto: data.text_content, destino: data.destination, chegada: null, saida: null, pdfUrl: data.pdf_url }
           : null;
