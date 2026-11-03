@@ -1,7 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import {
-  Camera, Check, ChevronLeft, ChevronRight, ClipboardCheck, Download, Lock, Map as MapIcon, MessageCircle, Pencil, Phone, Plus, Route, Share2, CloudSun,
+  Camera, Check, ChevronLeft, ChevronRight, ClipboardCheck, Download, LocateFixed, Lock, Map as MapIcon, MessageCircle, Pencil, Phone, Plus, Route, Share2, CloudSun,
 } from "lucide-react";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
@@ -9,8 +9,8 @@ import { Carregando, Segmentos, TituloSecao, Vazio, btnPrimario, btnSecundario, 
 import { EnviarFotos, GradeFotos, type GrupoAlbum, useAlbum } from "@/components/app/Album";
 import { AbrirRota } from "@/components/app/AbrirRota";
 import { MiniFotoParada, localDaParada, useFotosLocaisLigadas } from "@/components/app/FotoParada";
-import type { PontoMapa } from "@/components/app/MapaRoteiro";
-import { descreverTempo, geocode, previsao, queryDoMapa, rotaPelasRuas, type Coord, type PrevisaoDia } from "@/lib/geo";
+import type { PontoMapa, TrechoMapa } from "@/components/app/MapaRoteiro";
+import { descreverTempo, distanciaKm, geocode, previsao, queryDoMapa, rotaPorTrechos, type Coord, type PrevisaoDia } from "@/lib/geo";
 import {
   itensChecklist, chaveAtividade, diaDaViagem, horaInicio, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, rotuloDia, situacao, type Viagem,
 } from "@/lib/roteiro";
@@ -363,6 +363,41 @@ async function compartilharDia(destino: string | null, dia: string, itens: strin
 
 // ─── Mapa do dia ──────────────────────────────────────────────────────────────
 
+// Cada trecho do caminho com uma cor: bem diferentes entre si e das ruas do mapa (amarelas)
+const CORES_TRECHO = ["#0B5F8A", "#C2185B", "#6A1B9A", "#00897B", "#D84315", "#5D4037"];
+// Mais longe que isso dos lugares do dia, o caminho "de onde você está" não faz sentido
+const PERTO_KM = 60;
+
+type TrechoDoDia = TrechoMapa & { de: string; para: string; minutos: number | null; km: number | null };
+
+// Posição da pessoa enquanto o mapa está aberto: só se ela já deu permissão (ou tocou
+// no botão de localização do mapa). Muda só quando ela anda mais de 300 m.
+function useMinhaPosicao() {
+  const [pos, setPos] = useState<Coord | null>(null);
+  const [permitido, setPermitido] = useState(false);
+  const atualizar = (c: Coord) => setPos((ant) => (ant && distanciaKm(ant, c) < 0.3 ? ant : c));
+
+  useEffect(() => {
+    try {
+      navigator.permissions?.query({ name: "geolocation" as PermissionName })
+        .then((p) => { if (p.state === "granted") setPermitido(true); })
+        .catch(() => { /* sem como saber: espera o botão do mapa */ });
+    } catch { /* idem */ }
+  }, []);
+
+  useEffect(() => {
+    if (!permitido || !navigator.geolocation) return;
+    const id = navigator.geolocation.watchPosition(
+      (p) => atualizar({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => { /* sem posição: o mapa fica sem o trecho de onde a pessoa está */ },
+      { enableHighAccuracy: false, maximumAge: 60000, timeout: 30000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, [permitido]);
+
+  return { pos, doMapa: (c: Coord) => { atualizar(c); setPermitido(true); } };
+}
+
 function AbaMapa({ destino, atividades, estado, chaveDia }: {
   destino: string | null;
   atividades: ReturnType<typeof parseItinerary>[number]["activities"];
@@ -370,15 +405,16 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
   chaveDia: string;
 }) {
   const [pontos, setPontos] = useState<GeoPoint[]>([]);
-  const [rota, setRota] = useState<[number, number][]>([]);
+  const [trechos, setTrechos] = useState<TrechoDoDia[]>([]);
   const [centro, setCentro] = useState<Coord | null>(null);
   const [buscando, setBuscando] = useState(true);
+  const minhaPosicao = useMinhaPosicao();
 
   useEffect(() => {
     let cancelado = false;
     setBuscando(true);
     setPontos([]);
-    setRota([]);
+    setTrechos([]);
     if (destino) geocode(destino).then((c) => { if (!cancelado && c) setCentro(c); });
     (async () => {
       const pts: GeoPoint[] = [];
@@ -390,23 +426,54 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
         if (pt) { pts.push({ ...pt, name: act.name, actIndex: ai }); setPontos([...pts]); }
       }
       setBuscando(false);
-      if (pts.length >= 2) {
-        const r = await rotaPelasRuas(pts);
-        if (!cancelado) setRota(r);
-      }
     })();
     return () => { cancelado = true; };
   }, [chaveDia]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Primeiro lugar do mapa que ainda falta; a pessoa entra no caminho antes dele
+  const estados = pontos.map((p) => estado(p.actIndex));
+  const iFalta = estados.findIndex((e) => e !== "feita");
+  const alvo = iFalta >= 0 ? pontos[iFalta] : null;
+  const voce = minhaPosicao.pos && alvo && distanciaKm(minhaPosicao.pos, alvo) <= PERTO_KM ? minhaPosicao.pos : null;
+
+  // Caminho: lugares já feitos (cinza) → você, se estiver perto → lugares que faltam (uma cor por trecho)
+  const chaveRota = JSON.stringify([buscando, pontos.map((p) => [p.lat, p.lng]), estados, voce]);
+  useEffect(() => {
+    if (buscando) return;
+    let cancelado = false;
+    const feitos = iFalta >= 0 ? pontos.slice(0, iFalta) : pontos;
+    const seq = [
+      ...feitos.map((p, i) => ({ c: p as Coord, rotulo: String(i + 1) })),
+      ...(voce ? [{ c: voce, rotulo: "Você" }] : []),
+      ...(iFalta >= 0 ? pontos.slice(iFalta) : []).map((p, i) => ({ c: p as Coord, rotulo: String(feitos.length + i + 1) })),
+    ];
+    rotaPorTrechos(seq.map((s) => s.c)).then((ts) => {
+      if (cancelado) return;
+      let cor = 0;
+      const lista: TrechoDoDia[] = [];
+      ts.forEach((t, i) => {
+        if (voce && i === feitos.length - 1) return; // do último lugar feito até você: não interessa
+        const feito = i < feitos.length - 1;
+        lista.push({ ...t, de: seq[i].rotulo, para: seq[i + 1].rotulo, feito, cor: feito ? "" : CORES_TRECHO[cor++ % CORES_TRECHO.length] });
+      });
+      setTrechos(lista);
+    });
+    return () => { cancelado = true; };
+  }, [chaveRota]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const proxima = atividades.findIndex((_, ai) => estado(ai) === "proxima");
+  const daqui = voce && alvo?.actIndex === proxima ? trechos.find((t) => t.de === "Você") : undefined;
+  const aFazer = trechos.filter((t) => !t.feito);
   return (
     <>
       <div className="relative -mx-5 overflow-hidden bg-[#E6EEE9]" style={{ height: 400 }}>
         <Suspense fallback={<div className="h-full flex items-center justify-center text-sm text-sol-texto2">Carregando o mapa...</div>}>
           <MapaRoteiro
-            pontos={pontos.map((pt, i): PontoMapa => ({ lat: pt.lat, lng: pt.lng, nome: pt.name, numero: i + 1, estado: estado(pt.actIndex) }))}
-            rota={rota}
+            pontos={pontos.map((pt, i): PontoMapa => ({ lat: pt.lat, lng: pt.lng, nome: pt.name, numero: i + 1, estado: estados[i] }))}
+            trechos={trechos}
+            voce={voce}
             centro={centro}
+            onPosicao={minhaPosicao.doMapa}
           />
         </Suspense>
         {buscando && (
@@ -421,6 +488,23 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
           </div>
         )}
       </div>
+      {aFazer.length > 0 && (
+        <ul aria-label="Trajeto do dia, de carro" className="m-0 p-0 list-none flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] font-bold text-sol-fundo">
+          {aFazer.map((t) => (
+            <li key={`${t.de}-${t.para}`} className="flex items-center gap-1.5">
+              <span aria-hidden className="w-5 h-[5px] rounded-full" style={{ background: t.cor }} />
+              {t.de} → {t.para}
+              {t.minutos !== null && <span className="font-semibold text-sol-texto2">· {t.minutos} min</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!buscando && alvo && !minhaPosicao.pos && (
+        <p className="m-0 flex items-center gap-1.5 text-[13px] text-sol-texto2">
+          <LocateFixed size={16} className="flex-none text-sol-mar" />
+          Toque no botão de localização do mapa para ver o caminho de onde você está.
+        </p>
+      )}
       {proxima >= 0 && (
         <>
           <h2 className="m-0 text-base font-extrabold">Próxima parada</h2>
@@ -428,10 +512,14 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
             <span className="flex-none w-9 h-9 rounded-full bg-sol-sun flex items-center justify-center font-extrabold">
               {(pontos.findIndex((p) => p.actIndex === proxima) + 1) || "•"}
             </span>
-            <span className="flex-1 flex flex-col gap-0.5">
+            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
               <span className="text-base font-bold">{atividades[proxima].name}</span>
               <span className="text-sm text-sol-texto2">{atividades[proxima].time}{atividades[proxima].travel ? ` · ${atividades[proxima].travel}` : ""}</span>
+              {daqui?.minutos != null && (
+                <span className="text-sm font-bold text-sol-mar">Daqui: ~{daqui.minutos} min de carro ({String(daqui.km).replace(".", ",")} km)</span>
+              )}
             </span>
+            <MiniFotoParada local={localDaParada(atividades[proxima])} cidade={destino ?? ""} />
           </div>
           {atividades[proxima].mapUrl && <AbrirRota mapUrl={atividades[proxima].mapUrl} rotulo="Abrir rota" />}
         </>

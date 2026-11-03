@@ -38,17 +38,35 @@ export function queryDoMapa(mapUrl: string) {
   try { return new URL(mapUrl).searchParams.get("query"); } catch { return null; }
 }
 
-export async function rotaPelasRuas(points: Coord[]): Promise<[number, number][]> {
-  if (points.length < 2) return points.map((p) => [p.lat, p.lng]);
-  try {
-    const coords = points.map((p) => `${p.lng},${p.lat}`).join(";");
-    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
-    const data = await res.json();
-    if (data.routes?.[0]?.geometry?.coordinates) {
-      return data.routes[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
-    }
-  } catch { /* linha reta */ }
-  return points.map((p) => [p.lat, p.lng]);
+// Rota de carro pelas ruas, separada em trechos (um entre cada par de pontos seguidos),
+// com tempo e distância de cada um. Sem resposta do OSRM, vira linha reta sem tempo.
+export interface Trecho { linha: [number, number][]; minutos: number | null; km: number | null }
+
+const trechosCache = new Map<string, Promise<Trecho[]>>();
+
+export function rotaPorTrechos(points: Coord[]): Promise<Trecho[]> {
+  if (points.length < 2) return Promise.resolve([]);
+  const coords = points.map((p) => `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
+  if (!trechosCache.has(coords)) {
+    const retas = (): Trecho[] => points.slice(1).map((p, i) => ({ linha: [[points[i].lat, points[i].lng], [p.lat, p.lng]], minutos: null, km: null }));
+    trechosCache.set(coords, (async () => {
+      try {
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=false&steps=true&geometries=geojson`);
+        const data = await res.json();
+        const legs = data.routes?.[0]?.legs;
+        if (Array.isArray(legs) && legs.length === points.length - 1) {
+          return legs.map((leg: { duration: number; distance: number; steps: { geometry: { coordinates: [number, number][] } }[] }) => ({
+            linha: leg.steps.flatMap((s) => s.geometry.coordinates.map(([lng, lat]): [number, number] => [lat, lng])),
+            minutos: Math.max(1, Math.round(leg.duration / 60)),
+            km: Math.round(leg.distance / 100) / 10,
+          }));
+        }
+      } catch { /* linha reta */ }
+      trechosCache.delete(coords); // tenta as ruas de novo numa próxima vez
+      return retas();
+    })());
+  }
+  return trechosCache.get(coords)!;
 }
 
 // Distância em linha reta (km)
