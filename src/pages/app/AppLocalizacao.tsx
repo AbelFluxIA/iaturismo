@@ -4,6 +4,7 @@ import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, TopBar, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 import { posicaoAtual } from "@/lib/geo";
 import { VERSAO_LOCALIZACAO, useLocalizacaoEmUso } from "@/lib/localizacao";
+import { ehNativo } from "@/lib/nativo";
 
 // Consentimento da localização durante a viagem (finalidades determinadas,
 // revogável a qualquer momento). Texto provisório até a revisão jurídica.
@@ -50,7 +51,14 @@ export default function AppLocalizacao() {
         </div>
 
         <section className={`${cartao} flex flex-col gap-2 p-4 text-[15px] leading-snug`}>
-          <p className="m-0">Quando ligada, a Sol registra onde você está <strong>enquanto o app está aberto</strong>, só nos dias de uma viagem com roteiro.</p>
+          {ehNativo ? (
+            <>
+              <p className="m-0">Quando ligada, a Sol registra onde você está <strong>mesmo com o app fechado</strong>, só nos dias de uma viagem com roteiro. No Android, uma notificação fixa mostra que a Sol está acompanhando.</p>
+              <p className="m-0">Quando o celular perguntar, escolha <strong>"Permitir o tempo todo"</strong> (Android) ou <strong>"Sempre"</strong> (iPhone). Sem isso, só registra com o app aberto.</p>
+            </>
+          ) : (
+            <p className="m-0">Quando ligada, a Sol registra onde você está <strong>enquanto o app está aberto</strong>, só nos dias de uma viagem com roteiro.</p>
+          )}
           <p className="m-0 font-extrabold">Para quê</p>
           <ol className="m-0 pl-5 flex flex-col gap-1">
             <li>Avisos, sugestões e a Guia Sol no lugar certo.</li>

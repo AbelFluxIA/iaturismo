@@ -45,5 +45,19 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>A Sol usa sua localização durante a viagem para avisos, sugestões e estatísticas de turismo anônimas. Só com o seu consentimento no app.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Com "Sempre", a Sol continua registrando sua localização nos dias da viagem mesmo com o app fechado, para estatísticas de turismo anônimas. Você desliga quando quiser em Perfil → Localização.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Para enviar fotos dos lugares para a Sol e para o seu álbum da viagem.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Para falar com a Sol por áudio e usar o tradutor por voz.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Para escolher fotos da galeria e enviar para a Sol.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>
