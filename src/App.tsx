@@ -34,6 +34,7 @@ import AppConfig from "./pages/app/AppConfig";
 import AppSeguranca from "./pages/app/AppSeguranca";
 import AppPerfil from "./pages/app/AppPerfil";
 import AppExcluirConta from "./pages/app/AppExcluirConta";
+import { ehNativo } from "./lib/nativo";
 
 const queryClient = new QueryClient();
 
@@ -93,7 +94,8 @@ const router = createBrowserRouter([
       },
       {
         path: "/",
-        element: (
+        // No app nativo (lojas) a raiz é o app do turista; o painel admin é só do site
+        element: ehNativo ? <Navigate to="/app" replace /> : (
           <ProtectedRoute>
             <AdminDashboard />
           </ProtectedRoute>
