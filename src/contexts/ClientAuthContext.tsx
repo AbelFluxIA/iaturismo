@@ -1,7 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { DEMO_TOKEN, demoProfile } from "@/lib/demo";
+import { API_NATIVA, ehNativo } from "@/lib/nativo";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
+// No site, as chamadas são relativas (a Vercel repassa /api/app para o bot).
+// No app nativo não há Vercel: vai direto para o endereço do bot.
+const API_URL = import.meta.env.VITE_API_URL || (ehNativo ? API_NATIVA : "");
 
 export interface ClientProfile {
   name: string | null;

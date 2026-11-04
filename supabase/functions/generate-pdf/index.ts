@@ -194,6 +194,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Só o servidor da Sol (service role) pode chamar: a chave anônima do app não serve
+  const esperado = `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
+  if ((req.headers.get('Authorization') || '') !== esperado) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -201,6 +207,9 @@ serve(async (req) => {
 
     const body: TravelItinerary = await req.json();
     
+    if (typeof body.text === 'string' && body.text.length > 40000) {
+      return new Response(JSON.stringify({ error: 'Texto longo demais' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     if (!body.text) {
       return new Response(
         JSON.stringify({ error: 'O campo "text" é obrigatório' }),

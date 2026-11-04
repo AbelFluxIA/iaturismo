@@ -33,6 +33,7 @@ import AppChat from "./pages/app/AppChat";
 import AppConfig from "./pages/app/AppConfig";
 import AppSeguranca from "./pages/app/AppSeguranca";
 import AppPerfil from "./pages/app/AppPerfil";
+import AppExcluirConta from "./pages/app/AppExcluirConta";
 
 const queryClient = new QueryClient();
 
@@ -163,6 +164,7 @@ const router = createBrowserRouter([
       { path: "config", element: <AppConfig /> },
       { path: "seguranca", element: <AppSeguranca /> },
       { path: "perfil", element: <AppPerfil /> },
+      { path: "perfil/excluir", element: <AppExcluirConta /> },
     ],
   },
 ]);

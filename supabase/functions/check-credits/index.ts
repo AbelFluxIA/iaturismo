@@ -11,6 +11,12 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Só o servidor da Sol (service role) pode chamar: a chave anônima do app não serve
+  const esperado = `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`;
+  if ((req.headers.get('Authorization') || '') !== esperado) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   try {
     const { phone, name } = await req.json();
 

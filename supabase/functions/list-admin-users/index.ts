@@ -35,6 +35,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { data: ehAdmin } = await createClient(supabaseUrl, serviceKey)
+      .from("sol_admins").select("email").ilike("email", user.email ?? "").maybeSingle();
+    if (!ehAdmin) {
+      return new Response(JSON.stringify({ error: "Sem permissão de administrador" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const admin = createClient(supabaseUrl, serviceKey);
 
     if (req.method === "DELETE") {

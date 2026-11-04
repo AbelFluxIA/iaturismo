@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { ehNativo } from "@/lib/nativo";
 
 // Plugin Central de Bugs (relatar bug, melhoria ou ajuste com prints).
 // Carregado da própria Central para receber atualizações automáticas.
@@ -40,7 +41,8 @@ export default function CentralBugs() {
   const { token, isDemo } = useClientAuth();
 
   useEffect(() => {
-    if (!token || isDemo) return;
+    // No app nativo o endpoint /api/central-bugs/access (função da Vercel) não existe
+    if (!token || isDemo || ehNativo) return;
     const ciclo = new AbortController();
     let instancia: Instancia | null = null;
 

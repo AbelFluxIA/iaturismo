@@ -1,3 +1,4 @@
+import { fotoDoLugar } from "@/lib/fotoLugar";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -148,20 +149,12 @@ const PERIOD_EMOJI: Record<string, string> = {
 };
 const getPeriodEmoji = (p: string) => PERIOD_EMOJI[p.toLowerCase()] ?? "📍";
 
-const PEXELS_KEY = "V44MUGPGiCRMtaLLcm2R6K8oMlGMXzgG85S3xbxMYe1n7tXw8WFLfKNP";
-
+// Foto do destino pela Wikimedia Commons (grátis, sem chave no código)
 async function fetchDestinationImage(destination: string): Promise<string | null> {
   try {
     const query = destination.split(/\s*[-–]\s*/)[0].trim();
-    const res = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query + " travel")}&per_page=5&orientation=landscape`,
-      { headers: { Authorization: PEXELS_KEY } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const photos = data.photos as { src: { large2x: string } }[];
-    if (!photos?.length) return null;
-    return photos[Math.floor(Math.random() * Math.min(3, photos.length))].src.large2x;
+    const uf = destination.split(/\s*[-–]\s*/)[1]?.trim() ?? "";
+    return (await fotoDoLugar(query, uf))?.url ?? null;
   } catch { return null; }
 }
 

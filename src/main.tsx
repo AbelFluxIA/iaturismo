@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { iniciarAtualizacao } from "./lib/atualizacao";
+import { ehNativo } from "./lib/nativo";
 
 // PWA: Prevent service worker from running in iframes or preview environments
 const isInIframe = (() => {
@@ -16,7 +17,8 @@ const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
   window.location.hostname.includes("lovableproject.com");
 
-if (isPreviewHost || isInIframe) {
+// No app nativo (lojas) não há service worker: a atualização vem pela loja
+if (isPreviewHost || isInIframe || ehNativo) {
   navigator.serviceWorker?.getRegistrations().then((registrations) => {
     registrations.forEach((r) => r.unregister());
   });
