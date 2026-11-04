@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Check, ChevronLeft, MapPin, Phone, Shield } from "lucide-react";
+import { Check, ChevronLeft, Compass, Heart, MapPin, Phone, Plane, Plus, Shield } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, Carregando, Selo, btnPrimario, btnSecundario, cartao, mascararTelefone } from "@/components/app/ui";
 import { posicaoAtual } from "@/lib/geo";
+import { VERSAO_LOCALIZACAO, pedirPermissaoNativa } from "@/lib/localizacao";
+import { ehNativo } from "@/lib/nativo";
+import { DESTINOS } from "@/lib/destinos";
+import { TIPOS_PASSEIO, hojeISO } from "@/lib/roteiro";
 
 // Cadastro em etapas depois do código (RA-CAD-04 e RA-CAD-05):
-// WhatsApp e dados → Termos → Data de nascimento → Localização → Concluído.
+// WhatsApp e dados → Termos → Data de nascimento → Localização → Gostos →
+// Viagem em mente → Lugares que quer conhecer → Concluído (guia para o 1º roteiro).
 // Textos dos termos são o resumo provisório do protótipo, até a revisão jurídica.
 
 export const VERSAO_TERMOS = "termos-rascunho-1";
-type Etapa = "dados" | "termos" | "recusa" | "nascimento" | "menor" | "localizacao" | "concluido";
-const ETAPAS: Etapa[] = ["dados", "termos", "nascimento", "localizacao"];
+type Etapa = "dados" | "termos" | "recusa" | "nascimento" | "menor" | "localizacao" | "gostos" | "viagem" | "lugares" | "concluido";
+const ETAPAS: Etapa[] = ["dados", "termos", "nascimento", "localizacao", "gostos", "viagem", "lugares"];
+const chip = (ativo: boolean) =>
+  `flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-full border-[1.5px] text-sm font-bold ${ativo ? "bg-sol-fundo text-white border-sol-fundo" : "bg-white text-sol-fundo border-sol-borda"}`;
 
 const RESUMO_TERMOS = [
   "Usamos seu número de WhatsApp para identificar sua conta. Uma conta por número.",
@@ -25,6 +32,7 @@ const USOS_LOCALIZACAO = [
   "Mostrar sua posição no mapa do roteiro",
   "Dar respostas de perto na Guia Sol",
   "Enviar sua localização no SOS",
+  "Registrar seu trajeto nos dias da viagem, para estatísticas de turismo agregadas e anônimas (nenhum relatório identifica você)",
 ];
 
 function idade(nasc: string) {
@@ -44,6 +52,11 @@ export default function AppCadastro() {
   const [data, setData] = useState({ d: "", m: "", a: "" });
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [gostos, setGostos] = useState<string[]>([]);
+  const [temViagem, setTemViagem] = useState<boolean | null>(null);
+  const [viagem, setViagem] = useState({ destino: "", chegada: "", saida: "" });
+  const [lugares, setLugares] = useState<string[]>([]);
+  const [outroLugar, setOutroLugar] = useState("");
 
   if (isDemo) return <Navigate to="/app" replace />;
   if (profileLoading && !profile) return <div className="min-h-screen bg-sol-areia"><Carregando /></div>;
@@ -188,24 +201,137 @@ export default function AppCadastro() {
             <ol className={`${cartao} mt-4 mb-0 p-4 pl-8 flex flex-col gap-2 text-[15px]`}>
               {USOS_LOCALIZACAO.map((u) => <li key={u}>{u}</li>)}
             </ol>
-            <p className="mt-2 mb-0 text-xs text-sol-texto2">Guardar o trajeto durante a viagem é outra escolha, que você liga ou não em Perfil.</p>
+            <p className="mt-2 mb-0 text-xs text-sol-texto2">
+              Só nos dias de uma viagem com roteiro{ehNativo ? ", mesmo com o app fechado. Quando o celular perguntar, escolha \"Permitir o tempo todo\"" : ""}. Você desliga quando quiser em Perfil → Localização.
+            </p>
             {erro && <div className="mt-3"><Aviso tom="erro">{erro}</Aviso></div>}
             <div className="mt-auto pt-8 flex flex-col gap-2">
               <button
                 type="button"
                 disabled={ocupado}
-                onClick={() => passo(async () => { await posicaoAtual(15000); await enviar("/api/app/cadastro", { concluir: true }); await refreshProfile(); }, "concluido")}
+                onClick={() => passo(async () => {
+                  await enviar("/api/app/consentimento", { tipo: "localizacao_viagem", versao: VERSAO_LOCALIZACAO, aceito: true });
+                  if (ehNativo) await pedirPermissaoNativa(); else await posicaoAtual(15000);
+                }, "gostos")}
                 className={`${btnPrimario} w-full`}
               >
                 <MapPin size={18} /> Permitir
               </button>
+              <button type="button" disabled={ocupado} onClick={() => { setErro(null); setEtapa("gostos"); }} className={`${btnSecundario} w-full`}>
+                Agora não
+              </button>
+            </div>
+          </>
+        )}
+
+        {etapa === "gostos" && (
+          <>
+            <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">O que você mais gosta numa viagem?</h1>
+            <p className="mt-2 mb-0 text-[15px] text-sol-texto2">Escolha até 4. A Sol usa isso para montar roteiros com a sua cara. Dá para mudar depois em Criar roteiro.</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {TIPOS_PASSEIO.map((t) => {
+                const ativo = gostos.includes(t);
+                return (
+                  <button key={t} type="button" aria-pressed={ativo} onClick={() => setGostos((g) => ativo ? g.filter((x) => x !== t) : g.length < 4 ? [...g, t] : g)} className={chip(ativo)}>
+                    {ativo && <Heart size={14} fill="currentColor" />}{t}
+                  </button>
+                );
+              })}
+            </div>
+            {erro && <div className="mt-3"><Aviso tom="erro">{erro}</Aviso></div>}
+            <div className="mt-auto pt-8">
+              <button
+                type="button"
+                disabled={ocupado || gostos.length === 0}
+                onClick={() => passo(async () => {
+                  await enviar("/api/app/cadastro", { gostos });
+                  // Vira o padrão de Criar roteiro neste aparelho (RA-ROT-10), se ainda não houver um
+                  try { if (!localStorage.getItem("sol_preferencias")) localStorage.setItem("sol_preferencias", JSON.stringify({ tipos: gostos.slice(0, 3), custos: "melhor custo-benefício", quemVai: "sozinho" })); } catch { /* ok */ }
+                }, "viagem")}
+                className={`${btnPrimario} w-full disabled:opacity-40`}
+              >
+                Continuar
+              </button>
+            </div>
+          </>
+        )}
+
+        {etapa === "viagem" && (
+          <>
+            <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">Já tem uma viagem em mente?</h1>
+            <div className="mt-5 flex flex-col gap-2">
+              <button type="button" aria-pressed={temViagem === true} onClick={() => setTemViagem(true)} className={`${chip(temViagem === true)} justify-center min-h-[52px] text-[15px]`}><Plane size={18} /> Sim, já sei para onde</button>
+              <button type="button" disabled={ocupado} onClick={() => { setTemViagem(false); setErro(null); setEtapa("lugares"); }} className={`${chip(false)} justify-center min-h-[52px] text-[15px]`}>Ainda não</button>
+            </div>
+            {temViagem && (
+              <div className="mt-5 flex flex-col gap-3">
+                <label className="flex flex-col gap-1 text-[13px] font-extrabold">Para onde?
+                  <input value={viagem.destino} onChange={(e) => setViagem({ ...viagem, destino: e.target.value })} placeholder="Cidade ou lugar" autoComplete="off" className={campo} />
+                </label>
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                  <label className="min-w-0 flex flex-col gap-1 text-[13px] font-extrabold">Chegada (opcional)
+                    <input type="date" min={hojeISO()} value={viagem.chegada} onChange={(e) => setViagem({ ...viagem, chegada: e.target.value })} className={campo} />
+                  </label>
+                  <label className="min-w-0 flex flex-col gap-1 text-[13px] font-extrabold">Volta (opcional)
+                    <input type="date" min={viagem.chegada || hojeISO()} value={viagem.saida} onChange={(e) => setViagem({ ...viagem, saida: e.target.value })} className={campo} />
+                  </label>
+                </div>
+              </div>
+            )}
+            {erro && <div className="mt-3"><Aviso tom="erro">{erro}</Aviso></div>}
+            {temViagem && (
+              <div className="mt-auto pt-8">
+                <button
+                  type="button"
+                  disabled={ocupado || viagem.destino.trim().length < 2}
+                  onClick={() => passo(async () => {
+                    await enviar("/api/app/cadastro", { viagem: { destino: viagem.destino.trim(), chegada: viagem.chegada || undefined, saida: viagem.saida || viagem.chegada || undefined }, concluir: true });
+                    await refreshProfile();
+                  }, "concluido")}
+                  className={`${btnPrimario} w-full disabled:opacity-40`}
+                >
+                  Continuar
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {etapa === "lugares" && (
+          <>
+            <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">Quais lugares você tem vontade de conhecer?</h1>
+            <p className="mt-2 mb-0 text-[15px] text-sol-texto2">A Sol vai sugerir roteiros e novidades desses lugares. Pode escolher vários ou escrever outro.</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {[...DESTINOS.map((d) => d.nome), ...lugares.filter((l) => !DESTINOS.some((d) => d.nome === l))].map((nome) => {
+                const ativo = lugares.includes(nome);
+                return (
+                  <button key={nome} type="button" aria-pressed={ativo} onClick={() => setLugares((l) => ativo ? l.filter((x) => x !== nome) : [...l, nome])} className={chip(ativo)}>
+                    {ativo && <Compass size={14} />}{nome}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <input value={outroLugar} onChange={(e) => setOutroLugar(e.target.value)} placeholder="Outro lugar" aria-label="Outro lugar" autoComplete="off" className={`${campo} flex-1 !h-12 !text-[15px]`} />
+              <button
+                type="button"
+                aria-label="Adicionar lugar"
+                disabled={outroLugar.trim().length < 2}
+                onClick={() => { const n = outroLugar.trim(); setLugares((l) => (l.includes(n) ? l : [...l, n])); setOutroLugar(""); }}
+                className="flex-none w-12 h-12 rounded-xl bg-sol-fundo text-white flex items-center justify-center disabled:opacity-40"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+            {erro && <div className="mt-3"><Aviso tom="erro">{erro}</Aviso></div>}
+            <div className="mt-auto pt-8 flex flex-col gap-2">
               <button
                 type="button"
                 disabled={ocupado}
-                onClick={() => passo(async () => { await enviar("/api/app/cadastro", { concluir: true }); await refreshProfile(); }, "concluido")}
-                className={`${btnSecundario} w-full`}
+                onClick={() => passo(async () => { await enviar("/api/app/cadastro", { lugaresDesejados: lugares, viagem: null, concluir: true }); await refreshProfile(); }, "concluido")}
+                className={`${btnPrimario} w-full`}
               >
-                Agora não
+                {lugares.length ? "Continuar" : "Pular"}
               </button>
             </div>
           </>
@@ -215,9 +341,26 @@ export default function AppCadastro() {
           <>
             <div className="flex justify-center mt-10"><span className="w-20 h-20 rounded-full bg-sol-ok-claro text-sol-ok flex items-center justify-center"><Check size={40} strokeWidth={3} /></span></div>
             <h1 className="mt-5 mb-0 text-center font-display font-extrabold text-[26px] leading-tight">Cadastro concluído</h1>
-            <p className="mt-2 mb-0 text-center text-[15px] text-sol-texto2">Tudo pronto, {nome.split(" ")[0] || "viajante"}. Vamos para a sua primeira viagem?</p>
+            <p className="mt-2 mb-0 text-center text-[15px] text-sol-texto2">
+              {temViagem && viagem.destino.trim()
+                ? `Tudo pronto, ${nome.split(" ")[0] || "viajante"}. A Sol monta o roteiro de ${viagem.destino.trim()} em um minuto: é só confirmar as datas e quem vai.`
+                : `Tudo pronto, ${nome.split(" ")[0] || "viajante"}. Vamos para a sua primeira viagem?`}
+            </p>
             <div className="mt-auto pt-8 flex flex-col gap-2">
-              <button type="button" onClick={() => navigate("/app/criar", { replace: true })} className={`${btnPrimario} w-full`}>Criar meu primeiro roteiro</button>
+              {temViagem && viagem.destino.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/app/criar?destino=${encodeURIComponent(viagem.destino.trim())}${viagem.chegada ? `&chegada=${viagem.chegada}&saida=${viagem.saida || viagem.chegada}` : ""}`, { replace: true })}
+                  className={`${btnPrimario} w-full`}
+                >
+                  Montar roteiro para {viagem.destino.trim()}
+                </button>
+              ) : (
+                <>
+                  <button type="button" onClick={() => navigate("/app/criar", { replace: true })} className={`${btnPrimario} w-full`}>Criar meu primeiro roteiro</button>
+                  {lugares.length > 0 && <button type="button" onClick={() => navigate("/app/destinos", { replace: true })} className={`${btnSecundario} w-full`}>Ver lugares para conhecer</button>}
+                </>
+              )}
               <button type="button" onClick={() => navigate("/app", { replace: true })} className={`${btnSecundario} w-full`}>Ir para o Início</button>
             </div>
           </>

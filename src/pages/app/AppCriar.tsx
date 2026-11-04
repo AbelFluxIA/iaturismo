@@ -7,7 +7,7 @@ import { Aviso, TopBar, btnPrimario, btnSecundario, cartao, formatarData } from 
 import { urlSegura } from "@/lib/utils";
 import { CAPITAL, DESTINOS } from "@/lib/destinos";
 import { distanciaKm, posicaoSePermitida } from "@/lib/geo";
-import { hojeISO } from "@/lib/roteiro";
+import { hojeISO, TIPOS_PASSEIO } from "@/lib/roteiro";
 
 // Criar roteiro pelo app: destino → dados → hospedagem → revisão → gerando.
 // O pedido vai para o bot (/api/app/roteiros/criar), que gera em segundo plano.
@@ -34,7 +34,7 @@ interface Rascunho {
 }
 
 // Tipos de roteiro (RA-ROT-11) e quem vai (RA-ROT-12)
-const TIPOS = ["Natureza (inclui praia)", "Gastronomia", "Cultura", "Aventura", "Bares e pubs", "Negócios", "Inovação e tech"];
+const TIPOS = TIPOS_PASSEIO;
 const QUEM: [QuemVai, string][] = [["sozinho", "Sozinho"], ["casal", "Casal"], ["família", "Família"]];
 const PETS = ["Cachorro", "Gato", "Outro"];
 const PORTES = ["Pequeno", "Médio", "Grande"];
@@ -130,7 +130,12 @@ export default function AppCriar() {
       const salvo = JSON.parse(sessionStorage.getItem(CHAVE) || "null") as Rascunho | null;
       if (salvo && "adultos" in salvo && (!vindo || salvo.destino === vindo)) return salvo;
     } catch { /* sem rascunho */ }
-    return padrao(vindo ?? "", profile?.touristProfile);
+    // Datas vindas do onboarding ("já tem uma viagem em mente")
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    const chegadaQ = params.get("chegada") ?? "";
+    const saidaQ = params.get("saida") ?? "";
+    const base = padrao(vindo ?? "", profile?.touristProfile);
+    return iso.test(chegadaQ) ? { ...base, chegada: chegadaQ, saida: iso.test(saidaQ) && saidaQ >= chegadaQ ? saidaQ : chegadaQ } : base;
   });
   const set = (p: Partial<Rascunho>) => setR((x) => ({ ...x, ...p }));
   useEffect(() => { try { sessionStorage.setItem(CHAVE, JSON.stringify(r)); } catch { /* ok */ } }, [r]);

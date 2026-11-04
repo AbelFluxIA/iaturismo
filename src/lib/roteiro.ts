@@ -152,6 +152,9 @@ export function escolherAtual(viagens: Viagem[]): Viagem | null {
 
 // ─── Atividades marcadas como feitas (guardadas neste aparelho) ───────────────
 
+// Tipos de passeio (RA-ROT-11): usados em Criar roteiro e no onboarding ("o que você mais gosta")
+export const TIPOS_PASSEIO = ["Natureza (inclui praia)", "Gastronomia", "Cultura", "Aventura", "Bares e pubs", "Negócios", "Inovação e tech"];
+
 export const chaveFeitas = (id: string) => `sol_feitas_${id}`;
 export const chaveAtividade = (dia: number, atividade: number) => `d${dia}-${atividade}`;
 

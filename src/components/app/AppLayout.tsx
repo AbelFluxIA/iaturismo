@@ -6,6 +6,15 @@ import { RastreioViagem } from "@/lib/localizacao";
 import CentralBugs from "@/components/app/CentralBugs";
 import { Calendar, Check, Home, Map, MessageCircle, Plus, X, type LucideIcon } from "lucide-react";
 
+// A pergunta de localização na entrada só aparece uma vez por aparelho
+function jaPediuLocalizacao() {
+  try {
+    if (localStorage.getItem("sol_pediu_localizacao") === "1") return true;
+    localStorage.setItem("sol_pediu_localizacao", "1");
+  } catch { return true; }
+  return false;
+}
+
 // Barra (RA-NAV-01): Início · Roteiros · [Hoje ou Criar roteiro] · Guia Sol · Sol.
 // O Tradutor abre pelo Início e pela conversa da Guia; o SOS fica no cabeçalho
 // do Início; o Perfil abre pelo avatar.
@@ -130,6 +139,11 @@ export default function AppLayout() {
   // Cadastro em etapas ainda não concluído (o perfil do bot novo traz "cadastro")
   // (Segurança/SOS fica liberada mesmo sem concluir: é o que a conta restrita de menor pode usar)
   if (!isDemo && profile?.cadastro && !profile.cadastro.concluidoEm && !location.pathname.startsWith("/app/seguranca")) return <Navigate to="/app/cadastro" replace />;
+
+  // Quem já tinha cadastro antes da pergunta de localização existir: pergunta uma vez na entrada
+  if (!isDemo && profile?.cadastro?.concluidoEm && profile.consentimentos && !profile.consentimentos.localizacao_viagem && !location.pathname.startsWith("/app/localizacao") && !jaPediuLocalizacao()) {
+    return <Navigate to="/app/localizacao?primeira=1" replace />;
+  }
 
   return (
     <ViagensProvider>

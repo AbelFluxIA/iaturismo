@@ -29,6 +29,38 @@ export function useLocalizacaoEmUso() {
   return v;
 }
 
+const vigiaNativo = () => registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
+const TEXTO_NOTIFICACAO = { backgroundTitle: "Sol está acompanhando sua viagem", backgroundMessage: "Toque para abrir o app. Desligue em Perfil → Localização." };
+
+// App das lojas: abre o pedido de permissão do celular (no Android 10+ o "o tempo todo"
+// é escolhido nos ajustes; o plugin leva a pessoa até lá). true = liberou ao menos em uso.
+export function pedirPermissaoNativa(): Promise<boolean> {
+  if (!ehNativo) return Promise.resolve(false);
+  const BG = vigiaNativo();
+  return new Promise((ok) => {
+    let id: string | null = null;
+    let fim = false;
+    const terminar = (r: boolean) => {
+      if (fim) return;
+      fim = true;
+      if (id) BG.removeWatcher({ id }).catch(() => { /* ok */ });
+      ok(r);
+    };
+    BG.addWatcher({ ...TEXTO_NOTIFICACAO, requestPermissions: true, stale: true }, (pos, erro) => {
+      if (erro) terminar(erro.code !== "NOT_AUTHORIZED");
+      else if (pos) terminar(true);
+    })
+      .then((i) => { id = i; if (fim) BG.removeWatcher({ id: i }).catch(() => { /* ok */ }); })
+      .catch(() => terminar(false));
+    window.setTimeout(() => terminar(true), 20000);
+  });
+}
+
+// Ajustes de localização do app no celular (para mudar para "o tempo todo")
+export function abrirAjustesLocalizacao() {
+  if (ehNativo) vigiaNativo().openSettings().catch(() => { /* ok */ });
+}
+
 // Fica montado no layout do app: envia a posição quando a pessoa se move
 // (250 m) ou a cada 10 minutos, só durante a viagem e com o consentimento.
 export function RastreioViagem() {
@@ -62,15 +94,9 @@ export function RastreioViagem() {
     if (ehNativo) {
       let idVigia: string | null = null;
       let cancelado = false;
-      const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
+      const BackgroundGeolocation = vigiaNativo();
       BackgroundGeolocation.addWatcher(
-        {
-          backgroundTitle: "Sol está acompanhando sua viagem",
-          backgroundMessage: "Toque para abrir o app. Desligue em Perfil → Localização.",
-          requestPermissions: true,
-          stale: false,
-          distanceFilter: DISTANCIA_MIN_KM * 1000,
-        },
+        { ...TEXTO_NOTIFICACAO, requestPermissions: true, stale: false, distanceFilter: DISTANCIA_MIN_KM * 1000 },
         (pos, erro) => {
           if (erro) { if (erro.code === "NOT_AUTHORIZED") definirAtivo(false); return; }
           if (pos) enviar(pos.latitude, pos.longitude, pos.accuracy);

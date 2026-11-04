@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, TopBar, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 import { posicaoAtual } from "@/lib/geo";
-import { VERSAO_LOCALIZACAO, useLocalizacaoEmUso } from "@/lib/localizacao";
+import { VERSAO_LOCALIZACAO, abrirAjustesLocalizacao, pedirPermissaoNativa, useLocalizacaoEmUso } from "@/lib/localizacao";
 import { ehNativo } from "@/lib/nativo";
 
 // Consentimento da localização durante a viagem (finalidades determinadas,
@@ -14,13 +15,15 @@ export default function AppLocalizacao() {
   const emUso = useLocalizacaoEmUso();
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // ?primeira=1: pergunta feita na entrada do app (quem já tinha cadastro); volta para o Início
+  const primeira = useSearchParams()[0].get("primeira") === "1";
 
   async function mudar(aceito: boolean) {
     setErro(null);
     if (isDemo) { setErro("No modo demonstração nada é gravado."); return; }
     setOcupado(true);
     try {
-      if (aceito && !(await posicaoAtual(15000))) {
+      if (aceito && !(ehNativo ? await pedirPermissaoNativa() : await posicaoAtual(15000))) {
         setErro("O celular não liberou a localização. Permita a localização para o app e tente de novo.");
         return;
       }
@@ -40,7 +43,7 @@ export default function AppLocalizacao() {
 
   return (
     <div className="flex flex-col">
-      <TopBar title="Localização durante a viagem" back="/app/perfil" />
+      <TopBar title="Localização durante a viagem" back={primeira ? "/app" : "/app/perfil"} />
       <div className="flex flex-col gap-3 px-5">
         <div className={`flex items-center gap-3 p-4 rounded-2xl ${ligada ? "bg-sol-ok-claro text-sol-ok-texto" : "bg-[#F5F0E8]"}`}>
           <MapPin size={24} className="flex-none" />
@@ -70,9 +73,15 @@ export default function AppLocalizacao() {
 
         {erro && <p role="status" className="m-0 text-sm text-sol-sos">{erro}</p>}
         {ligada ? (
-          <button type="button" disabled={ocupado} onClick={() => mudar(false)} className={btnSecundario}>{ocupado ? "Salvando..." : "Desligar"}</button>
+          <>
+            {ehNativo && <button type="button" onClick={abrirAjustesLocalizacao} className={btnSecundario}>Abrir ajustes do celular ("o tempo todo")</button>}
+            <button type="button" disabled={ocupado} onClick={() => mudar(false)} className={btnSecundario}>{ocupado ? "Salvando..." : "Desligar"}</button>
+          </>
         ) : (
-          <button type="button" disabled={ocupado} onClick={() => mudar(true)} className={btnPrimario}>{ocupado ? "Salvando..." : "Concordo e quero ligar"}</button>
+          <>
+            <button type="button" disabled={ocupado} onClick={() => mudar(true)} className={btnPrimario}>{ocupado ? "Salvando..." : "Concordo e quero ligar"}</button>
+            {primeira && <button type="button" disabled={ocupado} onClick={() => mudar(false)} className={btnSecundario}>Agora não</button>}
+          </>
         )}
       </div>
     </div>
