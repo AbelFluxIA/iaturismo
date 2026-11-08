@@ -7,6 +7,7 @@ import { Aviso, TopBar, btnPrimario, btnSecundario, cartao, formatarData } from 
 import { urlSegura } from "@/lib/utils";
 import { CAPITAL, DESTINOS } from "@/lib/destinos";
 import { distanciaKm, posicaoSePermitida } from "@/lib/geo";
+import { BuscaCidade } from "@/components/app/BuscaCidade";
 import { hojeISO, TIPOS_PASSEIO } from "@/lib/roteiro";
 
 // Criar roteiro pelo app: destino → dados → hospedagem → revisão → gerando.
@@ -278,7 +279,7 @@ export default function AppCriar() {
         <TopBar title="Dados desta viagem" step="Criar roteiro" aoVoltar={() => setEtapa("inicio")} />
         <div className="flex flex-col gap-4 px-5">
           <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Destino</span>
-            <input className={campo} value={r.destino} onChange={(e) => set({ destino: e.target.value })} list="sol-destinos" />
+            <BuscaCidade className={campo} value={r.destino} onChange={(destino) => set({ destino })} />
           </label>
           <div className="grid grid-cols-[1fr_96px] gap-2">
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Chegada</span>
@@ -343,7 +344,6 @@ export default function AppCriar() {
             </span>
           )}
         </div>
-        <ListaDestinos />
       </div>
     );
   }
@@ -408,14 +408,6 @@ export default function AppCriar() {
   );
 }
 
-function ListaDestinos() {
-  return (
-    <datalist id="sol-destinos">
-      {DESTINOS.map((d) => <option key={d.slug} value={`${d.nome} - PB`} />)}
-    </datalist>
-  );
-}
-
 function Inicio({ r, set, cota, irPara, rapido }: {
   r: Rascunho;
   set: (p: Partial<Rascunho>) => void;
@@ -438,9 +430,8 @@ function Inicio({ r, set, cota, irPara, rapido }: {
       <div className="flex flex-col gap-3 px-5">
         <label className="flex flex-col gap-1.5">
           <span className="font-display font-extrabold text-xl">Para onde você vai?</span>
-          <input className={campo} value={r.destino} placeholder="Cidade, estado ou país" onChange={(e) => set({ destino: e.target.value })} list="sol-destinos" />
+          <BuscaCidade className={campo} value={r.destino} placeholder="Cidade, estado ou país" onChange={(destino) => set({ destino })} />
         </label>
-        <ListaDestinos />
         <div className="flex flex-wrap gap-2">
           {perto.map((d) => (
             <Chip key={d.slug} ativo={r.destino === `${d.nome} - PB`} onClick={() => set({ destino: `${d.nome} - PB` })}>{d.nome}</Chip>

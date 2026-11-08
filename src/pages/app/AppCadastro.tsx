@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Check, ChevronLeft, Compass, Heart, MapPin, Phone, Plane, Plus, Shield } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
@@ -8,6 +8,7 @@ import { VERSAO_LOCALIZACAO, pedirPermissaoNativa } from "@/lib/localizacao";
 import { ehNativo } from "@/lib/nativo";
 import { DESTINOS } from "@/lib/destinos";
 import { TIPOS_PASSEIO, hojeISO } from "@/lib/roteiro";
+import { BuscaCidade } from "@/components/app/BuscaCidade";
 
 // Cadastro em etapas depois do código (RA-CAD-04 e RA-CAD-05):
 // WhatsApp e dados → Termos → Data de nascimento → Localização → Gostos →
@@ -57,6 +58,7 @@ export default function AppCadastro() {
   const [viagem, setViagem] = useState({ destino: "", chegada: "", saida: "" });
   const [lugares, setLugares] = useState<string[]>([]);
   const [outroLugar, setOutroLugar] = useState("");
+  const camposData = useRef<(HTMLInputElement | null)[]>([]);
 
   if (isDemo) return <Navigate to="/app" replace />;
   if (profileLoading && !profile) return <div className="min-h-screen bg-sol-areia"><Carregando /></div>;
@@ -89,6 +91,8 @@ export default function AppCadastro() {
   const n = ETAPAS.indexOf(etapa);
   const voltar = n > 0 ? () => { setErro(null); setEtapa(ETAPAS[n - 1]); } : null;
   const campo = "h-14 w-full min-w-0 box-border px-4 rounded-xl border-[1.5px] border-sol-borda bg-white text-[18px] font-semibold focus:outline-none focus:border-sol-mar";
+  // Campo de data: no iPhone o date input tem largura própria e estourava a grade; appearance-none e fonte menor resolvem
+  const campoData = "appearance-none h-12 w-full min-w-0 box-border px-3 rounded-xl border-[1.5px] border-sol-borda bg-white text-[15px] font-semibold text-sol-fundo focus:outline-none focus:border-sol-mar [&::-webkit-date-and-time-value]:text-left";
 
   return (
     <div className="min-h-screen flex flex-col bg-sol-areia font-corpo text-sol-fundo">
@@ -159,9 +163,26 @@ export default function AppCadastro() {
             <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">Qual é a sua data de nascimento?</h1>
             <p className="mt-2 mb-0 text-[15px] text-sol-texto2">Menores de 18 anos usam a Sol com o cadastro de um responsável.</p>
             <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] gap-2">
-              {([["d", "Dia", "DD", 2], ["m", "Mês", "MM", 2], ["a", "Ano", "AAAA", 4]] as const).map(([k, rot, ph, max]) => (
+              {([["d", "Dia", "DD", 2], ["m", "Mês", "MM", 2], ["a", "Ano", "AAAA", 4]] as const).map(([k, rot, ph, max], i) => (
                 <label key={k} className="min-w-0 flex flex-col gap-1.5"><span className="text-[13px] font-bold">{rot}</span>
-                  <input inputMode="numeric" placeholder={ph} maxLength={max} value={data[k]} onChange={(e) => setData({ ...data, [k]: e.target.value.replace(/\D/g, "") })} className={`${campo} text-center`} />
+                  <input
+                    ref={(el) => { camposData.current[i] = el; }}
+                    inputMode="numeric"
+                    placeholder={ph}
+                    maxLength={max}
+                    value={data[k]}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, max);
+                      setData({ ...data, [k]: v });
+                      // Completou o campo: pula para o próximo (dia → mês → ano)
+                      if (v.length === max) camposData.current[i + 1]?.focus();
+                    }}
+                    onKeyDown={(e) => {
+                      // Apagar num campo vazio volta para o anterior
+                      if (e.key === "Backspace" && !data[k] && i > 0) { e.preventDefault(); camposData.current[i - 1]?.focus(); }
+                    }}
+                    className={`${campo} text-center`}
+                  />
                 </label>
               ))}
             </div>
@@ -266,14 +287,14 @@ export default function AppCadastro() {
             {temViagem && (
               <div className="mt-5 flex flex-col gap-3">
                 <label className="flex flex-col gap-1 text-[13px] font-extrabold">Para onde?
-                  <input value={viagem.destino} onChange={(e) => setViagem({ ...viagem, destino: e.target.value })} placeholder="Cidade ou lugar" autoComplete="off" className={campo} />
+                  <BuscaCidade value={viagem.destino} onChange={(destino) => setViagem({ ...viagem, destino })} placeholder="Cidade ou lugar" className={campo} />
                 </label>
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
                   <label className="min-w-0 flex flex-col gap-1 text-[13px] font-extrabold">Chegada (opcional)
-                    <input type="date" min={hojeISO()} value={viagem.chegada} onChange={(e) => setViagem({ ...viagem, chegada: e.target.value })} className={campo} />
+                    <input type="date" min={hojeISO()} value={viagem.chegada} onChange={(e) => setViagem({ ...viagem, chegada: e.target.value })} className={campoData} />
                   </label>
                   <label className="min-w-0 flex flex-col gap-1 text-[13px] font-extrabold">Volta (opcional)
-                    <input type="date" min={viagem.chegada || hojeISO()} value={viagem.saida} onChange={(e) => setViagem({ ...viagem, saida: e.target.value })} className={campo} />
+                    <input type="date" min={viagem.chegada || hojeISO()} value={viagem.saida} onChange={(e) => setViagem({ ...viagem, saida: e.target.value })} className={campoData} />
                   </label>
                 </div>
               </div>

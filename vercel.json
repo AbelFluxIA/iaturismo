@@ -1,6 +1,36 @@
 {
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "iaturismo.vercel.app"
+        }
+      ],
+      "destination": "https://painel.tripsol.com.br/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "iaturismo-two.vercel.app"
+        }
+      ],
+      "destination": "https://painel.tripsol.com.br/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
-    { "source": "/api/app/:path*", "destination": "https://sol-api.2-24-73-122.sslip.io/api/app/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/app/:path*",
+      "destination": "https://sol-api.2-24-73-122.sslip.io/api/app/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

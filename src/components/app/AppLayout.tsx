@@ -142,7 +142,7 @@ export default function AppLayout() {
 
   // Quem já tinha cadastro antes da pergunta de localização existir: pergunta uma vez na entrada
   if (!isDemo && profile?.cadastro?.concluidoEm && profile.consentimentos && !profile.consentimentos.localizacao_viagem && !location.pathname.startsWith("/app/localizacao") && !jaPediuLocalizacao()) {
-    return <Navigate to="/app/localizacao?primeira=1" replace />;
+    return <Navigate to="/app/localizacao?primeira=1" replace state={{ de: `${location.pathname}${location.search}` }} />;
   }
 
   return (

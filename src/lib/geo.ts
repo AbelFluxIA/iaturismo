@@ -1,6 +1,8 @@
 // Localização de lugares (Nominatim/OpenStreetMap), rota pelas ruas (OSRM) e
 // previsão do tempo (Open-Meteo). Serviços gratuitos e sem chave.
 
+import { UFS } from "@/lib/fotoLugar";
+
 export type Coord = { lat: number; lng: number };
 
 // O Nominatim aceita no máximo 1 consulta por segundo: fila única + memória no aparelho.
@@ -32,6 +34,41 @@ export function geocode(query: string): Promise<Coord | null> {
   });
   filaGeo = tarefa.catch(() => null);
   return tarefa;
+}
+
+// ─── Busca de cidades enquanto a pessoa digita (Open-Meteo geocoding, grátis) ──
+// "Curit" → [{ nome: "Curitiba", uf: "PR", rotulo: "Curitiba - PR" }]
+export interface CidadeAchada { nome: string; uf: string | null; rotulo: string; lat: number; lng: number }
+
+const UF_POR_NOME: Record<string, string> = Object.fromEntries(Object.entries(UFS).map(([uf, nome]) => [nome.toLowerCase(), uf]));
+const cidadesCache = new Map<string, Promise<CidadeAchada[]>>();
+
+export function buscarCidades(texto: string): Promise<CidadeAchada[]> {
+  const q = texto.trim();
+  if (q.length < 3) return Promise.resolve([]);
+  const chave = q.toLowerCase();
+  if (!cidadesCache.has(chave)) {
+    cidadesCache.set(chave, (async () => {
+      try {
+        const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=pt&countryCode=BR`);
+        if (!r.ok) return [];
+        const d = await r.json();
+        const vistos = new Set<string>();
+        const lista: CidadeAchada[] = [];
+        for (const c of (d.results ?? []) as { name: string; admin1?: string; feature_code?: string; latitude: number; longitude: number }[]) {
+          if (!/^PPL/.test(c.feature_code ?? "")) continue; // só lugares habitados (não rios, serras...)
+          const uf = c.admin1 ? UF_POR_NOME[c.admin1.toLowerCase()] ?? null : null;
+          const rotulo = uf ? `${c.name} - ${uf}` : c.name;
+          if (vistos.has(rotulo)) continue;
+          vistos.add(rotulo);
+          lista.push({ nome: c.name, uf, rotulo, lat: c.latitude, lng: c.longitude });
+          if (lista.length === 5) break;
+        }
+        return lista;
+      } catch { cidadesCache.delete(chave); return []; }
+    })());
+  }
+  return cidadesCache.get(chave)!;
 }
 
 export function queryDoMapa(mapUrl: string) {

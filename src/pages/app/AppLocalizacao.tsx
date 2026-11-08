@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, TopBar, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
@@ -17,6 +17,10 @@ export default function AppLocalizacao() {
   const [erro, setErro] = useState<string | null>(null);
   // ?primeira=1: pergunta feita na entrada do app (quem já tinha cadastro); volta para o Início
   const primeira = useSearchParams()[0].get("primeira") === "1";
+  // Depois de responder na entrada, volta para onde a pessoa ia (ex.: link de um roteiro)
+  const navigate = useNavigate();
+  const de = (useLocation().state as { de?: string } | null)?.de;
+  const voltar = de && de.startsWith("/app") && !de.startsWith("/app/localizacao") ? de : "/app";
 
   async function mudar(aceito: boolean) {
     setErro(null);
@@ -34,6 +38,7 @@ export default function AppLocalizacao() {
       });
       if (!r.ok) { setErro("Não consegui salvar agora. Tente de novo."); return; }
       await refreshProfile();
+      if (primeira) navigate(voltar, { replace: true });
     } catch {
       setErro("Sem conexão. Tente de novo.");
     } finally {
@@ -43,7 +48,7 @@ export default function AppLocalizacao() {
 
   return (
     <div className="flex flex-col">
-      <TopBar title="Localização durante a viagem" back={primeira ? "/app" : "/app/perfil"} />
+      <TopBar title="Localização durante a viagem" back={primeira ? voltar : "/app/perfil"} />
       <div className="flex flex-col gap-3 px-5">
         <div className={`flex items-center gap-3 p-4 rounded-2xl ${ligada ? "bg-sol-ok-claro text-sol-ok-texto" : "bg-[#F5F0E8]"}`}>
           <MapPin size={24} className="flex-none" />

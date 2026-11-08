@@ -4,6 +4,12 @@ import "./index.css";
 import { iniciarAtualizacao } from "./lib/atualizacao";
 import { ehNativo } from "./lib/nativo";
 
+// Endereços antigos da Vercel apontam para outro banco: o oficial é painel.tripsol.com.br
+// (a Vercel já redireciona no servidor; isto cobre o PWA instalado com service worker antigo)
+if (/^iaturismo(-two)?\.vercel\.app$/.test(window.location.hostname)) {
+  window.location.replace(`https://painel.tripsol.com.br${window.location.pathname}${window.location.search}${window.location.hash}`);
+}
+
 // PWA: Prevent service worker from running in iframes or preview environments
 const isInIframe = (() => {
   try {

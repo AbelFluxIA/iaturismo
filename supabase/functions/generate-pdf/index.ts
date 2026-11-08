@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, rgb, StandardFonts, PDFName, PDFArray } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, rgb, StandardFonts, PDFName, PDFArray, PDFString } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -189,6 +189,20 @@ function parseWhatsAppFormatting(text: string): TextSegment[] {
   return merged;
 }
 
+// "https://www.google.com/maps/search/?api=1&query=Museu+Paranaense" → "Abrir no Google Maps · Museu Paranaense"
+function rotuloDoLink(url: string): string {
+  try {
+    const u = new URL(url);
+    if (/google\.[a-z.]+$/i.test(u.hostname) && u.pathname.startsWith('/maps')) {
+      const q = u.searchParams.get('query') || u.searchParams.get('q') || '';
+      const nome = decodeURIComponent(q.replace(/\+/g, ' ')).trim();
+      return nome ? `Abrir no Google Maps · ${nome}` : 'Abrir no Google Maps';
+    }
+    if (/waze\.com$/i.test(u.hostname)) return 'Abrir no Waze';
+    return u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? u.pathname.substring(0, 30) : '');
+  } catch { return url.substring(0, 55); }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -284,7 +298,7 @@ serve(async (req) => {
           A: {
             Type: 'Action',
             S: 'URI',
-            URI: url,
+            URI: PDFString.of(url),
           },
         })
       );
@@ -494,7 +508,7 @@ serve(async (req) => {
       }
 
       // ── PERIOD / ACTIVITY NODE ──
-      const timeMatch = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*/i);
+      const timeMatch = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening|Almo[cç]o|Jantar|Caf[eé](?: da manh[aã])?)(?=\s*[(:])(\s*\([^)]+\))?:?\s*/i);
       if (timeMatch && inDaySection) {
         checkPageBreak(50);
         yPosition -= 8;
@@ -521,7 +535,7 @@ serve(async (req) => {
       }
 
       // ── NON-DAY period (intro section) ──
-      const timeMatchIntro = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening)(\s*\([^)]+\))?:?\s*\*{0,2}/i);
+      const timeMatchIntro = cleanLine.match(/^\*{0,2}\s*(Manh[aã]|Tarde|Noite|P[oô]r do Sol|Dia Inteiro|Morning|Afternoon|Evening|Almo[cç]o|Jantar|Caf[eé](?: da manh[aã])?)(?=\s*[(:])(\s*\([^)]+\))?:?\s*\*{0,2}/i);
       if (timeMatchIntro && !inDaySection) {
         checkPageBreak(40);
         yPosition -= 5;
@@ -677,7 +691,7 @@ serve(async (req) => {
 
       // Raw URLs (https://...)
       const rawUrlMatch = cleanLine.match(/^(https?:\/\/[^\s]+)/i);
-      if (rawUrlMatch) { drawLinkBlock(rawUrlMatch[1].substring(0, 55), rawUrlMatch[1]); continue; }
+      if (rawUrlMatch) { drawLinkBlock(rotuloDoLink(rawUrlMatch[1]), rawUrlMatch[1]); continue; }
 
       // [Navegar com ...] without URL
       const simpleNavMatch = cleanLine.match(/^\[([^\]]+)\]/i);
