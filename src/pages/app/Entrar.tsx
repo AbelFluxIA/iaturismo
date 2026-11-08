@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ClipboardPaste, MessageCircle } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
-import { Aviso, btnPrimario } from "@/components/app/ui";
-import { DEMO_TOKEN } from "@/lib/demo";
+import { Aviso, btnPrimario, btnSecundario } from "@/components/app/ui";
 
 type Step = "inicio" | "whatsapp" | "phone" | "otp";
 
@@ -91,22 +90,6 @@ export default function Entrar() {
 
   const linkWhatsapp = pedido ? `https://wa.me/${pedido.whatsapp}?text=${encodeURIComponent(pedido.texto)}` : undefined;
 
-  // Temporário: entra com uma viagem de exemplo, sem código
-  function pularDemonstracao() {
-    login(DEMO_TOKEN, "", "Visitante");
-    navigate(destino, { replace: true });
-  }
-
-  const pular = (
-    <button
-      type="button"
-      onClick={pularDemonstracao}
-      className="min-h-[48px] text-[15px] font-bold text-sol-mar"
-    >
-      Pular por enquanto · ver demonstração
-    </button>
-  );
-
   async function handleSolicitarOtp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -180,7 +163,6 @@ export default function Entrar() {
               <button type="button" onClick={() => setStep("whatsapp")} className={btnPrimario}>
                 Entrar com meu WhatsApp
               </button>
-              {pular}
             </div>
           </>
         )}
@@ -231,7 +213,7 @@ export default function Entrar() {
             </div>
             {error && <div className="mt-3"><Aviso tom="erro">{error}</Aviso></div>}
             {abriuWhatsapp && !error && (
-              <p className="mt-2 mb-0 text-[13px] text-sol-texto2">O código chega em poucos segundos. Não chegou? Confira se a mensagem foi enviada para a Sol.</p>
+              <p className="mt-2 mb-0 text-[13px] text-sol-texto2">O código chega em poucos segundos. Se a Sol respondeu outra coisa ou nada chegou, use "Receber o código pelo meu número" aqui embaixo.</p>
             )}
 
             <div className="mt-auto pt-8 flex flex-col gap-2">
@@ -239,8 +221,7 @@ export default function Entrar() {
                 {loading ? "Entrando..." : "Entrar"}
               </button>
               <button type="button" onClick={novoPedido} className="min-h-[44px] text-[14px] font-bold text-sol-mar">Gerar uma nova mensagem</button>
-              <button type="button" onClick={() => { setError(""); setStep("phone"); }} className="min-h-[44px] text-[14px] font-bold text-sol-texto2">Prefiro digitar meu número</button>
-              {pular}
+              <button type="button" onClick={() => { setError(""); setStep("phone"); }} className={`${btnSecundario} w-full`}>Receber o código pelo meu número</button>
             </div>
           </form>
         )}
@@ -308,7 +289,7 @@ export default function Entrar() {
               <button type="submit" disabled={loading || otp.length < 6} className={`${btnPrimario} w-full`}>
                 {loading ? "Confirmando..." : "Confirmar"}
               </button>
-              <div className="flex justify-center mt-2">{pular}</div>
+              <div className="flex justify-center mt-2"></div>
             </div>
           </form>
         )}
