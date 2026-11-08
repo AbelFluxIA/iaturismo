@@ -18,7 +18,7 @@ function periodo(g: GrupoAlbum) {
 
 export default function AppMural() {
   const { profile } = useClientAuth();
-  const { album, loading, recarregar } = useAlbum();
+  const { album, loading, recarregar, apagar } = useAlbum();
   const [copiado, setCopiado] = useState(false);
 
   if (loading) return <Carregando />;
@@ -39,7 +39,7 @@ export default function AppMural() {
     <div className="flex flex-col">
       <TopBar title="Álbum" step={total ? `${total} ${total === 1 ? "foto" : "fotos"}` : undefined} back="/app" />
       <div className="flex flex-col gap-4 px-5">
-        <EnviarFotos aoTerminar={recarregar} />
+        <EnviarFotos aoTerminar={recarregar} envio={album?.envio} />
 
         {total === 0 ? (
           <Vazio
@@ -54,7 +54,7 @@ export default function AppMural() {
                 <h2 className="m-0 text-base font-extrabold">{g.titulo}</h2>
                 <span className="text-xs text-sol-texto2">{periodo(g)} · {g.fotos.length} {g.fotos.length === 1 ? "foto" : "fotos"}</span>
               </div>
-              <GradeFotos fotos={g.fotos} />
+              <GradeFotos fotos={g.fotos} aoApagar={apagar} />
             </section>
           ))
         )}

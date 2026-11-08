@@ -263,3 +263,9 @@ Pendente (precisa de ação fora do código): `META_APP_SECRET` no `.env` do bot
 ## Onboarding (2026-11-04)
 
 Depois de Termos e Nascimento: **Localização** (consentimento `localizacao_viagem` + permissão do celular; no app das lojas, pede "o tempo todo" para o trajeto com o app fechado) → **Gostos** (até 4 tipos de passeio; viram o padrão de Criar roteiro e o `touristProfile` da Sol) → **Viagem em mente** (destino e datas opcionais → "Montar roteiro para X" já preenchido) ou **Lugares que quer conhecer** (lista + outro). Dados em `sol_cadastro` (`gostos`, `viagem_*`, `lugares_desejados`). Quem já tinha cadastro vê a pergunta de localização uma vez na entrada (`/app/localizacao?primeira=1`). Decisão do fundador em 2026-11-04: a localização é pedida na entrada (diverge de RA-GER-05, "permissão só na hora do uso"); vale para PWA, Android e iPhone.
+
+## Decisões do fundador em 2026-11-08 (ainda não refletidas nas Regras Vigentes)
+
+- **Álbum/mural (RA-FOT):** enviar fotos é recurso da **Guia Sol** e só **durante a viagem** (chegada ≤ hoje ≤ volta do último roteiro). Depois da viagem a pessoa só vê, apaga e compartilha. Servidor: `estadoDoAlbum` (album.service) bloqueia `POST /api/app/chat/foto` com 403 e motivo (`sem_guia`, `sem_viagem`, `viagem_encerrada`); `POST /api/app/album/apagar`. Diverge de RA-FOT-02 (álbum grátis por 30 dias): precisa de decisão no documento.
+- **RA-ROT-01 aplicado:** sem a Guia, o roteiro cobre 1 dia (`ROTEIRO_MAX_DAYS` padrão 1); a volta acompanha a chegada na tela Criar; o chat recusa pedidos de vários dias sem a Guia. Dias pagos (RA-ROT-02) continuam sem pagamento ativo.
+- **Administração interna:** telefones em `ADMIN_PHONES` (.env do bot) veem Perfil → Administração (`/app/admin`): consulta por WhatsApp, ativa/desliga a Guia, +1 crédito, marca roteiro como pago. Rotas `/api/app/admin/*`.

@@ -130,6 +130,7 @@ export default function AppPerfil() {
           <LinhaMenu titulo="Privacidade e dados" emBreve />
           {SOL_WHATSAPP && <LinhaMenu href={`https://wa.me/${SOL_WHATSAPP}`} titulo="Falar com a Sol no WhatsApp" />}
           <LinhaMenu to="/app/chat" titulo="Ajuda e suporte" detalhe="Pergunte à Sol" />
+          {profile?.admin && <LinhaMenu to="/app/admin" titulo="Administração" selo="interno" />}
           <LinhaMenu to="/app/perfil/excluir" titulo="Excluir minha conta" tom="perigo" />
         </nav>
 

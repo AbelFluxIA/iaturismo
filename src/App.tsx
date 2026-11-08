@@ -34,6 +34,7 @@ import AppConfig from "./pages/app/AppConfig";
 import AppSeguranca from "./pages/app/AppSeguranca";
 import AppPerfil from "./pages/app/AppPerfil";
 import AppExcluirConta from "./pages/app/AppExcluirConta";
+import AppAdmin from "./pages/app/AppAdmin";
 import { ehNativo } from "./lib/nativo";
 
 const queryClient = new QueryClient();
@@ -167,6 +168,7 @@ const router = createBrowserRouter([
       { path: "seguranca", element: <AppSeguranca /> },
       { path: "perfil", element: <AppPerfil /> },
       { path: "perfil/excluir", element: <AppExcluirConta /> },
+      { path: "admin", element: <AppAdmin /> },
     ],
   },
 ]);

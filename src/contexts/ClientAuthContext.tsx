@@ -44,6 +44,7 @@ export interface ClientProfile {
   };
   // Recursos ligados no servidor (ex.: fotos dos locais pelo Google Maps)
   recursos?: { fotosLocais: boolean };
+  admin?: boolean; // telefone em ADMIN_PHONES: vê a tela de administração
   hasPaid: boolean;
   hasCompanion: boolean;
   freeCredits: number;

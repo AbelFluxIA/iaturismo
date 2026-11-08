@@ -546,7 +546,7 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
 // ─── Álbum desta viagem ───────────────────────────────────────────────────────
 
 function AbaAlbum({ chegada, saida }: { chegada: string | null; saida: string | null }) {
-  const { album, loading, recarregar } = useAlbum();
+  const { album, loading, recarregar, apagar } = useAlbum();
   if (loading) return <Carregando />;
   // Fotos tiradas entre a véspera da chegada e o dia seguinte à saída
   const ini = chegada ? new Date(`${chegada}T00:00:00-03:00`).getTime() - 86400000 : -Infinity;
@@ -561,9 +561,9 @@ function AbaAlbum({ chegada, saida }: { chegada: string | null; saida: string | 
         <h2 className="m-0 text-base font-extrabold">Álbum desta viagem</h2>
         <span className="text-[13px] text-sol-texto2">{fotos.length} {fotos.length === 1 ? "foto" : "fotos"}</span>
       </div>
-      <EnviarFotos aoTerminar={recarregar} />
+      <EnviarFotos aoTerminar={recarregar} envio={album?.envio} />
       {fotos.length > 0 ? (
-        <GradeFotos fotos={fotos} />
+        <GradeFotos fotos={fotos} aoApagar={apagar} />
       ) : (
         <p className="m-0 text-sm text-sol-texto2 text-center py-3">Ainda não há fotos desta viagem. As fotos que você manda para a Sol aparecem aqui.</p>
       )}

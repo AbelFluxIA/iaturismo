@@ -145,7 +145,9 @@ export default function AppCriar() {
   const gratis = profile?.ofertas?.gratisDuranteTeste;
   const regras = profile?.regras;
   const comGuia = !!profile?.hasCompanion;
-  const maxDias = (comGuia ? regras?.maxDiasComGuia : regras?.maxDiasSemGuia) ?? (comGuia ? 7 : 5);
+  const maxDias = (comGuia ? regras?.maxDiasComGuia : regras?.maxDiasSemGuia) ?? (comGuia ? 7 : 1);
+  // RA-ROT-01: sem a Guia o roteiro grátis cobre 1 dia; a volta acompanha a chegada
+  useEffect(() => { if (!comGuia && r.chegada && r.saida !== r.chegada) set({ saida: r.chegada }); }, [comGuia, r.chegada, r.saida]); // eslint-disable-line react-hooks/exhaustive-deps
   const pernoite = r.saida > r.chegada;
   const cota = gratis
     ? "Roteiros grátis durante o teste."
@@ -283,19 +285,22 @@ export default function AppCriar() {
           </label>
           <div className="grid grid-cols-[1fr_110px] gap-2">
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Chegada</span>
-              <input type="date" className={campo} value={r.chegada} min={hojeISO()} onChange={(e) => set({ chegada: e.target.value, saida: r.saida < e.target.value ? e.target.value : r.saida })} />
+              <input type="date" className={campo} value={r.chegada} min={hojeISO()} onChange={(e) => set({ chegada: e.target.value, saida: !comGuia || r.saida < e.target.value ? e.target.value : r.saida })} />
             </label>
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Hora</span>
               <input type="time" className={campo} value={r.horaChegada} onChange={(e) => set({ horaChegada: e.target.value })} />
             </label>
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Volta</span>
-              <input type="date" className={campo} value={r.saida} min={r.chegada} onChange={(e) => set({ saida: e.target.value })} />
+              <input type="date" className={`${campo} disabled:opacity-60`} value={r.saida} min={r.chegada} disabled={!comGuia} onChange={(e) => set({ saida: e.target.value })} />
             </label>
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Hora</span>
               <input type="time" className={campo} value={r.horaVolta} onChange={(e) => set({ horaVolta: e.target.value })} />
             </label>
           </div>
 
+          {!comGuia && (
+            <p className="m-0 -mt-2 text-xs text-sol-texto2">Roteiro grátis: 1 dia. Com a <Link to="/app/guia" className="font-bold text-sol-mar">Guia Sol</Link>, até 7 dias.</p>
+          )}
           <fieldset className="flex flex-col gap-2 border-0 p-0 m-0"><legend className={`${rotuloCampo} mb-2`}>Quem vai com você</legend>
             <div className="flex flex-wrap gap-2">{QUEM.map(([v, l]) => <Chip key={v} ativo={r.quemVai === v} onClick={() => set({ quemVai: v })}>{l}</Chip>)}</div>
             {r.quemVai === "família" && ([["adultos", "Adultos", 1], ["criancas", "Crianças (até 12 anos)", 0]] as const).map(([k, rot, min]) => (
@@ -339,7 +344,7 @@ export default function AppCriar() {
           {!valido && (
             <span className="text-xs text-sol-texto2 -mt-2">
               {dias > maxDias
-                ? `Até ${maxDias} dias por roteiro${comGuia ? "" : " sem a Guia Sol (com a Guia, até 7)"}.`
+                ? (comGuia ? `Com a Guia, até ${maxDias} dias por roteiro.` : "Sem a Guia Sol, o roteiro grátis cobre 1 dia (com a Guia, até 7).")
                 : "Preencha destino, datas e pelo menos um tipo de roteiro."}
             </span>
           )}
