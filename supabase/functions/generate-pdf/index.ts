@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, rgb, StandardFonts, PDFName, PDFArray, PDFString } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, rgb, StandardFonts, PDFName, PDFArray, PDFHexString } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -194,8 +194,7 @@ function rotuloDoLink(url: string): string {
   try {
     const u = new URL(url);
     if (/google\.[a-z.]+$/i.test(u.hostname) && u.pathname.startsWith('/maps')) {
-      const q = u.searchParams.get('query') || u.searchParams.get('q') || '';
-      const nome = decodeURIComponent(q.replace(/\+/g, ' ')).trim();
+      const nome = (u.searchParams.get('query') || u.searchParams.get('q') || '').trim(); // searchParams já decodifica (+ e %xx)
       return nome ? `Abrir no Google Maps · ${nome}` : 'Abrir no Google Maps';
     }
     if (/waze\.com$/i.test(u.hostname)) return 'Abrir no Waze';
@@ -298,7 +297,7 @@ serve(async (req) => {
           A: {
             Type: 'Action',
             S: 'URI',
-            URI: PDFString.of(url),
+            URI: PDFHexString.fromText(url),
           },
         })
       );

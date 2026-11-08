@@ -34,6 +34,7 @@ export default function AppConfig() {
   const [departureDate, setDepartureDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("");
   const [originCity, setOriginCity] = useState("");
+  const [instagram, setInstagram] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -46,6 +47,10 @@ export default function AppConfig() {
     setDestination(profile.destination ?? "");
     setArrivalDate(profile.arrivalDate?.slice(0, 10) ?? "");
     setDepartureDate(profile.departureDate?.slice(0, 10) ?? "");
+    // Antes esses dois não vinham preenchidos e salvar apagava o que já estava no perfil
+    setArrivalTime(profile.arrivalTime ?? "");
+    setOriginCity(profile.originCity ?? "");
+    setInstagram(profile.cadastro?.instagram ? `@${profile.cadastro.instagram}` : "");
   }, [profile]);
 
   async function handleSave(e: React.FormEvent) {
@@ -61,7 +66,7 @@ export default function AppConfig() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, destination, arrivalDate, departureDate, arrivalTime, originCity }),
+        body: JSON.stringify({ name, destination, arrivalDate, departureDate, arrivalTime, originCity, instagram }),
       });
       if (!res.ok) { setError("Não foi possível salvar. Tente de novo."); return; }
       await refreshProfile();
@@ -93,6 +98,7 @@ export default function AppConfig() {
           </div>
           <Field label="Horário de chegada" value={arrivalTime} onChange={setArrivalTime} type="time" />
           <Field label="Cidade de origem" value={originCity} onChange={setOriginCity} placeholder="Ex.: São Paulo - SP" />
+          <Field label="Instagram" value={instagram} onChange={setInstagram} placeholder="@seuusuario" />
           <p className="m-0 text-[13px] text-sol-texto2">A mudança vale para os próximos roteiros. O roteiro já gerado não muda.</p>
         </section>
 

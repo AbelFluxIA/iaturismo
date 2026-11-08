@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, RefreshCw } from "lucide-react";
+import { Camera, Instagram, LogOut, RefreshCw } from "lucide-react";
 import { procurarAtualizacao, versaoDoApp } from "@/lib/atualizacao";
-import { useClientAuth } from "@/contexts/ClientAuthContext";
+import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { LinhaMenu, Selo, TopBar, mascararTelefone } from "@/components/app/ui";
 import { lerPreferencias } from "@/pages/app/AppCriar";
@@ -21,7 +21,7 @@ function preferencias(perfil: string | null | undefined, grupo: string | null | 
 }
 
 export default function AppPerfil() {
-  const { profile, name, phone, logout } = useClientAuth();
+  const { profile, name, phone, token, isDemo, logout, refreshProfile } = useClientAuth();
   const { viagens } = useViagens();
   const navigate = useNavigate();
   const nome = name || profile?.name || "Viajante";
@@ -54,22 +54,56 @@ export default function AppPerfil() {
     navigate("/app/entrar", { replace: true });
   }
 
+  // Foto de perfil: manda a imagem como veio; o servidor recorta em quadrado
+  const arquivoFoto = useRef<HTMLInputElement>(null);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [erroFoto, setErroFoto] = useState<string | null>(null);
+  const fotoUrl = profile?.cadastro?.fotoUrl ?? null;
+  async function enviarFoto(arquivo: File) {
+    if (!token) return;
+    setErroFoto(null);
+    if (arquivo.size > 10 * 1024 * 1024) { setErroFoto("Foto grande demais (máximo 10 MB)."); return; }
+    setEnviandoFoto(true);
+    try {
+      const r = await fetch(`${API_URL}/api/app/perfil/foto`, { method: "POST", headers: { "Content-Type": arquivo.type || "image/jpeg", Authorization: `Bearer ${token}` }, body: arquivo });
+      if (!r.ok) { setErroFoto((await r.json().catch(() => ({}))).error ?? "Não consegui salvar a foto."); return; }
+      await refreshProfile();
+    } catch { setErroFoto("Sem conexão. Tente de novo."); }
+    finally { setEnviandoFoto(false); }
+  }
+
   return (
     <div className="flex flex-col">
       <TopBar title="Perfil" back="/app" />
       <div className="flex flex-col gap-3 px-5">
         <div className="flex items-center gap-3.5">
-          <div className="flex-none w-16 h-16 rounded-full bg-sol-sun flex items-center justify-center font-display font-extrabold text-2xl">
-            {nome.charAt(0).toUpperCase()}
-          </div>
+          {/* Foto de perfil: toque para trocar (abre a câmera ou a galeria) */}
+          <button
+            type="button"
+            onClick={() => !isDemo && !enviandoFoto && arquivoFoto.current?.click()}
+            aria-label={fotoUrl ? "Trocar foto de perfil" : "Adicionar foto de perfil"}
+            className="relative flex-none w-16 h-16 rounded-full bg-sol-sun flex items-center justify-center font-display font-extrabold text-2xl overflow-visible"
+          >
+            {fotoUrl ? <img src={fotoUrl} alt="" className="w-16 h-16 rounded-full object-cover" /> : nome.charAt(0).toUpperCase()}
+            <span className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-sol-fundo text-white border-2 border-sol-areia flex items-center justify-center">
+              {enviandoFoto ? <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Camera size={14} />}
+            </span>
+          </button>
+          <input ref={arquivoFoto} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) enviarFoto(f); }} />
           <div className="flex flex-col gap-1 min-w-0">
             <span className="font-display font-extrabold text-2xl truncate">{nome}</span>
             <span className="flex items-center gap-1.5 text-sm text-sol-texto2">
               {mascararTelefone(profile?.phone || phone)}
               <Selo tom="ok">Verificado</Selo>
             </span>
+            {profile?.cadastro?.instagram && (
+              <a href={`https://instagram.com/${profile.cadastro.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-bold text-sol-mar no-underline">
+                <Instagram size={14} /> @{profile.cadastro.instagram}
+              </a>
+            )}
           </div>
         </div>
+        {erroFoto && <p role="alert" className="m-0 text-[13px] font-bold text-sol-sos">{erroFoto}</p>}
 
         {prefs.length > 0 && (
           <section className="flex flex-col gap-2 p-4 rounded-[18px] bg-sol-claro">

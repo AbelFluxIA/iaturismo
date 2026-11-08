@@ -255,18 +255,44 @@ export default function AppDashboard() {
 function CidadeETempo() {
   const cidade = useCidade();
   const [agora, setAgora] = useState<TempoAgora | null>(null);
+  const [pedindo, setPedindo] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   useEffect(() => { if (cidade.coord) tempoAgora(cidade.coord).then(setAgora); }, [cidade.coord?.lat, cidade.coord?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Sem a posição, a cidade vem do roteiro/cadastro: um toque pede a localização de verdade
+  async function usarMinhaLocalizacao() {
+    setPedindo(true); setAviso(null);
+    const ok = await cidade.atualizar();
+    setPedindo(false);
+    if (!ok) setAviso("Não consegui ler sua localização. Permita a localização para este site nos ajustes do navegador e tente de novo.");
+  }
   return (
+    <div className="flex flex-col gap-1">
     <div className="flex items-center gap-2">
-      <span className="flex-1 min-w-0 flex items-center gap-1.5 text-[14px] font-semibold text-sol-texto2 truncate">
-        {cidade.origem === "posicao" ? <Navigation size={13} strokeWidth={2.4} className="flex-none fill-current" /> : <MapPin size={14} strokeWidth={2.2} className="flex-none" />}
-        {cidade.carregando ? "…" : cidade.nome ? nomeCurto(cidade.nome) : "Escolher cidade"}
-      </span>
+      {cidade.origem === "posicao" ? (
+        <span className="flex-1 min-w-0 flex items-center gap-1.5 text-[14px] font-semibold text-sol-texto2 truncate">
+          <Navigation size={13} strokeWidth={2.4} className="flex-none fill-current" />
+          {cidade.nome ? nomeCurto(cidade.nome) : "…"}
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={usarMinhaLocalizacao}
+          disabled={pedindo || cidade.carregando}
+          aria-label="Usar minha localização"
+          className="flex-1 min-w-0 flex items-center gap-1.5 min-h-[44px] -ml-1 pl-1 text-left text-[14px] font-semibold text-sol-texto2"
+        >
+          <MapPin size={14} strokeWidth={2.2} className="flex-none" />
+          <span className="truncate">{cidade.carregando ? "…" : pedindo ? "Localizando…" : cidade.nome ? nomeCurto(cidade.nome) : "Escolher cidade"}</span>
+          {!cidade.carregando && !pedindo && <span className="flex-none text-[12px] font-bold text-sol-mar underline">usar minha localização</span>}
+        </button>
+      )}
       {agora && (
         <Link to="/app/tempo" aria-label={`Tempo agora: ${agora.temp} graus. Ver a previsão`} className="flex-none flex items-center gap-1.5 h-11 px-3 rounded-full bg-white border border-sol-linha text-sol-fundo text-[15px] font-extrabold no-underline">
           <IconeTempo codigo={agora.codigo} size={18} className="text-sol-mar" />{agora.temp}°
         </Link>
       )}
+    </div>
+    {aviso && <p role="status" className="m-0 text-[12px] text-sol-sos">{aviso}</p>}
     </div>
   );
 }

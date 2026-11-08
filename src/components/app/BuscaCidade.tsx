@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 import { buscarCidades, type CidadeAchada } from "@/lib/geo";
 
@@ -15,6 +15,8 @@ export function BuscaCidade({ value, onChange, placeholder, className, autoFocus
   const [sugestoes, setSugestoes] = useState<CidadeAchada[]>([]);
   const [aberto, setAberto] = useState(false);
   const escolhido = useRef<string | null>(null);
+  const caixa = useRef<HTMLDivElement>(null);
+  const idLista = useId();
 
   useEffect(() => {
     if (!aberto || value.trim().length < 3 || value === escolhido.current) { setSugestoes([]); return; }
@@ -26,7 +28,7 @@ export function BuscaCidade({ value, onChange, placeholder, className, autoFocus
   }, [value, aberto]);
 
   return (
-    <div className="relative">
+    <div ref={caixa} className="relative">
       <input
         className={className}
         value={value}
@@ -34,19 +36,24 @@ export function BuscaCidade({ value, onChange, placeholder, className, autoFocus
         autoComplete="off"
         autoCorrect="off"
         autoFocus={autoFocus}
+        role="combobox"
+        aria-expanded={aberto && sugestoes.length > 0}
+        aria-controls={idLista}
+        aria-autocomplete="list"
         onFocus={() => setAberto(true)}
-        onBlur={() => window.setTimeout(() => setAberto(false), 150)}
+        onBlur={(e) => { if (!caixa.current?.contains(e.relatedTarget as Node | null)) window.setTimeout(() => setAberto(false), 150); }}
         onChange={(e) => { escolhido.current = null; onChange(e.target.value); }}
       />
       {aberto && sugestoes.length > 0 && (
-        <ul role="listbox" aria-label="Cidades encontradas" className="absolute left-0 right-0 top-full z-20 m-0 mt-1 p-1 list-none rounded-xl bg-white border border-sol-borda shadow-lg">
+        <ul id={idLista} role="listbox" aria-label="Cidades encontradas" className="absolute left-0 right-0 top-full z-20 m-0 mt-1 p-1 list-none rounded-xl bg-white border border-sol-borda shadow-lg">
           {sugestoes.map((c) => (
-            <li key={c.rotulo}>
+            <li key={c.rotulo} role="none">
               <button
                 type="button"
                 role="option"
                 aria-selected={false}
                 onMouseDown={(e) => e.preventDefault()}
+                onBlur={(e) => { if (!caixa.current?.contains(e.relatedTarget as Node | null)) setAberto(false); }}
                 onClick={() => { escolhido.current = c.rotulo; onChange(c.rotulo); setSugestoes([]); setAberto(false); }}
                 className="w-full flex items-center gap-2 min-h-[44px] px-3 rounded-lg text-left text-[15px] font-semibold text-sol-fundo hover:bg-sol-areia"
               >

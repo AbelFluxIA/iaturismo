@@ -25,6 +25,8 @@ export interface ClientProfile {
     gostos?: string[];
     viagem?: { destino: string; chegada: string | null; saida: string | null } | null;
     lugaresDesejados?: string[];
+    fotoUrl?: string | null;
+    instagram?: string | null;
   };
   consentimentos?: Record<"termos" | "sos" | "localizacao_viagem", { versao: string; aceito: boolean; em: string } | null>;
   // Parâmetros das regras, vindos do servidor (o app só mostra)

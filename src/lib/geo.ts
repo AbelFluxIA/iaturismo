@@ -51,7 +51,7 @@ export function buscarCidades(texto: string): Promise<CidadeAchada[]> {
     cidadesCache.set(chave, (async () => {
       try {
         const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=pt&countryCode=BR`);
-        if (!r.ok) return [];
+        if (!r.ok) { cidadesCache.delete(chave); return []; }
         const d = await r.json();
         const vistos = new Set<string>();
         const lista: CidadeAchada[] = [];
@@ -116,20 +116,32 @@ export function distanciaKm(a: Coord, b: Coord) {
 }
 
 // Posição do aparelho só se a pessoa já deu permissão (não abre o pedido sozinho)
+// Lembra que a pessoa já liberou a localização neste aparelho: o Safari do iPhone não
+// responde à Permissions API, e sem isso o app nunca usava a posição mesmo depois de liberada
+const JA_LIBEROU = "sol_geo_permitida";
+
 export async function posicaoSePermitida(): Promise<Coord | null> {
   try {
     const p = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
-    if (p?.state !== "granted") return null;
-  } catch { return null; }
-  return posicaoAtual();
+    if (p?.state === "granted") return posicaoAtual();
+    if (p?.state === "denied") return null;
+  } catch { /* Safari: sem Permissions API para geolocalização */ }
+  try { if (localStorage.getItem(JA_LIBEROU) === "1") return posicaoAtual(); } catch { /* sem armazenamento */ }
+  return null;
 }
 
 export function posicaoAtual(timeout = 10000): Promise<Coord | null> {
   return new Promise((ok) => {
     if (!navigator.geolocation) return ok(null);
     navigator.geolocation.getCurrentPosition(
-      (p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => ok(null),
+      (p) => {
+        try { localStorage.setItem(JA_LIBEROU, "1"); } catch { /* ok */ }
+        ok({ lat: p.coords.latitude, lng: p.coords.longitude });
+      },
+      (e) => {
+        if (e.code === e.PERMISSION_DENIED) { try { localStorage.removeItem(JA_LIBEROU); } catch { /* ok */ } }
+        ok(null);
+      },
       { enableHighAccuracy: false, timeout, maximumAge: 5 * 60 * 1000 },
     );
   });

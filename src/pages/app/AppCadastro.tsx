@@ -181,6 +181,15 @@ export default function AppCadastro() {
                       // Apagar num campo vazio volta para o anterior
                       if (e.key === "Backspace" && !data[k] && i > 0) { e.preventDefault(); camposData.current[i - 1]?.focus(); }
                     }}
+                    onBeforeInput={(e) => {
+                      // Teclado do Android não informa a tecla: usa o tipo do evento
+                      if ((e.nativeEvent as InputEvent).inputType === "deleteContentBackward" && !data[k] && i > 0) { e.preventDefault(); camposData.current[i - 1]?.focus(); }
+                    }}
+                    onPaste={(e) => {
+                      // Colou a data inteira (08/11/1990 ou 08111990): distribui nos três campos
+                      const dig = e.clipboardData.getData("text").replace(/\D/g, "");
+                      if (dig.length >= 8) { e.preventDefault(); setData({ d: dig.slice(0, 2), m: dig.slice(2, 4), a: dig.slice(4, 8) }); camposData.current[2]?.focus(); }
+                    }}
                     className={`${campo} text-center`}
                   />
                 </label>
