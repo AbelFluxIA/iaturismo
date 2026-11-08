@@ -281,7 +281,7 @@ export default function AppCriar() {
           <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Destino</span>
             <BuscaCidade className={campo} value={r.destino} onChange={(destino) => set({ destino })} />
           </label>
-          <div className="grid grid-cols-[1fr_96px] gap-2">
+          <div className="grid grid-cols-[1fr_110px] gap-2">
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Chegada</span>
               <input type="date" className={campo} value={r.chegada} min={hojeISO()} onChange={(e) => set({ chegada: e.target.value, saida: r.saida < e.target.value ? e.target.value : r.saida })} />
             </label>
@@ -432,7 +432,9 @@ function Inicio({ r, set, cota, irPara, rapido }: {
           <span className="font-display font-extrabold text-xl">Para onde você vai?</span>
           <BuscaCidade className={campo} value={r.destino} placeholder="Cidade, estado ou país" onChange={(destino) => set({ destino })} />
         </label>
-        <div className="flex flex-wrap gap-2">
+        {!temDestino && <span className="-mt-1 text-xs text-sol-texto2">Digite a cidade ou escolha uma perto de você.</span>}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-sol-texto2">Perto de você:</span>
           {perto.map((d) => (
             <Chip key={d.slug} ativo={r.destino === `${d.nome} - PB`} onClick={() => set({ destino: `${d.nome} - PB` })}>{d.nome}</Chip>
           ))}
@@ -454,7 +456,7 @@ function Inicio({ r, set, cota, irPara, rapido }: {
 
         <h2 className="m-0 mt-1 text-base font-extrabold">Como você quer montar?</h2>
         {[
-          { titulo: "Roteiro rápido", texto: "A Sol completa com padrões: sai em 1 hora e volta hoje às 22h, com as preferências acima. Você revisa antes de gerar.", Icon: Sparkles, acao: rapido },
+          { titulo: "Roteiro rápido", texto: "A Sol completa com padrões: começa daqui a 1 hora e termina hoje às 22h, com as preferências acima. Você revisa antes de gerar.", Icon: Sparkles, acao: rapido },
           { titulo: "Personalizar", texto: "Escolha datas, quem vai, tipos de passeio e custos.", Icon: SlidersHorizontal, acao: () => irPara("dados") },
         ].map(({ titulo, texto, Icon, acao }) => (
           <button key={titulo} type="button" disabled={!temDestino} onClick={acao} className={`${cartao} flex items-start gap-3 p-4 text-left disabled:opacity-50`}>

@@ -619,9 +619,10 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
             }}
             placeholder="Pergunte à Sol"
+
             rows={1}
             disabled={sending}
-            className="flex-1 min-w-0 min-h-[48px] max-h-28 resize-none px-4 py-3 rounded-3xl border-[1.5px] border-sol-borda bg-sol-areia text-[15px] text-sol-fundo placeholder-[#8A9599] focus:outline-none focus:border-sol-mar"
+            className="flex-1 min-w-0 min-h-[48px] max-h-28 resize-none px-4 py-3 rounded-3xl border-[1.5px] border-sol-borda bg-sol-areia text-[15px] text-sol-fundo placeholder-sol-texto2 focus:outline-none focus:border-sol-mar"
           />
           {input.trim() ? (
             <button

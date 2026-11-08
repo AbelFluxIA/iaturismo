@@ -127,10 +127,10 @@ export default function AppPerfil() {
           <LinhaMenu to="/app/seguranca" titulo="Segurança e contatos de emergência" />
           <LinhaMenu to="/app/localizacao" titulo="Localização durante a viagem" detalhe={profile?.consentimentos?.localizacao_viagem?.aceito ? "Ligada" : "Desligada"} />
           <LinhaMenu titulo="Configurações e notificações" emBreve />
-          <LinhaMenu to="/app/perfil/excluir" titulo="Excluir minha conta" />
           <LinhaMenu titulo="Privacidade e dados" emBreve />
           {SOL_WHATSAPP && <LinhaMenu href={`https://wa.me/${SOL_WHATSAPP}`} titulo="Falar com a Sol no WhatsApp" />}
           <LinhaMenu to="/app/chat" titulo="Ajuda e suporte" detalhe="Pergunte à Sol" />
+          <LinhaMenu to="/app/perfil/excluir" titulo="Excluir minha conta" tom="perigo" />
         </nav>
 
       <button

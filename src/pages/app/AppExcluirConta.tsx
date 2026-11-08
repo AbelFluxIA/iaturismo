@@ -15,6 +15,7 @@ export default function AppExcluirConta() {
 
   async function excluir() {
     if (!token || isDemo) return;
+    if (!window.confirm("Excluir sua conta de forma definitiva? Isso não pode ser desfeito.")) return;
     setOcupado(true);
     setErro(null);
     try {
@@ -29,7 +30,7 @@ export default function AppExcluirConta() {
         return;
       }
       logout();
-      navigate("/app/entrar", { replace: true });
+      navigate("/app/entrar", { replace: true, state: { aviso: "Sua conta foi excluída. Seus dados foram apagados." } });
     } catch {
       setErro("Sem conexão agora. Tente de novo em instantes.");
     } finally {

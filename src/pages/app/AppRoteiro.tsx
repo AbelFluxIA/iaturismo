@@ -297,7 +297,7 @@ function RoteiroDetalhe() {
                       to={`/app/roteiro/atividade?${chave === idParam ? "id" : "codigo"}=${encodeURIComponent(chave ?? "")}&d=${di}&a=${ai}`}
                       className="flex-1 min-w-0 flex items-center gap-2.5 min-h-[56px] text-sol-fundo no-underline"
                     >
-                      <span className="flex-none w-12 font-display font-extrabold text-[15px]">{horaInicio(act)}</span>
+                      <span className="flex-none w-11 font-display font-extrabold text-[15px]">{horaInicio(act)}</span>
                       <span className="flex-1 min-w-0 flex flex-col gap-px">
                         <span className={`text-[15px] font-bold leading-tight ${feita ? "line-through text-sol-texto2" : ""}`}>{act.name}</span>
                         {act.travel && <span className="text-xs text-sol-texto2 truncate">{act.travel}</span>}
@@ -495,6 +495,14 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
           </div>
         )}
       </div>
+      <div className="flex flex-wrap gap-3.5 text-[13px] text-sol-texto2">
+        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-sol-ok" />Feita</span>
+        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-sol-sun border-2 border-sol-fundo" />Próxima</span>
+        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-white border-2 border-sol-fundo" />Depois</span>
+      </div>
+      {aFazer.length > 0 && (
+        <p className="m-0 -mb-1 text-[12px] font-extrabold uppercase tracking-[0.06em] text-sol-texto2">Trajeto do dia, de carro</p>
+      )}
       {aFazer.length > 0 && (
         <ul aria-label="Trajeto do dia, de carro" className="m-0 p-0 list-none flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] font-bold text-sol-fundo">
           {aFazer.map((t) => (
@@ -531,11 +539,6 @@ function AbaMapa({ destino, atividades, estado, chaveDia }: {
           {atividades[proxima].mapUrl && <AbrirRota mapUrl={atividades[proxima].mapUrl} rotulo="Abrir rota" />}
         </>
       )}
-      <div className="flex flex-wrap gap-3.5 text-[13px] text-sol-texto2">
-        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-sol-ok" />Feita</span>
-        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-sol-sun border-2 border-sol-fundo" />Próxima</span>
-        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-white border-2 border-sol-fundo" />Depois</span>
-      </div>
     </>
   );
 }

@@ -14,15 +14,16 @@ export function BuscaCidade({ value, onChange, placeholder, className, autoFocus
 }) {
   const [sugestoes, setSugestoes] = useState<CidadeAchada[]>([]);
   const [aberto, setAberto] = useState(false);
+  const [semResultado, setSemResultado] = useState(false);
   const escolhido = useRef<string | null>(null);
   const caixa = useRef<HTMLDivElement>(null);
   const idLista = useId();
 
   useEffect(() => {
-    if (!aberto || value.trim().length < 3 || value === escolhido.current) { setSugestoes([]); return; }
+    if (!aberto || value.trim().length < 3 || value === escolhido.current) { setSugestoes([]); setSemResultado(false); return; }
     let cancelado = false;
     const t = window.setTimeout(() => {
-      buscarCidades(value).then((lista) => { if (!cancelado) setSugestoes(lista.filter((c) => c.rotulo !== value)); });
+      buscarCidades(value).then((lista) => { if (!cancelado) { setSugestoes(lista.filter((c) => c.rotulo !== value)); setSemResultado(lista.length === 0); } });
     }, 450);
     return () => { cancelado = true; window.clearTimeout(t); };
   }, [value, aberto]);
@@ -44,6 +45,9 @@ export function BuscaCidade({ value, onChange, placeholder, className, autoFocus
         onBlur={(e) => { if (!caixa.current?.contains(e.relatedTarget as Node | null)) window.setTimeout(() => setAberto(false), 150); }}
         onChange={(e) => { escolhido.current = null; onChange(e.target.value); }}
       />
+      {aberto && semResultado && sugestoes.length === 0 && value.trim().length >= 3 && (
+        <p className="m-0 mt-1 text-xs text-sol-texto2">Não achei essa cidade na lista. Pode continuar com esse nome mesmo.</p>
+      )}
       {aberto && sugestoes.length > 0 && (
         <ul id={idLista} role="listbox" aria-label="Cidades encontradas" className="absolute left-0 right-0 top-full z-20 m-0 mt-1 p-1 list-none rounded-xl bg-white border border-sol-borda shadow-lg">
           {sugestoes.map((c) => (

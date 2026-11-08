@@ -30,7 +30,9 @@ export default function Entrar() {
   const { login } = useClientAuth();
   const navigate = useNavigate();
   // Veio de um link protegido (ex.: /r/código)? Volta para lá depois de entrar
-  const de = (useLocation().state as { de?: string } | null)?.de;
+  const estadoRota = useLocation().state as { de?: string; aviso?: string } | null;
+  const de = estadoRota?.de;
+  const avisoEntrada = estadoRota?.aviso;
   const destino = de && de.startsWith("/app") ? de : "/app";
 
   const digitos = phone.replace(/\D/g, "");
@@ -166,6 +168,7 @@ export default function Entrar() {
               <img src="/sol-logo.png" alt="Sol" className="w-[210px] h-auto object-contain" />
             </div>
             <div className="flex flex-col gap-3.5">
+              {avisoEntrada && <div className="mb-3"><Aviso tom="ok">{avisoEntrada}</Aviso></div>}
               <h1 className="m-0 font-display font-extrabold text-[30px] leading-[1.02] tracking-[-0.03em]">
                 Sua viagem inteligente
               </h1>

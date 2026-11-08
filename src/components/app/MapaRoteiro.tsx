@@ -48,7 +48,7 @@ function elementoMarcador(p: PontoMapa) {
     proxima: { bg: "#F5B40F", fg: "#0E2F45", borda: "#0E2F45" },
     depois: { bg: "#FFFFFF", fg: "#0E2F45", borda: "#0E2F45" },
   }[p.estado];
-  const tam = p.estado === "proxima" ? 34 : 28;
+  const tam = p.estado === "proxima" ? 40 : 36;
   el.style.cssText = `width:${tam}px;height:${tam}px;border-radius:50%;background:${cores.bg};color:${cores.fg};border:3px solid ${cores.borda};display:flex;align-items:center;justify-content:center;font:800 13px Figtree,system-ui,sans-serif;box-shadow:0 2px 8px rgba(14,47,69,.25);cursor:pointer`;
   el.textContent = String(p.numero);
   el.setAttribute("aria-label", `${p.numero}. ${p.nome}`);

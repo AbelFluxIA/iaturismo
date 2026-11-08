@@ -68,15 +68,14 @@ export default function AppLocalizacao() {
             <p className="m-0">Quando ligada, a Sol registra onde você está <strong>enquanto o app está aberto</strong>, só nos dias de uma viagem com roteiro.</p>
           )}
           <p className="m-0 font-extrabold">Para quê</p>
-          <ol className="m-0 pl-5 flex flex-col gap-1">
+          <ol className="m-0 pl-5 flex flex-col gap-1 list-decimal">
             <li>Avisos, sugestões e a Guia Sol no lugar certo.</li>
             <li>Estatísticas de turismo <strong>agregadas e anônimas</strong> (por exemplo, quantas pessoas visitaram uma região num mês), entregues a prefeituras, órgãos de turismo e parceiros. Nenhum relatório identifica você.</li>
           </ol>
           <p className="m-0">Você pode desligar quando quiser, aqui ou em Perfil. Desligar não muda o resto do app.</p>
         </section>
-        <Aviso tom="atencao">Texto provisório: a versão final, com o prazo de guarda dos dados, depende da revisão jurídica.</Aviso>
-
         {erro && <p role="status" className="m-0 text-sm text-sol-sos">{erro}</p>}
+        <div className={primeira ? "sticky bottom-[calc(var(--sol-nav)+8px)] z-10 -mx-5 px-5 py-3 bg-sol-areia/95 backdrop-blur flex flex-col gap-2" : "flex flex-col gap-2"}>
         {ligada ? (
           <>
             {ehNativo && <button type="button" onClick={abrirAjustesLocalizacao} className={btnSecundario}>Abrir ajustes do celular ("o tempo todo")</button>}
@@ -88,6 +87,8 @@ export default function AppLocalizacao() {
             {primeira && <button type="button" disabled={ocupado} onClick={() => mudar(false)} className={btnSecundario}>Agora não</button>}
           </>
         )}
+        </div>
+        <p className="m-0 text-[11px] text-sol-texto2">Texto provisório: a versão final, com o prazo de guarda dos dados, depende da revisão jurídica.</p>
       </div>
     </div>
   );

@@ -70,7 +70,7 @@ export function Segmentos<T extends string>({ opcoes, valor, aoMudar, rotulo }: 
 }
 
 // Linha de menu (Perfil, Informações...)
-export function LinhaMenu({ to, href, onClick, titulo, detalhe, selo, emBreve }: {
+export function LinhaMenu({ to, href, onClick, titulo, detalhe, selo, emBreve, tom }: {
   to?: string;
   href?: string;
   onClick?: () => void;
@@ -78,11 +78,12 @@ export function LinhaMenu({ to, href, onClick, titulo, detalhe, selo, emBreve }:
   detalhe?: string;
   selo?: string;
   emBreve?: boolean;
+  tom?: "perigo"; // ação destrutiva (ex.: excluir conta)
 }) {
   const conteudo = (
     <>
-      <span className="flex-1 min-w-0 text-[15px] font-semibold">{titulo}</span>
-      {detalhe && <span className="flex-none ml-2 text-sm text-sol-texto2 truncate max-w-[45%]">{detalhe}</span>}
+      <span className={`flex-1 min-w-0 text-[15px] font-semibold ${tom === "perigo" ? "text-sol-sos" : ""}`}>{titulo}</span>
+      {detalhe && <span className="flex-none ml-2 text-sm text-sol-texto2 truncate whitespace-nowrap max-w-[55%]">{detalhe}</span>}
       {selo && <span className="flex-none text-xs font-extrabold px-2 py-0.5 rounded-full bg-sol-creme text-sol-creme-texto">{selo}</span>}
       {emBreve ? <span className="flex-none text-xs font-bold px-2 py-0.5 rounded-full bg-[#ECEFF1] text-sol-texto2">Em breve</span> : <ChevronRight size={18} className="flex-none text-sol-texto2" />}
     </>

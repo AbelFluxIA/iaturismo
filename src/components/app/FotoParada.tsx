@@ -62,7 +62,7 @@ export function MiniFotoParada({ local, cidade }: { local: string | null; cidade
 
   if (!foto || falhou) return <span ref={ref} aria-hidden className="flex-none w-0 h-12" />;
   return (
-    <span ref={ref} className="flex-none w-12 h-12 rounded-lg overflow-hidden bg-sol-creme">
+    <span ref={ref} className="hidden min-[360px]:block flex-none w-12 h-12 rounded-lg overflow-hidden bg-sol-creme">
       <img src={foto.url} alt="" loading="lazy" decoding="async" onError={() => setFalhou(true)} className="w-full h-full object-cover" />
     </span>
   );

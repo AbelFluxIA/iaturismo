@@ -228,7 +228,7 @@ export default function AppCadastro() {
           <>
             <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">Por que a Sol pede sua localização</h1>
             <p className="mt-2 mb-0 text-[15px] text-sol-texto2">O app funciona sem ela, com menos recursos. Usamos para:</p>
-            <ol className={`${cartao} mt-4 mb-0 p-4 pl-8 flex flex-col gap-2 text-[15px]`}>
+            <ol className={`${cartao} mt-4 mb-0 p-4 pl-8 flex flex-col gap-2 text-[15px] list-decimal`}>
               {USOS_LOCALIZACAO.map((u) => <li key={u}>{u}</li>)}
             </ol>
             <p className="mt-2 mb-0 text-xs text-sol-texto2">
@@ -247,7 +247,12 @@ export default function AppCadastro() {
               >
                 <MapPin size={18} /> Permitir
               </button>
-              <button type="button" disabled={ocupado} onClick={() => { setErro(null); setEtapa("gostos"); }} className={`${btnSecundario} w-full`}>
+              <button
+                type="button"
+                disabled={ocupado}
+                onClick={() => passo(async () => { await enviar("/api/app/consentimento", { tipo: "localizacao_viagem", versao: VERSAO_LOCALIZACAO, aceito: false }); }, "gostos")}
+                className={`${btnSecundario} w-full`}
+              >
                 Agora não
               </button>
             </div>
@@ -257,12 +262,12 @@ export default function AppCadastro() {
         {etapa === "gostos" && (
           <>
             <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">O que você mais gosta numa viagem?</h1>
-            <p className="mt-2 mb-0 text-[15px] text-sol-texto2">Escolha até 4. A Sol usa isso para montar roteiros com a sua cara. Dá para mudar depois em Criar roteiro.</p>
+            <p className="mt-2 mb-0 text-[15px] text-sol-texto2">{gostos.length >= 4 ? "Máximo de 4 escolhidos. Desmarque um para trocar." : "Escolha até 4. A Sol usa isso para montar roteiros com a sua cara. Dá para mudar depois em Criar roteiro."}</p>
             <div className="mt-5 flex flex-wrap gap-2">
               {TIPOS_PASSEIO.map((t) => {
                 const ativo = gostos.includes(t);
                 return (
-                  <button key={t} type="button" aria-pressed={ativo} onClick={() => setGostos((g) => ativo ? g.filter((x) => x !== t) : g.length < 4 ? [...g, t] : g)} className={chip(ativo)}>
+                  <button key={t} type="button" aria-pressed={ativo} aria-disabled={!ativo && gostos.length >= 4} onClick={() => setGostos((g) => ativo ? g.filter((x) => x !== t) : g.length < 4 ? [...g, t] : g)} className={`${chip(ativo)} ${!ativo && gostos.length >= 4 ? "opacity-40" : ""}`}>
                     {ativo && <Heart size={14} fill="currentColor" />}{t}
                   </button>
                 );
