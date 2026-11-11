@@ -6,6 +6,7 @@ import { Aviso, Carregando, Selo, btnPrimario, btnSecundario, cartao, mascararTe
 import { posicaoAtual } from "@/lib/geo";
 import { VERSAO_LOCALIZACAO, pedirPermissaoNativa } from "@/lib/localizacao";
 import { ehNativo } from "@/lib/nativo";
+import { conviteGuardado, limparConvite } from "@/lib/convite";
 import { DESTINOS } from "@/lib/destinos";
 import { TIPOS_PASSEIO, hojeISO } from "@/lib/roteiro";
 import { BuscaCidade } from "@/components/app/BuscaCidade";
@@ -65,12 +66,15 @@ export default function AppCadastro() {
   if (profile?.cadastro?.concluidoEm && etapa !== "concluido") return <Navigate to="/app" replace />;
 
   async function enviar(url: string, corpo: object) {
+    const concluindo = (corpo as { concluir?: boolean }).concluir === true;
     const r = await fetch(`${API_URL}${url}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(corpo),
+      // Ao concluir, manda junto o convite guardado no aparelho (link /convite/CÓDIGO)
+      body: JSON.stringify(concluindo && conviteGuardado() ? { ...corpo, convite: conviteGuardado() } : corpo),
     });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? "erro");
+    if (concluindo) limparConvite();
   }
 
   async function passo(acao: () => Promise<void>, proxima: Etapa) {

@@ -35,6 +35,7 @@ import AppSeguranca from "./pages/app/AppSeguranca";
 import AppPerfil from "./pages/app/AppPerfil";
 import AppExcluirConta from "./pages/app/AppExcluirConta";
 import AppAdmin from "./pages/app/AppAdmin";
+import Convite from "./pages/Convite";
 import { ehNativo } from "./lib/nativo";
 
 const queryClient = new QueryClient();
@@ -101,6 +102,10 @@ const router = createBrowserRouter([
             <AdminDashboard />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: "/convite/:codigo",
+        element: <Convite />,
       },
       {
         path: "/mural/:shareCode",
