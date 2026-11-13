@@ -10,9 +10,11 @@ interface Pedido { pedido: string; whatsapp: string; texto: string; criado: numb
 const CHAVE_PEDIDO = "sol_pedido_login";
 const VALIDADE_PEDIDO = 14 * 60 * 1000;
 
+// Guardado no localStorage: ao ir para o WhatsApp e voltar, o celular pode recarregar o app,
+// e o pedido precisa continuar o mesmo (senão o código recebido não bate)
 function pedidoGuardado(): Pedido | null {
   try {
-    const p = JSON.parse(sessionStorage.getItem(CHAVE_PEDIDO) || "null") as Pedido | null;
+    const p = JSON.parse(localStorage.getItem(CHAVE_PEDIDO) || "null") as Pedido | null;
     return p && Date.now() - p.criado < VALIDADE_PEDIDO ? p : null;
   } catch { return null; }
 }
@@ -45,7 +47,7 @@ export default function Entrar() {
       if (!res.ok) { setStep("phone"); return; } // servidor antigo: entra pelo número
       const d = await res.json();
       const p: Pedido = { pedido: d.pedido, whatsapp: d.whatsapp, texto: d.texto, criado: Date.now() };
-      try { sessionStorage.setItem(CHAVE_PEDIDO, JSON.stringify(p)); } catch { /* ok */ }
+      try { localStorage.setItem(CHAVE_PEDIDO, JSON.stringify(p)); } catch { /* ok */ }
       setPedido(p);
       setAbriuWhatsapp(false);
       setOtp("");
@@ -78,7 +80,7 @@ export default function Entrar() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Código incorreto."); return; }
-      try { sessionStorage.removeItem(CHAVE_PEDIDO); } catch { /* ok */ }
+      try { localStorage.removeItem(CHAVE_PEDIDO); } catch { /* ok */ }
       login(data.token, data.phone, data.name);
       navigate(destino, { replace: true });
     } catch {
