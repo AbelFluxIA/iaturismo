@@ -222,7 +222,7 @@ function TelaSOS({ contatos, mensagem, fechar }: { contatos: Contato[]; mensagem
       if (p >= 1) {
         soltar();
         setBuscando(true);
-        const c = await posicaoAtual(8000);
+        const c = await posicaoAtual(8000, { ligar: true });
         const link = c ? `https://maps.google.com/?q=${c.lat.toFixed(6)},${c.lng.toFixed(6)}` : "(localização indisponível)";
         setPronto(mensagem.includes("[link]") ? mensagem.replace("[link]", link) : `${mensagem} ${link}`);
         setBuscando(false);

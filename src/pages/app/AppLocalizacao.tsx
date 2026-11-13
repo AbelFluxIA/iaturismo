@@ -6,6 +6,7 @@ import { Aviso, TopBar, btnPrimario, btnSecundario, cartao } from "@/components/
 import { posicaoAtual } from "@/lib/geo";
 import { VERSAO_LOCALIZACAO, abrirAjustesLocalizacao, pedirPermissaoNativa, useLocalizacaoEmUso } from "@/lib/localizacao";
 import { ehNativo } from "@/lib/nativo";
+import { abrirAjustesDeLocalizacaoDoCelular, explicarSemPosicao, motivoSemPosicao, podeAbrirAjustesDoCelular, type MotivoSemPosicao } from "@/lib/gps";
 
 // Consentimento da localização durante a viagem (finalidades determinadas,
 // revogável a qualquer momento). Texto provisório até a revisão jurídica.
@@ -15,6 +16,7 @@ export default function AppLocalizacao() {
   const emUso = useLocalizacaoEmUso();
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState<MotivoSemPosicao | null>(null);
   // ?primeira=1: pergunta feita na entrada do app (quem já tinha cadastro); volta para o Início
   const primeira = useSearchParams()[0].get("primeira") === "1";
   // Depois de responder na entrada, volta para onde a pessoa ia (ex.: link de um roteiro)
@@ -23,12 +25,15 @@ export default function AppLocalizacao() {
   const voltar = de && de.startsWith("/app") && !de.startsWith("/app/localizacao") ? de : "/app";
 
   async function mudar(aceito: boolean) {
-    setErro(null);
+    setErro(null); setMotivo(null);
     if (isDemo) { setErro("No modo demonstração nada é gravado."); return; }
     setOcupado(true);
     try {
-      if (aceito && !(ehNativo ? await pedirPermissaoNativa() : await posicaoAtual(15000))) {
-        setErro("O celular não liberou a localização. Permita a localização para o app e tente de novo.");
+      // Permissão do app E localização do celular ligada: sem as duas, nada funciona.
+      // No app Android, o próprio celular mostra o aviso para ligar a localização.
+      if (aceito && !(ehNativo ? await pedirPermissaoNativa() : await posicaoAtual(15000, { ligar: true }))) {
+        setMotivo(motivoSemPosicao());
+        setErro(explicarSemPosicao());
         return;
       }
       const r = await fetch(`${API_URL}/api/app/consentimento`, {
@@ -74,7 +79,14 @@ export default function AppLocalizacao() {
           </ol>
           <p className="m-0">Você pode desligar quando quiser, aqui ou em Perfil. Desligar não muda o resto do app.</p>
         </section>
-        {erro && <p role="status" className="m-0 text-sm text-sol-sos">{erro}</p>}
+        {erro && (
+          <div role="alert" className="flex flex-col gap-2 px-3.5 py-3 rounded-[14px] border bg-sol-sos-claro border-[#F0B4AC] text-sm text-sol-sos">
+            <span>{erro}</span>
+            {motivo === "desligada" && podeAbrirAjustesDoCelular() && <button type="button" onClick={() => mudar(true)} disabled={ocupado} className="self-start min-h-[40px] px-3 rounded-xl bg-sol-fundo text-white font-bold">Ligar a localização</button>}
+            {motivo === "desligada" && podeAbrirAjustesDoCelular() && <button type="button" onClick={abrirAjustesDeLocalizacaoDoCelular} className="self-start min-h-[36px] font-bold underline">Abrir os ajustes de localização do celular</button>}
+            {motivo === "negada" && ehNativo && <button type="button" onClick={abrirAjustesLocalizacao} className="self-start min-h-[40px] px-3 rounded-xl bg-sol-fundo text-white font-bold">Abrir os ajustes do app</button>}
+          </div>
+        )}
         <div className={primeira ? "sticky bottom-[calc(var(--sol-nav)+8px)] z-10 -mx-5 px-5 py-3 bg-sol-areia/95 backdrop-blur flex flex-col gap-2" : "flex flex-col gap-2"}>
         {ligada ? (
           <>

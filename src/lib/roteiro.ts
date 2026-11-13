@@ -153,6 +153,15 @@ export function escolherAtual(viagens: Viagem[]): Viagem | null {
 // ─── Atividades marcadas como feitas (guardadas neste aparelho) ───────────────
 
 // Tipos de passeio (RA-ROT-11): usados em Criar roteiro e no onboarding ("o que você mais gosta")
+// Dias de uma viagem, como o app conta para o limite e o preço: sair hoje e voltar amanhã
+// é 1 dia (dias = volta − chegada; ir e voltar no mesmo dia também é 1). Mesma conta do servidor.
+export function diasDaViagem(chegada: string | null | undefined, saida: string | null | undefined, reserva = 1): number {
+  const iso = /^\d{4}-\d{2}-\d{2}/;
+  if (!chegada || !saida || !iso.test(chegada) || !iso.test(saida)) return reserva;
+  const n = Math.round((Date.parse(`${saida.slice(0, 10)}T12:00:00Z`) - Date.parse(`${chegada.slice(0, 10)}T12:00:00Z`)) / 86400000);
+  return Number.isFinite(n) ? Math.max(1, n) : reserva;
+}
+
 export const TIPOS_PASSEIO = ["Natureza (inclui praia)", "Gastronomia", "Cultura", "Aventura", "Bares e pubs", "Negócios", "Inovação e tech"];
 
 export const chaveFeitas = (id: string) => `sol_feitas_${id}`;

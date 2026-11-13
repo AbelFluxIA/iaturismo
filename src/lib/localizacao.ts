@@ -4,6 +4,7 @@ import { useViagens } from "@/contexts/ViagensContext";
 import { distanciaKm } from "@/lib/geo";
 import { situacao } from "@/lib/roteiro";
 import { ehNativo } from "@/lib/nativo";
+import { anotarMotivo, ligarLocalizacaoDoCelular } from "@/lib/gps";
 import { registerPlugin } from "@capacitor/core";
 import type { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
 
@@ -34,9 +35,13 @@ const TEXTO_NOTIFICACAO = { backgroundTitle: "Sol está acompanhando sua viagem"
 
 // App das lojas: abre o pedido de permissão do celular (no Android 10+ o "o tempo todo"
 // é escolhido nos ajustes; o plugin leva a pessoa até lá). true = liberou ao menos em uso.
-export function pedirPermissaoNativa(): Promise<boolean> {
-  if (!ehNativo) return Promise.resolve(false);
+export async function pedirPermissaoNativa(): Promise<boolean> {
+  if (!ehNativo) return false;
+  anotarMotivo(null);
+  // Primeiro a localização do CELULAR: desligada, a permissão sozinha não adianta
+  if (!(await ligarLocalizacaoDoCelular())) { anotarMotivo("desligada"); return false; }
   const BG = vigiaNativo();
+  const desligada = (e: unknown) => /disabled|desligad/i.test(String((e as { message?: string })?.message ?? e));
   return new Promise((ok) => {
     let id: string | null = null;
     let fim = false;
@@ -47,11 +52,11 @@ export function pedirPermissaoNativa(): Promise<boolean> {
       ok(r);
     };
     BG.addWatcher({ ...TEXTO_NOTIFICACAO, requestPermissions: true, stale: true }, (pos, erro) => {
-      if (erro) terminar(erro.code !== "NOT_AUTHORIZED");
+      if (erro) { if (erro.code === "NOT_AUTHORIZED") anotarMotivo(desligada(erro) ? "desligada" : "negada"); terminar(erro.code !== "NOT_AUTHORIZED"); }
       else if (pos) terminar(true);
     })
       .then((i) => { id = i; if (fim) BG.removeWatcher({ id: i }).catch(() => { /* ok */ }); })
-      .catch(() => terminar(false));
+      .catch((e) => { anotarMotivo(desligada(e) ? "desligada" : "negada"); terminar(false); });
     window.setTimeout(() => terminar(true), 20000);
   });
 }

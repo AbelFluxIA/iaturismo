@@ -7,7 +7,7 @@ import { Aviso, TopBar, btnPrimario, btnSecundario, cartao, formatarData } from 
 import { urlSegura } from "@/lib/utils";
 import { useSugestoes } from "@/lib/sugestoes";
 import { BuscaCidade } from "@/components/app/BuscaCidade";
-import { hojeISO, TIPOS_PASSEIO } from "@/lib/roteiro";
+import { diasDaViagem, hojeISO, TIPOS_PASSEIO } from "@/lib/roteiro";
 
 // Criar roteiro pelo app: destino → dados → hospedagem → revisão → gerando.
 // O pedido vai para o bot (/api/app/roteiros/criar), que gera em segundo plano.
@@ -92,7 +92,8 @@ function padrao(destino: string, perfil?: string | null): Rascunho {
   };
 }
 
-const diasEntre = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000) + 1;
+// Sair hoje e voltar amanhã é 1 dia (regra do fundador, 13/11): dias = volta − chegada, no mínimo 1
+const diasEntre = (a: string, b: string) => diasDaViagem(a, b);
 
 function textoQuemVai(r: Rascunho) {
   const base = r.quemVai === "família"
@@ -149,6 +150,14 @@ export default function AppCriar() {
   const comGuia = !!profile?.hasCompanion;
   const maxDias = (comGuia ? regras?.maxDiasComGuia : regras?.maxDiasSemGuia) ?? (comGuia ? 7 : 5);
   const pernoite = r.saida > r.chegada;
+  // Preço do roteiro, a mesma conta do servidor: no modo de teste e com a Guia nada é cobrado;
+  // senão o 1º dia é grátis (enquanto houver roteiro grátis na semana) e cada dia a mais é pago.
+  const diasViagem = r.chegada && r.saida && r.saida >= r.chegada ? diasEntre(r.chegada, r.saida) : 1;
+  const precoDia = regras?.diaRoteiroPreco ?? 4.9;
+  const gratisNaSemana = !profile?.cota || profile.cota.usados < profile.cota.limite;
+  const diasPagos = gratis || comGuia ? 0 : Math.max(0, diasViagem - (gratisNaSemana ? 1 : 0));
+  const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
+  const valorTexto = reais(diasPagos * precoDia);
   const cota = gratis
     ? "Roteiros grátis durante o teste."
     : comGuia
@@ -316,13 +325,26 @@ export default function AppCriar() {
             </label>
           </div>
 
-          {!comGuia && (
+          {gratis ? (
+            <p className="m-0 -mt-2 text-xs text-sol-texto2">Durante o teste, o roteiro é grátis (até {maxDias} dias). Esta viagem: {diasViagem} {diasViagem === 1 ? "dia" : "dias"}.</p>
+          ) : comGuia ? null : diasPagos === 0 ? (
             <p className="m-0 -mt-2 text-xs text-sol-texto2">
-              {dias > 1
-                ? `O 1º dia é grátis (se você ainda tiver roteiro grátis na semana); cada dia a mais custa R$ ${(regras?.diaRoteiroPreco ?? 4.9).toFixed(2).replace(".", ",")}. O valor aparece antes de pagar.`
-                : "Roteiro de 1 dia: grátis."}{" "}
-              Com a <Link to="/app/guia" className="font-bold text-sol-mar">Guia Sol</Link>, até 7 dias sem pagar por dia.
+              Roteiro de 1 dia: grátis (voltar no mesmo dia ou no dia seguinte conta 1 dia). Cada dia a mais custa {reais(precoDia)}. Com a <Link to="/app/guia" className="font-bold text-sol-mar">Guia Sol</Link>, até 7 dias sem pagar por dia.
             </p>
+          ) : (
+            <div role="status" className="-mt-1 flex flex-col gap-2 px-3.5 py-3 rounded-[14px] border bg-sol-atencao border-sol-atencao-borda text-sm text-sol-atencao-texto">
+              <span>
+                <strong>Este roteiro custa {valorTexto}.</strong> Sua viagem tem {diasViagem} dias ({formatarData(r.chegada)} a {formatarData(r.saida)}).{" "}
+                {gratisNaSemana ? `O 1º dia é grátis e ${diasPagos === 1 ? "o outro dia custa" : `os outros ${diasPagos} custam`} ${reais(precoDia)}${diasPagos === 1 ? "" : " cada"}.` : `Seus roteiros grátis desta semana já foram usados; cada dia custa ${reais(precoDia)}.`}{" "}
+                Você paga por Pix no próximo passo e o roteiro sai em seguida.
+              </span>
+              {gratisNaSemana && (
+                <button type="button" onClick={() => set({ saida: somarDias(r.chegada, 1) })} className="self-start min-h-[40px] px-3 rounded-xl bg-white border-[1.5px] border-sol-borda text-sol-fundo font-bold">
+                  Fazer só 1 dia, grátis
+                </button>
+              )}
+              <Link to="/app/guia" className="self-start font-bold text-sol-mar">Com a Guia Sol, até 7 dias sem pagar por dia</Link>
+            </div>
           )}
           <fieldset className="flex flex-col gap-2 border-0 p-0 m-0"><legend className={`${rotuloCampo} mb-2`}>Quem vai com você</legend>
             <div className="flex flex-wrap gap-2">{QUEM.map(([v, l]) => <Chip key={v} ativo={r.quemVai === v} onClick={() => set({ quemVai: v })}>{l}</Chip>)}</div>
@@ -411,6 +433,7 @@ export default function AppCriar() {
     ["Quem vai", textoQuemVai(r), "dados"],
     ["Tipos", r.tipos.join(", "), "dados"],
     ["Custos", CUSTOS.find(([v]) => v === r.custos)?.[1] ?? r.custos, "dados"],
+    ["Valor", diasPagos > 0 ? `${valorTexto} (${diasViagem} dias; ${gratisNaSemana ? "o 1º é grátis" : "sem roteiro grátis nesta semana"})` : "Grátis", "dados"],
     ...(pernoite ? [["Hospedagem", r.temHospedagem === "sim" ? r.hospedagem : "Sem hospedagem definida", "hospedagem"] as [string, string, Etapa]] : []),
   ];
   return (
@@ -432,7 +455,7 @@ export default function AppCriar() {
         </label>
         <Aviso>{cota}</Aviso>
         <button type="button" disabled={r.destino.trim().length < 2 || r.saida < r.chegada || diasEntre(r.chegada, r.saida) > maxDias} onClick={gerar} className={btnPrimario}>
-          <Sparkles size={18} /> Gerar roteiro
+          <Sparkles size={18} /> {diasPagos > 0 ? `Pagar ${valorTexto} e gerar` : "Gerar roteiro"}
         </button>
         <button type="button" onClick={() => setEtapa("inicio")} className={btnSecundario}>Outro destino</button>
       </div>

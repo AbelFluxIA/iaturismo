@@ -5,6 +5,7 @@ import { UFS } from "@/lib/fotoLugar";
 import { ehNativo } from "@/lib/nativo";
 import { registerPlugin } from "@capacitor/core";
 import type { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
+import { anotarMotivo, ligarLocalizacaoDoCelular, localizacaoDoCelularLigada, motivoSemPosicao } from "@/lib/gps";
 
 export type Coord = { lat: number; lng: number };
 
@@ -134,10 +135,24 @@ export async function posicaoSePermitida(): Promise<Coord | null> {
   return null;
 }
 
-export function posicaoAtual(timeout = 10000): Promise<Coord | null> {
-  // App das lojas: lê pelo plugin nativo (a permissão foi dada a ele; o caminho do navegador
-  // dentro do app às vezes não devolve nada). Se falhar, tenta o do navegador.
-  if (ehNativo) return posicaoNativa(timeout).then((c) => c ?? posicaoDoNavegador(timeout));
+// opts.ligar: a pessoa tocou em algo que precisa da posição. Se a localização do CELULAR
+// estiver desligada, o app Android pede para ligar antes (aviso do sistema). Leituras
+// automáticas (ao abrir uma tela) não passam ligar, para não abrir aviso sozinho.
+// Quando não vem posição, motivoSemPosicao() diz por quê.
+export async function posicaoAtual(timeout = 10000, opts: { ligar?: boolean } = {}): Promise<Coord | null> {
+  anotarMotivo(null);
+  if (ehNativo) {
+    if (opts.ligar && !(await ligarLocalizacaoDoCelular())) { anotarMotivo("desligada"); return null; }
+    // App das lojas: lê pelo plugin nativo (a permissão foi dada a ele; o caminho do navegador
+    // dentro do app às vezes não devolve nada). Se falhar, tenta o do navegador.
+    const c = await posicaoNativa(timeout);
+    if (c) return c;
+    const motivo = motivoSemPosicao();
+    const pelo = await posicaoDoNavegador(timeout);
+    if (!pelo && motivo) anotarMotivo(motivo);
+    if (!pelo && !motivoSemPosicao() && (await localizacaoDoCelularLigada()) === false) anotarMotivo("desligada");
+    return pelo;
+  }
   return posicaoDoNavegador(timeout);
 }
 
@@ -153,12 +168,14 @@ function posicaoNativa(timeout: number): Promise<Coord | null> {
       if (c) { try { localStorage.setItem(JA_LIBEROU, "1"); } catch { /* ok */ } }
       ok(c);
     };
+    // O plugin responde "Location services disabled." quando a localização do celular está desligada
+    const anotar = (e: unknown) => anotarMotivo(/disabled|desligad/i.test(String((e as { message?: string })?.message ?? e)) ? "desligada" : "negada");
     BG.addWatcher({ requestPermissions: false, stale: true }, (pos, erro) => {
-      if (erro) terminar(null);
+      if (erro) { anotar(erro); terminar(null); }
       else if (pos) terminar({ lat: pos.latitude, lng: pos.longitude });
     })
       .then((i) => { id = i; if (fim) BG.removeWatcher({ id: i }).catch(() => { /* ok */ }); })
-      .catch(() => terminar(null));
+      .catch((e) => { anotar(e); terminar(null); });
     window.setTimeout(() => terminar(null), timeout);
   });
 }
@@ -172,8 +189,9 @@ function posicaoDoNavegador(timeout: number): Promise<Coord | null> {
         ok({ lat: p.coords.latitude, lng: p.coords.longitude });
       },
       (e) => {
-        if (e.code === e.PERMISSION_DENIED) { try { localStorage.removeItem(JA_LIBEROU); } catch { /* ok */ } ok(null); return; }
-        if (depois) depois(); else ok(null);
+        if (e.code === e.PERMISSION_DENIED) { try { localStorage.removeItem(JA_LIBEROU); } catch { /* ok */ } anotarMotivo("negada"); ok(null); return; }
+        // POSITION_UNAVAILABLE ou tempo esgotado: quase sempre é a localização do celular desligada
+        if (depois) depois(); else { anotarMotivo(e.code === e.POSITION_UNAVAILABLE ? "desligada" : "indisponivel"); ok(null); }
       },
       { enableHighAccuracy: preciso, timeout, maximumAge: 5 * 60 * 1000 },
     );

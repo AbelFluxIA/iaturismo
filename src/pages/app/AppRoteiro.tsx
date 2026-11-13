@@ -14,6 +14,7 @@ import { descreverTempo, distanciaKm, geocode, previsao, queryDoMapa, rotaPorTre
 import { urlSegura } from "@/lib/utils";
 import {
   itensChecklist, chaveAtividade, diaDaViagem, horaInicio, indiceDoDia, lerChecklist, nomeCurto, parseItinerary, rotuloDia, situacao, type Viagem,
+  diasDaViagem,
 } from "@/lib/roteiro";
 
 const MapaRoteiro = lazy(() => import("@/components/app/MapaRoteiro"));
@@ -112,7 +113,7 @@ function CartaoAndamento({ v, guiaAtiva }: { v: Viagem; guiaAtiva: boolean }) {
         <span className="flex-1 font-display font-extrabold text-[26px] leading-tight truncate">{nomeCurto(v.destination) || "Roteiro"}</span>
         {andamento?.total && <span className="flex-none text-xs font-extrabold px-2.5 py-1 rounded-full bg-sol-sun text-sol-fundo">Dia {andamento.dia} de {andamento.total}</span>}
       </span>
-      <span className="text-sm text-sol-azul-suave">{[formatarData(v.arrivalDate), formatarData(v.departureDate)].filter(Boolean).join(" a ")} · {v.days} {v.days === 1 ? "dia" : "dias"}</span>
+      <span className="text-sm text-sol-azul-suave">{[formatarData(v.arrivalDate), formatarData(v.departureDate)].filter(Boolean).join(" a ")} · {diasDaViagem(v.arrivalDate, v.departureDate, v.days)} {diasDaViagem(v.arrivalDate, v.departureDate, v.days) === 1 ? "dia" : "dias"}</span>
       <span className="flex items-center gap-2 pt-2.5 border-t border-white/15 text-[13px] font-bold">
         <span className="flex-1">{hoje.length ? `${feitasHoje} de ${hoje.length} atividades feitas hoje` : "Ver o roteiro"}</span>
         <span className="text-sol-azul-suave">{guiaAtiva ? "Guia Sol ativa" : "Guia Sol não ativa"}</span>
@@ -131,7 +132,7 @@ function CartaoData({ v, passada = false }: { v: Viagem; passada?: boolean }) {
       </span>
       <span className="flex-1 min-w-0 flex flex-col gap-0.5">
         <span className="text-base font-extrabold truncate">{nomeCurto(v.destination) || "Roteiro"}</span>
-        <span className="text-[13px] text-sol-texto2">{v.days} {v.days === 1 ? "dia" : "dias"}{passada ? " · já passou" : ""}</span>
+        <span className="text-[13px] text-sol-texto2">{diasDaViagem(v.arrivalDate, v.departureDate, v.days)} {diasDaViagem(v.arrivalDate, v.departureDate, v.days) === 1 ? "dia" : "dias"}{passada ? " · já passou" : ""}</span>
       </span>
       <ChevronRight size={20} className="flex-none text-sol-texto2" />
     </Link>
@@ -232,7 +233,7 @@ function RoteiroDetalhe() {
           <h1 className="flex-1 min-w-0 m-0 font-display font-extrabold text-[26px] tracking-tight truncate">{nomeCurto(destino) || "Seu roteiro"}</h1>
         </div>
         <span className="text-[13px] text-sol-azul-suave pl-1 pb-2">
-          {periodo || "Datas a confirmar"} · {days.length} {days.length === 1 ? "dia" : "dias"}
+          {periodo || "Datas a confirmar"} · {diasDaViagem(chegada, saida, days.length)} {diasDaViagem(chegada, saida, days.length) === 1 ? "dia" : "dias"}
         </span>
         <nav aria-label="Seções do roteiro" className="grid grid-cols-4 -mx-4 px-1">
           {([["dia", "Dia a dia"], ["mapa", "Mapa"], ["album", "Álbum"], ["info", "Info"]] as [Aba, string][]).map(([id, label]) => (

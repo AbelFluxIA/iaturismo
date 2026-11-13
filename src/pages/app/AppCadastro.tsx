@@ -4,6 +4,7 @@ import { Check, ChevronLeft, Compass, Heart, MapPin, Phone, Plane, Plus, Shield 
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, Carregando, Selo, btnPrimario, btnSecundario, cartao, mascararTelefone } from "@/components/app/ui";
 import { posicaoAtual, posicaoSePermitida } from "@/lib/geo";
+import { explicarSemPosicao } from "@/lib/gps";
 import { VERSAO_LOCALIZACAO, pedirPermissaoNativa } from "@/lib/localizacao";
 import { ehNativo } from "@/lib/nativo";
 import { conviteGuardado, limparConvite } from "@/lib/convite";
@@ -54,6 +55,7 @@ export default function AppCadastro() {
   const [data, setData] = useState({ d: "", m: "", a: "" });
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [semGps, setSemGps] = useState(false); // já avisou que a localização não veio: o próximo toque segue adiante
   const [gostos, setGostos] = useState<string[]>([]);
   const [temViagem, setTemViagem] = useState<boolean | null>(null);
   const [viagem, setViagem] = useState({ destino: "", chegada: "", saida: "" });
@@ -270,12 +272,19 @@ export default function AppCadastro() {
                 disabled={ocupado}
                 onClick={() => passo(async () => {
                   await enviar("/api/app/consentimento", { tipo: "localizacao_viagem", versao: VERSAO_LOCALIZACAO, aceito: true });
-                  if (ehNativo) await pedirPermissaoNativa(); else await posicaoAtual(15000);
+                  // Localização do celular desligada (ou bloqueada): avisa e deixa tentar de novo ou seguir sem ela
+                  const veio = ehNativo ? await pedirPermissaoNativa() : !!(await posicaoAtual(15000, { ligar: true }));
+                  if (!veio && !semGps) { setSemGps(true); throw new Error(explicarSemPosicao()); }
                 }, "gostos")}
                 className={`${btnPrimario} w-full`}
               >
-                <MapPin size={18} /> Permitir
+                <MapPin size={18} /> {semGps ? "Tentar de novo" : "Permitir"}
               </button>
+              {semGps && (
+                <button type="button" disabled={ocupado} onClick={() => { setErro(null); setEtapa("gostos"); }} className={`${btnSecundario} w-full`}>
+                  Continuar e ligar depois
+                </button>
+              )}
               <button
                 type="button"
                 disabled={ocupado}

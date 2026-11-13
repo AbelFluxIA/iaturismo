@@ -493,7 +493,7 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
       document.getElementById("msg")?.focus();
       return;
     }
-    const c = await posicaoAtual(8000);
+    const c = await posicaoAtual(8000, { ligar: true });
     sendMessage(c ? `[LOCALIZAÇÃO: lat=${c.lat.toFixed(6)}, lng=${c.lng.toFixed(6)}]\n${a.texto}` : a.texto);
   }
 

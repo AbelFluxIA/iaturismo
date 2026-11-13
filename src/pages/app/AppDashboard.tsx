@@ -7,6 +7,7 @@ import { BotaoSOS, Carregando, btnSecundario, cartao, formatarData } from "@/com
 import { IconeTempo } from "@/components/app/IconeTempo";
 import { useAlbum } from "@/components/app/Album";
 import { useCidade } from "@/lib/cidade";
+import { explicarSemPosicao } from "@/lib/gps";
 import { useLocalizacaoEmUso } from "@/lib/localizacao";
 import { geocode, previsao, tempoAgora, type PrevisaoDia, type TempoAgora } from "@/lib/geo";
 import { useSugestoes } from "@/lib/sugestoes";
@@ -263,7 +264,7 @@ function CidadeETempo() {
     setPedindo(true); setAviso(null);
     const ok = await cidade.atualizar();
     setPedindo(false);
-    if (!ok) setAviso("Não consegui ler sua localização. Permita a localização para este site nos ajustes do navegador e tente de novo.");
+    if (!ok) setAviso(explicarSemPosicao());
   }
   return (
     <div className="flex flex-col gap-1">

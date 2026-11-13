@@ -43,7 +43,7 @@ export function useCidade(): Cidade & { carregando: boolean; atualizar: () => Pr
 
   // Pede a posição ao celular (abre o pedido do navegador se ainda não liberou)
   const atualizar = async (): Promise<boolean> => {
-    const pos = await posicaoAtual(15000);
+    const pos = await posicaoAtual(15000, { ligar: true });
     const nome = pos ? await cidadeDaPosicao(pos) : null;
     if (pos && nome) { setEstado({ nome, coord: pos, origem: "posicao", carregando: false }); return true; }
     return false;
@@ -57,7 +57,8 @@ export function useCidade(): Cidade & { carregando: boolean; atualizar: () => Pr
       if (!pos && consentiu) {
         let jaPediu = true;
         try { jaPediu = sessionStorage.getItem(PEDIU_NA_SESSAO) === "1"; sessionStorage.setItem(PEDIU_NA_SESSAO, "1"); } catch { /* ok */ }
-        if (!jaPediu) pos = await posicaoAtual(15000);
+        // Uma vez por sessão: se a localização do celular estiver desligada, o app Android pede para ligar
+        if (!jaPediu) pos = await posicaoAtual(15000, { ligar: true });
       }
       if (pos) {
         const nome = await cidadeDaPosicao(pos);
