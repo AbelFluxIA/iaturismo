@@ -31,7 +31,7 @@ export default function AppAdmin() {
     try {
       const r = await fetch(`${API_URL}/api/app/admin/cliente?phone=${encodeURIComponent(alvo)}`, { headers: cab });
       const d = await r.json();
-      if (!r.ok) { setCliente(null); setErro(d.error ?? "Erro"); return; }
+      if (!r.ok || !d?.phone || !d.cota || !d.cadastro || !d.album) { setCliente(null); setErro(d?.error ?? "Não consegui carregar este cliente."); return; }
       setCliente(d);
     } catch { setErro("Sem conexão."); } finally { setOcupado(false); }
   }

@@ -156,6 +156,7 @@ export default function AppCriar() {
   // ─── Gerando ───
   const [gerando, setGerando] = useState<{ estado: "enviando" | "esperando" | "pronto" | "pagar" | "demorou" | "erro"; id?: string; texto?: string }>({ estado: "enviando" });
   const cancelado = useRef(false);
+  const [tentou, setTentou] = useState(false);
   useEffect(() => () => { cancelado.current = true; }, []);
 
   async function gerar() {
@@ -283,7 +284,13 @@ export default function AppCriar() {
 
   if (etapa === "dados") {
     const dias = r.chegada && r.saida ? diasEntre(r.chegada, r.saida) : 0;
-    const valido = r.destino.trim().length >= 2 && r.chegada && r.saida && r.saida >= r.chegada && r.tipos.length > 0 && dias <= maxDias;
+    const faltas = [
+      r.destino.trim().length < 2 ? "Escreva o destino." : "",
+      !r.chegada || !r.saida ? "Escolha a data de chegada e a de volta." : "",
+      r.chegada && r.saida && r.saida < r.chegada ? "A volta não pode ser antes da chegada." : "",
+      r.tipos.length === 0 ? "Marque pelo menos um tipo de roteiro." : "",
+      dias > maxDias ? `O roteiro pode ter até ${maxDias} dias${comGuia ? "" : " sem a Guia Sol"} (você escolheu ${dias}). Encurte as datas.` : "",
+    ].filter(Boolean);
     return (
       <div className="flex flex-col">
         <TopBar title="Dados desta viagem" step="Criar roteiro" aoVoltar={() => setEtapa("inicio")} />
@@ -353,14 +360,15 @@ export default function AppCriar() {
             <div className="flex flex-wrap gap-2">{CUSTOS.map(([v, l]) => <Chip key={v} ativo={r.custos === v} onClick={() => set({ custos: v })}>{l}</Chip>)}</div>
           </fieldset>
 
-          <button type="button" disabled={!valido} onClick={() => setEtapa(pernoite ? "hospedagem" : "revisao")} className={btnPrimario}>Continuar</button>
-          {!valido && (
-            <span className="text-xs text-sol-texto2 -mt-2">
-              {dias > maxDias
-                ? `Até ${maxDias} dias por roteiro${comGuia ? "" : " sem a Guia Sol (com a Guia, até 7)"}.`
-                : "Preencha destino, datas e pelo menos um tipo de roteiro."}
-            </span>
+          {/* O botão nunca fica travado sem explicação: ao tocar, mostra exatamente o que falta */}
+          {tentou && faltas.length > 0 && (
+            <div role="alert" className="flex flex-col gap-1 px-3.5 py-3 rounded-[14px] border border-sol-sos/40 bg-[#FDECEA] text-sm text-sol-sos">
+              <strong>Falta pouco para continuar:</strong>
+              <ul className="m-0 pl-5 list-disc">{faltas.map((f) => <li key={f}>{f}</li>)}</ul>
+              {dias > maxDias && !comGuia && <Link to="/app/guia" className="font-extrabold text-sol-mar">Conhecer a Guia Sol (roteiros de até 7 dias)</Link>}
+            </div>
           )}
+          <button type="button" onClick={() => { if (faltas.length) { setTentou(true); return; } setEtapa(pernoite ? "hospedagem" : "revisao"); }} className={`${btnPrimario} ${faltas.length ? "opacity-60" : ""}`}>Continuar</button>
         </div>
       </div>
     );
@@ -383,7 +391,10 @@ export default function AppCriar() {
           {r.temHospedagem === "nao" && (
             <Aviso>A Sol monta o roteiro sem ponto de partida fixo. Se quiser sugestões de hospedagem, peça no chat depois.</Aviso>
           )}
-          <button type="button" disabled={!r.temHospedagem || (r.temHospedagem === "sim" && !r.hospedagem.trim())} onClick={() => setEtapa("revisao")} className={btnPrimario}>Ir à revisão</button>
+          {tentou && (!r.temHospedagem || (r.temHospedagem === "sim" && !r.hospedagem.trim())) && (
+            <p role="alert" className="m-0 text-sm font-bold text-sol-sos">{!r.temHospedagem ? "Escolha se você já tem hospedagem." : "Escreva onde você vai ficar."}</p>
+          )}
+          <button type="button" onClick={() => { if (!r.temHospedagem || (r.temHospedagem === "sim" && !r.hospedagem.trim())) { setTentou(true); return; } setTentou(false); setEtapa("revisao"); }} className={btnPrimario}>Ir à revisão</button>
         </div>
       </div>
     );

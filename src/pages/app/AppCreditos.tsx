@@ -37,7 +37,10 @@ export default function AppCreditos() {
     try {
       const r = await fetch(`${API_URL}/api/app/indicacao`, { headers: { Authorization: `Bearer ${token}` } });
       if (!r.ok) { setFalhou(true); return; }
-      setInd(await r.json());
+      // Resposta incompleta (servidor antigo ou falha) não pode derrubar a tela
+      const d = await r.json().catch(() => null);
+      if (!d || !d.diasGuia || !Array.isArray(d.diasGuia.itens) || !d.regras) { setFalhou(true); return; }
+      setInd(d);
     } catch { setFalhou(true); }
   }
   useEffect(() => { carregar(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps

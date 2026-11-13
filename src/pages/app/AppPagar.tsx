@@ -35,7 +35,7 @@ export default function AppPagar() {
     try {
       const r = await fetch(`${API_URL}/api/app/pagamento/${ref}`, { headers: cab });
       if (r.status === 404) { setErro("Não achei este pagamento."); return; }
-      if (r.ok) setP(await r.json());
+      if (r.ok) { const d = await r.json().catch(() => null); if (d?.ref && d.tipo) setP(d); else setErro("Não consegui carregar este pagamento."); }
     } catch { /* tenta de novo no próximo ciclo */ }
   }
   useEffect(() => {
@@ -53,6 +53,7 @@ export default function AppPagar() {
       const r = await fetch(`${API_URL}/api/app/pagamento/${ref}/${nome}`, { method: "POST", headers: cab });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setErro(d.error ?? "Não consegui agora. Tente de novo."); return; }
+      if (!d?.ref) { setErro("Não consegui agora. Tente de novo."); return; }
       setP(d);
       if (nome === "cartao" && urlSegura(d.cartaoUrl)) window.open(d.cartaoUrl, "_blank", "noopener");
     } catch { setErro("Sem conexão. Tente de novo."); } finally { setOcupado(false); }
