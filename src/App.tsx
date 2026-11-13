@@ -35,6 +35,7 @@ import AppSeguranca from "./pages/app/AppSeguranca";
 import AppPerfil from "./pages/app/AppPerfil";
 import AppExcluirConta from "./pages/app/AppExcluirConta";
 import AppAdmin from "./pages/app/AppAdmin";
+import AppPagar from "./pages/app/AppPagar";
 import Convite from "./pages/Convite";
 import { ehNativo } from "./lib/nativo";
 
@@ -174,6 +175,7 @@ const router = createBrowserRouter([
       { path: "perfil", element: <AppPerfil /> },
       { path: "perfil/excluir", element: <AppExcluirConta /> },
       { path: "admin", element: <AppAdmin /> },
+      { path: "pagar/:ref", element: <AppPagar /> },
     ],
   },
 ]);

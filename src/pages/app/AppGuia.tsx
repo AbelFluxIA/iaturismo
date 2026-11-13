@@ -48,6 +48,22 @@ export default function AppGuia() {
     }
   }
 
+  // Compra pela AbacatePay: cria a cobrança e abre a tela do Pix
+  async function comprar(tipo: "guia_dia" | "guia_mes") {
+    if (isDemo) { setEstado({ carregando: false, erro: "No modo demonstração a Guia Sol não é ativada." }); return; }
+    setEstado({ carregando: true });
+    try {
+      const r = await fetch(`${API_URL}/api/app/pagamento`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ tipo, dias: 1 }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ref) { setEstado({ carregando: false, erro: d.error ?? "Não consegui gerar o pagamento agora." }); return; }
+      navigate(`/app/pagar/${d.ref}`);
+    } catch {
+      setEstado({ carregando: false, erro: "Sem conexão. Tente de novo." });
+    }
+  }
+  const regras = profile?.regras;
+  const preco = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
+
   const semViagem = !atual;
 
   return (
@@ -60,7 +76,7 @@ export default function AppGuia() {
         <span className="flex-none w-12 h-12 rounded-2xl bg-sol-sun text-sol-fundo flex items-center justify-center"><MessageCircle size={26} /></span>
         <h2 className="m-0 font-display font-extrabold text-2xl leading-tight">Uma guia do seu lado na viagem, em tempo real</h2>
         <p className="m-0 text-sm text-sol-azul-suave leading-snug">Especializada no seu roteiro e na sua cidade, do primeiro ao último dia. Também no WhatsApp.</p>
-        <span className="mt-1 self-start px-3 py-1.5 rounded-full bg-sol-sun text-sol-fundo text-sm font-extrabold">{profile?.ofertas?.guiaPreco ?? "R$ 29,90 para toda a viagem"}</span>
+        <span className="mt-1 self-start px-3 py-1.5 rounded-full bg-sol-sun text-sol-fundo text-sm font-extrabold">{`A partir de ${preco(regras?.guiaPrecoDia ?? 9.9)} por dia`}</span>
       </section>
 
       <ul className={`${cartao} m-0 p-0 list-none flex flex-col overflow-hidden`}>
@@ -76,15 +92,21 @@ export default function AppGuia() {
           <Aviso>A Guia Sol acompanha um roteiro seu. Para ativar, crie um roteiro primeiro.</Aviso>
           <Link to="/app/criar" className={`${btnPrimario} no-underline`}><Plus size={18} strokeWidth={2.4} /> Criar roteiro</Link>
         </>
-      ) : estado.pagar ? (
-        <>
-          <Aviso tom="ok">Toque em pagar para ativar. Assim que o pagamento for confirmado, a Guia Sol fica ativa.</Aviso>
-          <a href={estado.pagar} target="_blank" rel="noopener noreferrer" className={`${btnPrimario} !bg-sol-sun !text-sol-fundo no-underline`}>Pagar e ativar</a>
-        </>
       ) : (
-        <button type="button" disabled={estado.carregando} onClick={ativar} className={btnPrimario}>
-          {estado.carregando ? "Ativando..." : <><Check size={18} strokeWidth={2.6} /> Ativar para {nomeCurto(atual?.destination) || "a viagem"}</>}
-        </button>
+        <>
+          <button type="button" disabled={estado.carregando} onClick={() => comprar("guia_dia")} className={`${btnPrimario} justify-between`}>
+            <span>Guia Sol por 1 dia</span><span className="font-extrabold">{preco(regras?.guiaPrecoDia ?? 9.9)}</span>
+          </button>
+          <button type="button" disabled={estado.carregando} onClick={() => comprar("guia_mes")} className={`${btnPrimario} !bg-sol-sun !text-sol-fundo justify-between`}>
+            <span>Guia Sol por 30 dias</span><span className="font-extrabold">{preco(regras?.guiaPrecoMes ?? 29.9)}</span>
+          </button>
+          <p className="m-0 text-xs text-sol-texto2 text-center">Pix na hora, direto aqui no app. Também dá para pagar com cartão.</p>
+          {profile?.ofertas?.gratisDuranteTeste && (
+            <button type="button" disabled={estado.carregando} onClick={ativar} className={btnSecundario}>
+              <Check size={18} strokeWidth={2.6} /> Ativar grátis (período de teste)
+            </button>
+          )}
+        </>
       )}
       {estado.erro && <p role="status" className="m-0 text-sm text-sol-sos">{estado.erro}</p>}
 

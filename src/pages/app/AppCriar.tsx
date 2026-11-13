@@ -145,9 +145,7 @@ export default function AppCriar() {
   const gratis = profile?.ofertas?.gratisDuranteTeste;
   const regras = profile?.regras;
   const comGuia = !!profile?.hasCompanion;
-  const maxDias = (comGuia ? regras?.maxDiasComGuia : regras?.maxDiasSemGuia) ?? (comGuia ? 7 : 1);
-  // RA-ROT-01: sem a Guia o roteiro grátis cobre 1 dia; a volta acompanha a chegada
-  useEffect(() => { if (!comGuia && r.chegada && r.saida !== r.chegada) set({ saida: r.chegada }); }, [comGuia, r.chegada, r.saida]); // eslint-disable-line react-hooks/exhaustive-deps
+  const maxDias = (comGuia ? regras?.maxDiasComGuia : regras?.maxDiasSemGuia) ?? (comGuia ? 7 : 5);
   const pernoite = r.saida > r.chegada;
   const cota = gratis
     ? "Roteiros grátis durante o teste."
@@ -171,24 +169,25 @@ export default function AppCriar() {
       setGerando({ estado: "pronto", id: "demo" });
       return;
     }
+    const pedido = {
+      destino: r.destino,
+      chegada: r.chegada,
+      saida: r.saida,
+      horaChegada: r.horaChegada,
+      horaVolta: r.horaVolta,
+      quemVai: r.quemVai,
+      adultos: r.quemVai === "família" ? r.adultos : undefined,
+      criancas: r.quemVai === "família" ? r.criancas : undefined,
+      pet: r.pet ?? undefined,
+      tipos: r.tipos,
+      custos: r.custos,
+      hospedagem: pernoite && r.temHospedagem === "sim" ? r.hospedagem : undefined,
+    };
     try {
       const res = await fetch(`${API_URL}/api/app/roteiros/criar`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          destino: r.destino,
-          chegada: r.chegada,
-          saida: r.saida,
-          horaChegada: r.horaChegada,
-          horaVolta: r.horaVolta,
-          quemVai: r.quemVai,
-          adultos: r.quemVai === "família" ? r.adultos : undefined,
-          criancas: r.quemVai === "família" ? r.criancas : undefined,
-          pet: r.pet ?? undefined,
-          tipos: r.tipos,
-          custos: r.custos,
-          hospedagem: pernoite && r.temHospedagem === "sim" ? r.hospedagem : undefined,
-        }),
+        body: JSON.stringify(pedido),
       });
       if (res.status === 404) {
         // Bot antigo: pede pela conversa
@@ -196,6 +195,15 @@ export default function AppCriar() {
         return;
       }
       const data = await res.json().catch(() => ({}));
+      // Dias além do grátis: cria a cobrança e abre o Pix; o roteiro sai quando o pagamento cai
+      if (res.status === 402 && data.pagamento) {
+        const pg = await fetch(`${API_URL}/api/app/pagamento`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ tipo: "roteiro", pedido }) });
+        const d = await pg.json().catch(() => ({}));
+        if (!pg.ok || !d.ref) { setGerando({ estado: "erro", texto: d.error }); return; }
+        try { sessionStorage.removeItem(CHAVE); } catch { /* ok */ }
+        navigate(`/app/pagar/${d.ref}`);
+        return;
+      }
       if (!res.ok) { setGerando({ estado: "erro", texto: data.error }); return; }
       const reply: string = data.reply ?? "";
       const link = reply.match(/https?:\/\/\S+/)?.[0];
@@ -285,13 +293,13 @@ export default function AppCriar() {
           </label>
           <div className="grid grid-cols-[1fr_110px] gap-2">
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Chegada</span>
-              <input type="date" className={campo} value={r.chegada} min={hojeISO()} onChange={(e) => set({ chegada: e.target.value, saida: !comGuia || r.saida < e.target.value ? e.target.value : r.saida })} />
+              <input type="date" className={campo} value={r.chegada} min={hojeISO()} onChange={(e) => set({ chegada: e.target.value, saida: r.saida < e.target.value ? e.target.value : r.saida })} />
             </label>
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Hora</span>
               <input type="time" className={campo} value={r.horaChegada} onChange={(e) => set({ horaChegada: e.target.value })} />
             </label>
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Volta</span>
-              <input type="date" className={`${campo} disabled:opacity-60`} value={r.saida} min={r.chegada} disabled={!comGuia} onChange={(e) => set({ saida: e.target.value })} />
+              <input type="date" className={campo} value={r.saida} min={r.chegada} onChange={(e) => set({ saida: e.target.value })} />
             </label>
             <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Hora</span>
               <input type="time" className={campo} value={r.horaVolta} onChange={(e) => set({ horaVolta: e.target.value })} />
@@ -299,7 +307,12 @@ export default function AppCriar() {
           </div>
 
           {!comGuia && (
-            <p className="m-0 -mt-2 text-xs text-sol-texto2">Roteiro grátis: 1 dia. Com a <Link to="/app/guia" className="font-bold text-sol-mar">Guia Sol</Link>, até 7 dias.</p>
+            <p className="m-0 -mt-2 text-xs text-sol-texto2">
+              {dias > 1
+                ? `O 1º dia é grátis (se você ainda tiver roteiro grátis na semana); cada dia a mais custa R$ ${(regras?.diaRoteiroPreco ?? 4.9).toFixed(2).replace(".", ",")}. O valor aparece antes de pagar.`
+                : "Roteiro de 1 dia: grátis."}{" "}
+              Com a <Link to="/app/guia" className="font-bold text-sol-mar">Guia Sol</Link>, até 7 dias sem pagar por dia.
+            </p>
           )}
           <fieldset className="flex flex-col gap-2 border-0 p-0 m-0"><legend className={`${rotuloCampo} mb-2`}>Quem vai com você</legend>
             <div className="flex flex-wrap gap-2">{QUEM.map(([v, l]) => <Chip key={v} ativo={r.quemVai === v} onClick={() => set({ quemVai: v })}>{l}</Chip>)}</div>
@@ -344,7 +357,7 @@ export default function AppCriar() {
           {!valido && (
             <span className="text-xs text-sol-texto2 -mt-2">
               {dias > maxDias
-                ? (comGuia ? `Com a Guia, até ${maxDias} dias por roteiro.` : "Sem a Guia Sol, o roteiro grátis cobre 1 dia (com a Guia, até 7).")
+                ? `Até ${maxDias} dias por roteiro${comGuia ? "" : " sem a Guia Sol (com a Guia, até 7)"}.`
                 : "Preencha destino, datas e pelo menos um tipo de roteiro."}
             </span>
           )}
