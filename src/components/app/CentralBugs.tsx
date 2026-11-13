@@ -45,25 +45,34 @@ export default function CentralBugs() {
     if (!token || isDemo || ehNativo) return;
     const ciclo = new AbortController();
     let instancia: Instancia | null = null;
+    let espera: number | undefined;
 
-    carregarScript()
-      .then(() => {
-        if (ciclo.signal.aborted || !window.CentralBugs) return null;
-        return window.CentralBugs.connect({
-          accessEndpoint: "/api/central-bugs/access",
-          signal: ciclo.signal,
-          position: "top-right", // embaixo fica a barra de abas
-          accessHeaders: () => ({ Authorization: `Bearer ${token}` }),
+    // Se a conexão com a Central falhar (internet lenta, Central fora), tenta de novo:
+    // antes o botão só voltava recarregando o app.
+    const conectar = (tentativa: number) => {
+      carregarScript()
+        .then(() => {
+          if (ciclo.signal.aborted || !window.CentralBugs) return null;
+          return window.CentralBugs.connect({
+            accessEndpoint: "/api/central-bugs/access",
+            signal: ciclo.signal,
+            position: "top-right", // embaixo fica a barra de abas
+            accessHeaders: () => ({ Authorization: `Bearer ${token}` }),
+          });
+        })
+        .then((inst) => {
+          if (ciclo.signal.aborted) inst?.destroy();
+          else instancia = inst ?? null;
+        })
+        .catch((err) => {
+          console.warn("[Central de Bugs]", err?.message || err);
+          if (!ciclo.signal.aborted && tentativa < 4) espera = window.setTimeout(() => conectar(tentativa + 1), 20000 * tentativa);
         });
-      })
-      .then((inst) => {
-        if (ciclo.signal.aborted) inst?.destroy();
-        else instancia = inst ?? null;
-      })
-      .catch((err) => console.warn("[Central de Bugs]", err?.message || err));
+    };
+    conectar(1);
 
     // Sair, trocar de conta ou entrar no modo demonstração remove o botão.
-    return () => { ciclo.abort(); instancia?.destroy(); };
+    return () => { ciclo.abort(); window.clearTimeout(espera); instancia?.destroy(); };
   }, [token, isDemo]);
 
   return null;

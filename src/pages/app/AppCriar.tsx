@@ -71,7 +71,8 @@ function tiposDoPerfil(perfil: string | null | undefined) {
 // fica para amanhã de manhã.
 function padrao(destino: string, perfil?: string | null): Rascunho {
   const prefs = lerPreferencias();
-  const tarde = new Date(Date.now() + 60 * 60 * 1000).getHours() >= 21 || new Date().getHours() < 5;
+  // Das 20h às 5h não dá para "começar daqui a 1 hora": o roteiro rápido fica para as 9h (de hoje, se já passou da meia-noite; senão de amanhã)
+  const tarde = new Date().getHours() >= 20 || new Date().getHours() < 5;
   const dia = tarde && new Date().getHours() >= 5 ? somarDias(hojeISO(), 1) : hojeISO();
   return {
     destino,
@@ -251,6 +252,7 @@ export default function AppCriar() {
               <h2 className="m-0 font-display font-extrabold text-2xl">Seu roteiro está pronto</h2>
               <button type="button" onClick={() => navigate(`/app/roteiro?id=${encodeURIComponent(gerando.id ?? "")}`)} className={`${btnPrimario} w-full`}>Abrir roteiro</button>
               {!profile?.hasCompanion && <Link to="/app/guia" className={`${btnSecundario} w-full no-underline`}>Conhecer a Guia Sol</Link>}
+              <Link to="/app" className="min-h-[44px] flex items-center text-sm font-bold text-sol-mar no-underline">Voltar ao início</Link>
             </>
           )}
           {gerando.estado === "pagar" && (
@@ -500,7 +502,7 @@ function Inicio({ r, set, cota, irPara, rapido }: {
 
         <h2 ref={montar} className="m-0 mt-1 text-base font-extrabold scroll-mt-4">Como você quer montar?</h2>
         {[
-          { titulo: "Roteiro rápido", texto: "A Sol completa com padrões: começa daqui a 1 hora e termina hoje às 22h, com as preferências acima. Você revisa antes de gerar.", Icon: Sparkles, acao: rapido },
+          { titulo: "Roteiro rápido", texto: "A Sol completa com padrões: começa daqui a 1 hora e termina às 22h (à noite, fica para amanhã às 9h), com as preferências acima. Você revisa antes de gerar.", Icon: Sparkles, acao: rapido },
           { titulo: "Personalizar", texto: "Escolha datas, quem vai, tipos de passeio e custos.", Icon: SlidersHorizontal, acao: () => irPara("dados") },
         ].map(({ titulo, texto, Icon, acao }) => (
           <button key={titulo} type="button" onClick={() => { if (!temDestino) { setTentou(true); topo.current?.scrollIntoView({ behavior: "smooth", block: "start" }); return; } acao(); }} className={`${cartao} flex items-start gap-3 p-4 text-left`}>

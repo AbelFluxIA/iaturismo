@@ -3,6 +3,9 @@ import App from "./App.tsx";
 import "./index.css";
 import { iniciarAtualizacao } from "./lib/atualizacao";
 import { ehNativo } from "./lib/nativo";
+import { iniciarCapturaDeErros } from "./lib/erros";
+
+iniciarCapturaDeErros();
 
 // Endereços antigos da Vercel apontam para outro banco: o oficial é painel.tripsol.com.br
 // (a Vercel já redireciona no servidor; isto cobre o PWA instalado com service worker antigo)

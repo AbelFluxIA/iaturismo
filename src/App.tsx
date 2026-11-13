@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,8 +35,11 @@ import AppConfig from "./pages/app/AppConfig";
 import AppSeguranca from "./pages/app/AppSeguranca";
 import AppPerfil from "./pages/app/AppPerfil";
 import AppExcluirConta from "./pages/app/AppExcluirConta";
-import AppAdmin from "./pages/app/AppAdmin";
+// Painel da equipe: carregado só quando um administrador abre (não pesa para o cliente)
+const AppAdmin = lazy(() => import("./pages/app/AppAdmin"));
 import AppPagar from "./pages/app/AppPagar";
+import TelaErro from "@/components/app/TelaErro";
+import { Carregando } from "@/components/app/ui";
 import Convite from "./pages/Convite";
 import { ehNativo } from "./lib/nativo";
 
@@ -90,6 +94,7 @@ const Layout = () => (
 const router = createBrowserRouter([
   {
     element: <Layout />,
+    errorElement: <TelaErro inteira />,
     children: [
       {
         path: "/login",
@@ -128,6 +133,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/app/entrar",
+    errorElement: <TelaErro inteira />,
     element: (
       <ClientAuthProvider>
         <Entrar />
@@ -136,6 +142,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/app/cadastro",
+    errorElement: <TelaErro inteira />,
     element: (
       <ClientAuthProvider>
         <ClientProtectedRoute>
@@ -146,6 +153,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/app",
+    errorElement: <TelaErro inteira />,
     element: (
       <ClientAuthProvider>
         <ClientProtectedRoute>
@@ -154,28 +162,34 @@ const router = createBrowserRouter([
       </ClientAuthProvider>
     ),
     children: [
-      { index: true, element: <AppDashboard /> },
-      { path: "chat", element: <AppChat /> },
-      { path: "roteiro", element: <AppRoteiro /> },
-      { path: "roteiro/atividade", element: <AppAtividade /> },
-      { path: "roteiro/checklist", element: <AppChecklist /> },
-      { path: "hoje", element: <AppHoje /> },
-      { path: "criar", element: <AppCriar /> },
-      { path: "guia", element: <AppGuia /> },
-      { path: "guia/comparar", element: <AppGuiaComparar /> },
-      { path: "tempo", element: <AppTempo /> },
-      { path: "localizacao", element: <AppLocalizacao /> },
-      { path: "tradutor", element: <AppTradutor /> },
-      { path: "destinos", element: <AppDestinos /> },
-      { path: "destinos/:slug", element: <AppDestino /> },
-      { path: "mural", element: <AppMural /> },
-      { path: "creditos", element: <AppCreditos /> },
-      { path: "config", element: <AppConfig /> },
-      { path: "seguranca", element: <AppSeguranca /> },
-      { path: "perfil", element: <AppPerfil /> },
-      { path: "perfil/excluir", element: <AppExcluirConta /> },
-      { path: "admin", element: <AppAdmin /> },
-      { path: "pagar/:ref", element: <AppPagar /> },
+      {
+        // Erro em uma tela: as abas e o botão de relatar continuam; só o miolo vira a tela de erro
+        errorElement: <TelaErro />,
+        children: [
+          { index: true, element: <AppDashboard /> },
+          { path: "chat", element: <AppChat /> },
+          { path: "roteiro", element: <AppRoteiro /> },
+          { path: "roteiro/atividade", element: <AppAtividade /> },
+          { path: "roteiro/checklist", element: <AppChecklist /> },
+          { path: "hoje", element: <AppHoje /> },
+          { path: "criar", element: <AppCriar /> },
+          { path: "guia", element: <AppGuia /> },
+          { path: "guia/comparar", element: <AppGuiaComparar /> },
+          { path: "tempo", element: <AppTempo /> },
+          { path: "localizacao", element: <AppLocalizacao /> },
+          { path: "tradutor", element: <AppTradutor /> },
+          { path: "destinos", element: <AppDestinos /> },
+          { path: "destinos/:slug", element: <AppDestino /> },
+          { path: "mural", element: <AppMural /> },
+          { path: "creditos", element: <AppCreditos /> },
+          { path: "config", element: <AppConfig /> },
+          { path: "seguranca", element: <AppSeguranca /> },
+          { path: "perfil", element: <AppPerfil /> },
+          { path: "perfil/excluir", element: <AppExcluirConta /> },
+          { path: "admin", element: <Suspense fallback={<Carregando />}><AppAdmin /></Suspense> },
+          { path: "pagar/:ref", element: <AppPagar /> },
+        ],
+      },
     ],
   },
 ]);
