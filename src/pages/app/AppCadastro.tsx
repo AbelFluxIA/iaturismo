@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Check, ChevronLeft, Compass, Heart, MapPin, Phone, Plane, Plus, Shield } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, Carregando, Selo, btnPrimario, btnSecundario, cartao, mascararTelefone } from "@/components/app/ui";
-import { posicaoAtual } from "@/lib/geo";
+import { posicaoAtual, posicaoSePermitida } from "@/lib/geo";
 import { VERSAO_LOCALIZACAO, pedirPermissaoNativa } from "@/lib/localizacao";
 import { ehNativo } from "@/lib/nativo";
 import { conviteGuardado, limparConvite } from "@/lib/convite";
@@ -60,6 +60,31 @@ export default function AppCadastro() {
   const [lugares, setLugares] = useState<string[]>([]);
   const [outroLugar, setOutroLugar] = useState("");
   const camposData = useRef<(HTMLInputElement | null)[]>([]);
+  // Lugares sugeridos na etapa "lugares": recomendação da Sol perto de onde a pessoa está
+  // (mesma do "Para onde ir"); sem posição ou sem resposta, a lista fixa de reserva
+  const [sugeridos, setSugeridos] = useState<string[]>([]);
+  const [baseLugares, setBaseLugares] = useState<string | null>(null);
+  const [buscandoLugares, setBuscandoLugares] = useState(false);
+  useEffect(() => {
+    if (etapa !== "lugares" || sugeridos.length) return;
+    let cancelado = false;
+    const reserva = () => { if (!cancelado) { setSugeridos(DESTINOS.map((d) => d.nome)); setBuscandoLugares(false); } };
+    setBuscandoLugares(true);
+    const limite = window.setTimeout(reserva, 25000);
+    (async () => {
+      try {
+        const pos = await posicaoSePermitida();
+        if (!pos) { reserva(); return; }
+        const r = await fetch(`${API_URL}/api/app/sugestoes?lat=${pos.lat}&lng=${pos.lng}`, { headers: { Authorization: `Bearer ${token}` } });
+        const d = r.ok ? await r.json() : null;
+        const nomes: string[] = (d?.sugestoes ?? []).map((x: { nome: string; uf?: string }) => (x.uf ? `${x.nome} - ${x.uf}` : x.nome));
+        if (cancelado) return;
+        if (!nomes.length) { reserva(); return; }
+        setSugeridos(nomes.slice(0, 10)); setBaseLugares(d.base ?? null); setBuscandoLugares(false);
+      } catch { reserva(); } finally { window.clearTimeout(limite); }
+    })();
+    return () => { cancelado = true; window.clearTimeout(limite); };
+  }, [etapa]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isDemo) return <Navigate to="/app" replace />;
   if (profileLoading && !profile) return <div className="min-h-screen bg-sol-areia"><Carregando /></div>;
@@ -340,8 +365,11 @@ export default function AppCadastro() {
           <>
             <h1 className="m-0 font-display font-extrabold text-[24px] leading-tight">Quais lugares você tem vontade de conhecer?</h1>
             <p className="mt-2 mb-0 text-[15px] text-sol-texto2">A Sol vai sugerir roteiros e novidades desses lugares. Pode escolher vários ou escrever outro.</p>
+            <p role="status" className="mt-2 mb-0 text-[13px] font-bold text-sol-mar">
+              {buscandoLugares ? "Buscando lugares bons perto de você…" : baseLugares ? `Sugestões perto de ${baseLugares}` : "Sugestões da Sol"}
+            </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              {[...DESTINOS.map((d) => d.nome), ...lugares.filter((l) => !DESTINOS.some((d) => d.nome === l))].map((nome) => {
+              {[...sugeridos, ...lugares.filter((l) => !sugeridos.includes(l))].map((nome) => {
                 const ativo = lugares.includes(nome);
                 return (
                   <button key={nome} type="button" aria-pressed={ativo} onClick={() => setLugares((l) => ativo ? l.filter((x) => x !== nome) : [...l, nome])} className={chip(ativo)}>

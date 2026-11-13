@@ -2,6 +2,9 @@
 // previsão do tempo (Open-Meteo). Serviços gratuitos e sem chave.
 
 import { UFS } from "@/lib/fotoLugar";
+import { ehNativo } from "@/lib/nativo";
+import { registerPlugin } from "@capacitor/core";
+import type { BackgroundGeolocationPlugin } from "@capacitor-community/background-geolocation";
 
 export type Coord = { lat: number; lng: number };
 
@@ -121,6 +124,7 @@ export function distanciaKm(a: Coord, b: Coord) {
 const JA_LIBEROU = "sol_geo_permitida";
 
 export async function posicaoSePermitida(): Promise<Coord | null> {
+  if (ehNativo) return posicaoAtual(8000); // o plugin não abre pedido de permissão sozinho
   try {
     const p = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
     if (p?.state === "granted") return posicaoAtual();
@@ -131,19 +135,50 @@ export async function posicaoSePermitida(): Promise<Coord | null> {
 }
 
 export function posicaoAtual(timeout = 10000): Promise<Coord | null> {
+  // App das lojas: lê pelo plugin nativo (a permissão foi dada a ele; o caminho do navegador
+  // dentro do app às vezes não devolve nada). Se falhar, tenta o do navegador.
+  if (ehNativo) return posicaoNativa(timeout).then((c) => c ?? posicaoDoNavegador(timeout));
+  return posicaoDoNavegador(timeout);
+}
+
+function posicaoNativa(timeout: number): Promise<Coord | null> {
+  return new Promise((ok) => {
+    const BG = registerPlugin<BackgroundGeolocationPlugin>("BackgroundGeolocation");
+    let id: string | null = null;
+    let fim = false;
+    const terminar = (c: Coord | null) => {
+      if (fim) return;
+      fim = true;
+      if (id) BG.removeWatcher({ id }).catch(() => { /* ok */ });
+      if (c) { try { localStorage.setItem(JA_LIBEROU, "1"); } catch { /* ok */ } }
+      ok(c);
+    };
+    BG.addWatcher({ requestPermissions: false, stale: true }, (pos, erro) => {
+      if (erro) terminar(null);
+      else if (pos) terminar({ lat: pos.latitude, lng: pos.longitude });
+    })
+      .then((i) => { id = i; if (fim) BG.removeWatcher({ id: i }).catch(() => { /* ok */ }); })
+      .catch(() => terminar(null));
+    window.setTimeout(() => terminar(null), timeout);
+  });
+}
+
+function posicaoDoNavegador(timeout: number): Promise<Coord | null> {
   return new Promise((ok) => {
     if (!navigator.geolocation) return ok(null);
-    navigator.geolocation.getCurrentPosition(
+    const ler = (preciso: boolean, depois?: () => void) => navigator.geolocation.getCurrentPosition(
       (p) => {
         try { localStorage.setItem(JA_LIBEROU, "1"); } catch { /* ok */ }
         ok({ lat: p.coords.latitude, lng: p.coords.longitude });
       },
       (e) => {
-        if (e.code === e.PERMISSION_DENIED) { try { localStorage.removeItem(JA_LIBEROU); } catch { /* ok */ } }
-        ok(null);
+        if (e.code === e.PERMISSION_DENIED) { try { localStorage.removeItem(JA_LIBEROU); } catch { /* ok */ } ok(null); return; }
+        if (depois) depois(); else ok(null);
       },
-      { enableHighAccuracy: false, timeout, maximumAge: 5 * 60 * 1000 },
+      { enableHighAccuracy: preciso, timeout, maximumAge: 5 * 60 * 1000 },
     );
+    // Primeiro a posição rápida (rede); se não vier, tenta com GPS
+    ler(false, () => ler(true));
   });
 }
 
