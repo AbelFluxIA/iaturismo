@@ -5,8 +5,7 @@ import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { Aviso, TopBar, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
 import { urlSegura } from "@/lib/utils";
-import { CAPITAL, DESTINOS } from "@/lib/destinos";
-import { distanciaKm, posicaoSePermitida } from "@/lib/geo";
+import { useSugestoes } from "@/lib/sugestoes";
 import { BuscaCidade } from "@/components/app/BuscaCidade";
 import { hojeISO, TIPOS_PASSEIO } from "@/lib/roteiro";
 
@@ -117,6 +116,8 @@ function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => voi
 }
 
 const rotuloCampo = "text-[13px] font-extrabold";
+// Data e hora: no iPhone esses campos têm largura própria e um passava por cima do outro; appearance-none + min-w-0 resolvem
+const campoData = "appearance-none h-12 w-full min-w-0 max-w-full box-border px-3 rounded-xl border-[1.5px] border-sol-borda bg-white text-[15px] text-sol-fundo focus:outline-none focus:border-sol-mar [&::-webkit-date-and-time-value]:text-left";
 const campo = "h-12 w-full box-border px-3.5 rounded-xl border-[1.5px] border-sol-borda bg-white text-[15px] text-sol-fundo focus:outline-none focus:border-sol-mar";
 
 export default function AppCriar() {
@@ -298,18 +299,18 @@ export default function AppCriar() {
           <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Destino</span>
             <BuscaCidade className={campo} value={r.destino} onChange={(destino) => set({ destino })} />
           </label>
-          <div className="grid grid-cols-[1fr_110px] gap-2">
-            <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Chegada</span>
-              <input type="date" className={campo} value={r.chegada} min={hojeISO()} onChange={(e) => set({ chegada: e.target.value, saida: r.saida < e.target.value ? e.target.value : r.saida })} />
+          <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
+            <label className="flex flex-col gap-1.5 min-w-0"><span className={rotuloCampo}>Chegada</span>
+              <input type="date" className={campoData} value={r.chegada} min={hojeISO()} onChange={(e) => set({ chegada: e.target.value, saida: r.saida < e.target.value ? e.target.value : r.saida })} />
             </label>
-            <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Hora</span>
-              <input type="time" className={campo} value={r.horaChegada} onChange={(e) => set({ horaChegada: e.target.value })} />
+            <label className="flex flex-col gap-1.5 min-w-0"><span className={rotuloCampo}>Hora</span>
+              <input type="time" className={campoData} value={r.horaChegada} onChange={(e) => set({ horaChegada: e.target.value })} />
             </label>
-            <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Volta</span>
-              <input type="date" className={campo} value={r.saida} min={r.chegada} onChange={(e) => set({ saida: e.target.value })} />
+            <label className="flex flex-col gap-1.5 min-w-0"><span className={rotuloCampo}>Volta</span>
+              <input type="date" className={campoData} value={r.saida} min={r.chegada} onChange={(e) => set({ saida: e.target.value })} />
             </label>
-            <label className="flex flex-col gap-1.5"><span className={rotuloCampo}>Hora</span>
-              <input type="time" className={campo} value={r.horaVolta} onChange={(e) => set({ horaVolta: e.target.value })} />
+            <label className="flex flex-col gap-1.5 min-w-0"><span className={rotuloCampo}>Hora</span>
+              <input type="time" className={campoData} value={r.horaVolta} onChange={(e) => set({ horaVolta: e.target.value })} />
             </label>
           </div>
 
@@ -444,30 +445,44 @@ function Inicio({ r, set, cota, irPara, rapido }: {
   irPara: (e: Etapa) => void;
   rapido: () => void;
 }) {
-  const [perto, setPerto] = useState(DESTINOS.slice(0, 4));
-  useEffect(() => {
-    posicaoSePermitida().then((c) => {
-      const origem = c ?? CAPITAL;
-      setPerto([...DESTINOS].sort((a, b) => distanciaKm(origem, a) - distanciaKm(origem, b)).slice(0, 4));
-    });
-  }, []);
+  // Sugestões pela localização da pessoa (as mesmas de "Para onde ir"), não mais uma lista fixa da Paraíba
+  const { lista, recomendado } = useSugestoes();
+  const perto = [...(lista ?? [])].sort((a, b) => (a.km ?? 9e9) - (b.km ?? 9e9)).slice(0, 4);
+  const [tentou, setTentou] = useState(false);
+  const topo = useRef<HTMLDivElement>(null);
+  const montar = useRef<HTMLHeadingElement>(null);
+  const escolher = (destino: string) => {
+    set({ destino });
+    setTentou(false);
+    window.setTimeout(() => montar.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+  };
   const temDestino = r.destino.trim().length >= 2;
 
   return (
     <div className="flex flex-col">
       <TopBar title="Criar roteiro" back="/app" />
-      <div className="flex flex-col gap-3 px-5">
+      <div ref={topo} className="flex flex-col gap-3 px-5 scroll-mt-4">
         <label className="flex flex-col gap-1.5">
           <span className="font-display font-extrabold text-xl">Para onde você vai?</span>
           <BuscaCidade className={campo} value={r.destino} placeholder="Cidade, estado ou país" onChange={(destino) => set({ destino })} />
         </label>
-        {!temDestino && <span className="-mt-1 text-xs text-sol-texto2">Digite a cidade ou escolha uma perto de você.</span>}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-sol-texto2">Perto de você:</span>
-          {perto.map((d) => (
-            <Chip key={d.slug} ativo={r.destino === `${d.nome} - PB`} onClick={() => set({ destino: `${d.nome} - PB` })}>{d.nome}</Chip>
-          ))}
-        </div>
+        {tentou && !temDestino && (
+          <div role="alert" className="rounded-xl border-[1.5px] border-[#E8B4A8] bg-[#FCE7E2] px-3.5 py-3 text-sm font-semibold text-sol-fundo">
+            Primeiro escreva o destino aqui em cima (ou toque em uma sugestão). Depois escolha como montar.
+          </div>
+        )}
+        {!temDestino && !tentou && <span className="-mt-1 text-xs text-sol-texto2">Digite a cidade ou toque em uma sugestão.</span>}
+        {temDestino && (
+          <p className="m-0 -mt-1 flex items-center gap-1.5 text-sm font-bold text-sol-mar"><Check size={16} /> Destino: {r.destino}. Agora escolha abaixo como montar.</p>
+        )}
+        {perto.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-sol-texto2">{recomendado ? "Perto de você:" : "Destinos na Paraíba:"}</span>
+            {perto.map((d) => (
+              <Chip key={d.slug} ativo={r.destino === `${d.nome} - ${d.uf}`} onClick={() => escolher(`${d.nome} - ${d.uf}`)}>{d.nome}{d.uf !== "PB" || recomendado ? ` - ${d.uf}` : ""}</Chip>
+            ))}
+          </div>
+        )}
         <Link to="/app/destinos" className="flex items-center gap-1 min-h-[44px] text-sm font-bold text-sol-mar no-underline">Ver destinos sugeridos <ChevronRight size={16} /></Link>
 
         <section className={`${cartao} flex flex-col gap-1.5 p-4`}>
@@ -483,12 +498,12 @@ function Inicio({ r, set, cota, irPara, rapido }: {
           <p className="m-0 text-xs text-sol-texto2">Padrão do seu perfil. Editar aqui muda só esta busca.</p>
         </section>
 
-        <h2 className="m-0 mt-1 text-base font-extrabold">Como você quer montar?</h2>
+        <h2 ref={montar} className="m-0 mt-1 text-base font-extrabold scroll-mt-4">Como você quer montar?</h2>
         {[
           { titulo: "Roteiro rápido", texto: "A Sol completa com padrões: começa daqui a 1 hora e termina hoje às 22h, com as preferências acima. Você revisa antes de gerar.", Icon: Sparkles, acao: rapido },
           { titulo: "Personalizar", texto: "Escolha datas, quem vai, tipos de passeio e custos.", Icon: SlidersHorizontal, acao: () => irPara("dados") },
         ].map(({ titulo, texto, Icon, acao }) => (
-          <button key={titulo} type="button" disabled={!temDestino} onClick={acao} className={`${cartao} flex items-start gap-3 p-4 text-left disabled:opacity-50`}>
+          <button key={titulo} type="button" onClick={() => { if (!temDestino) { setTentou(true); topo.current?.scrollIntoView({ behavior: "smooth", block: "start" }); return; } acao(); }} className={`${cartao} flex items-start gap-3 p-4 text-left`}>
             <span className="flex-none w-11 h-11 rounded-xl bg-sol-creme flex items-center justify-center"><Icon size={22} /></span>
             <span className="flex-1 flex flex-col gap-0.5"><span className="text-base font-extrabold">{titulo}</span><span className="text-[13px] leading-snug text-sol-texto2">{texto}</span></span>
             <ChevronRight size={20} className="flex-none self-center text-sol-texto2" />
@@ -502,7 +517,6 @@ function Inicio({ r, set, cota, irPara, rapido }: {
           <span className="flex-1 flex flex-col gap-0.5"><span className="text-base font-extrabold">Pedir conversando</span><span className="text-[13px] leading-snug text-sol-texto2">Escreva ou mande um áudio no chat e a Sol pergunta o que faltar.</span></span>
           <ChevronRight size={20} className="flex-none self-center text-sol-texto2" />
         </Link>
-        {!temDestino && <span className="text-xs text-sol-texto2">Escolha o destino para continuar.</span>}
         <p className="m-0 text-xs text-sol-texto2">{cota}</p>
       </div>
     </div>
