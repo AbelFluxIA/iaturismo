@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { DEMO_TOKEN, demoProfile } from "@/lib/demo";
+import { DEMO_TOKEN } from "@/lib/demo";
 import { API_NATIVA, ehNativo } from "@/lib/nativo";
 
 // No site, as chamadas são relativas (a Vercel repassa /api/app para o bot).
@@ -74,7 +74,15 @@ interface ClientAuthState {
 const ClientAuthContext = createContext<ClientAuthState | null>(null);
 
 export function ClientAuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("sol_client_token"));
+  const [token, setToken] = useState<string | null>(() => {
+    // O modo demonstração acabou: sessão antiga de demonstração guardada no aparelho é apagada
+    // (o Android restaura dados do backup mesmo depois de desinstalar)
+    try {
+      const t = localStorage.getItem("sol_client_token");
+      if (t === DEMO_TOKEN) { for (const k of Object.keys(localStorage)) if (k.startsWith("sol_")) localStorage.removeItem(k); return null; }
+      return t;
+    } catch { return null; }
+  });
   const [phone, setPhone] = useState<string | null>(() => localStorage.getItem("sol_client_phone"));
   const [name, setName] = useState<string | null>(() => localStorage.getItem("sol_client_name"));
   const [profile, setProfile] = useState<ClientProfile | null>(null);
@@ -102,11 +110,10 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
-  const isDemo = token === DEMO_TOKEN;
+  const isDemo = false; // sem modo demonstração: só entra com o WhatsApp
 
   const refreshProfile = async () => {
     if (!token) return;
-    if (token === DEMO_TOKEN) { setProfile(demoProfile()); return; }
     setProfileLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/app/perfil`, {
