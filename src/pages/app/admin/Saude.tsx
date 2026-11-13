@@ -2,7 +2,7 @@ import { Estado, Etiqueta, Numero, Secao, dataHora, duracao, haQuanto, numero, t
 
 interface DadosSaude {
   banco: { pingMs: number; bytes: number; maxConexoes: number; conexoes: { estado: string; n: number }[]; tabelas: { tabela: string; linhas: number; bytes: number }[] };
-  processo: { iniciadoEm: string; noArSegundos: number; memoriaMb: number; heapMb: number; atraso: { mediaMs: number; p99Ms: number; maxMs: number }; node: string; versao: string; operacoesEmAndamento: number };
+  processo: { iniciadoEm: string; noArSegundos: number; memoriaMb: number; heapMb: number; atraso: { mediaMs: number; p99Ms: number; maxMs: number }; node: string; versao: string; operacoesEmAndamento: number; filaDeRoteiros?: { ativos: number; naFila: number; maximo: number } };
   servidor: { cpus: number; carga: number[]; memoriaTotalMb: number; memoriaLivreMb: number; disco: { totalGb: number; livreGb: number } | null };
   whatsapp: { ultimoWebhook: string | null; ultimaMensagem: string | null; assinaturaConferida: boolean };
   servicos: { nome: string; estado: "ok" | "falhando" | "recuperado" | "sem-uso"; chamadas48h: number; erros48h: number; ultimoErro: string | null; ultimoOk: string | null; mensagem: string | null }[];
@@ -34,7 +34,7 @@ export default function Saude() {
         <Numero rotulo="Travamento do processo" valor={`${d.processo.atraso.p99Ms} ms`} tom={d.processo.atraso.p99Ms > 500 ? "erro" : d.processo.atraso.p99Ms > 150 ? "aviso" : "ok"} detalhe={`pior momento: ${d.processo.atraso.maxMs} ms`} />
         <Numero rotulo="Disco livre" valor={d.servidor.disco ? `${d.servidor.disco.livreGb} GB` : "?"} tom={d.servidor.disco && d.servidor.disco.livreGb < 5 ? "erro" : undefined} detalhe={d.servidor.disco ? `de ${d.servidor.disco.totalGb} GB` : undefined} />
         <Numero rotulo="Última mensagem do WhatsApp" valor={haQuanto(d.whatsapp.ultimaMensagem ?? d.whatsapp.ultimoWebhook)} detalhe={d.whatsapp.assinaturaConferida ? "assinatura da Meta conferida" : "assinatura NÃO conferida"} tom={d.whatsapp.assinaturaConferida ? undefined : "erro"} />
-        <Numero rotulo="Trabalhos em andamento" valor={numero(d.processo.operacoesEmAndamento)} detalhe="roteiros sendo gerados agora" />
+        <Numero rotulo="Roteiros sendo gerados" valor={numero(d.processo.filaDeRoteiros?.ativos ?? d.processo.operacoesEmAndamento)} tom={d.processo.filaDeRoteiros && d.processo.filaDeRoteiros.naFila > 5 ? "aviso" : undefined} detalhe={d.processo.filaDeRoteiros ? `${d.processo.filaDeRoteiros.naFila} esperando a vez · até ${d.processo.filaDeRoteiros.maximo} ao mesmo tempo` : "agora"} />
       </div>
 
       <Secao titulo="Serviços de fora (últimas 48 h)">
