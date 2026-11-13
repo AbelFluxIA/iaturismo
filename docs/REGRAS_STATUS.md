@@ -291,3 +291,27 @@ Uma cobrança por compra, com referência própria (`sol_pagamentos`). No app: P
 **Modo de teste do servidor** (`MODO_CARGA=1`, arquivo `src/carga-mock.ts` no bot): simula WhatsApp, IA, Google, AbacatePay, clima, PDF e arquivos, com atraso parecido com o real. Recusa ligar na porta de produção ou com envios diários ligados. Serve para jornadas automáticas e teste de carga sem enviar mensagem nem gastar.
 
 **Testes que passaram em 13/11**: jornada completa pela API (login real por código, cadastro, roteiro, conversa nos dois canais, Pix simulado, permissões entre usuários, 163 entradas inválidas sem nenhum erro 500, excluir conta) e pelas telas em iPhone 13, iPhone SE e Pixel 7 (caminho feliz; internet lenta, recarregar, toque duplo e botão voltar; servidor com erro e sem resposta em 16 telas; sessão vencida; ficar sem internet no meio). Corrigido no caminho: endereço de pagamento malformado dava erro 500.
+
+## Teste de carga e estresse (2026-11-13)
+
+Feito numa cópia de teste do bot (`MODO_CARGA=1`, porta 3002, serviços de fora simulados com atraso parecido com o real, mesmo banco, contas falsas `55009000xxxxx` apagadas no fim). O gerador de carga roda na mesma máquina de 1 núcleo, então os limites reais são um pouco maiores. Scripts: `carga.mjs` e `estresse.mjs` (pasta de trabalho da sessão; vale trazer para o repositório).
+
+**Gargalo**: o banco (Supabase) fica em San Jose, Califórnia (AWS us-west-1) e o servidor em Boston: cada consulta custa ~80 ms só de viagem. Processador e memória ficaram folgados; o que limita é consultas por tela × 80 ms ÷ conexões abertas.
+
+| Usuários ao mesmo tempo | Antes (3 conexões) | 12 conexões | 25 conexões + menos consultas (como está hoje) |
+|---|---|---|---|
+| 50 | 3,0 s | 0,2 s | - |
+| 100 | 6,4 s | 0,5 s | - |
+| 200 | 16 s, 8,5% de erro | 2,5 s | 0,15 s |
+| 400 | - | ~6,5 s | 1,1 s |
+| 600 | - | 11 s, 4% de erro | 2,2 s |
+| 800 | - | 16 s, 5% de erro | 3,4 s |
+| 1000 | - | 20 s, 6% de erro | 4,4 s, 0,4% de erro |
+
+(tempo típico das telas comuns; a conversa com a Sol fica mais lenta antes: 3 s com 200 pessoas, 12 s com 400, 40 s com 1000.) O servidor não caiu em nenhum cenário; depois de um pico de 400 pessoas no mesmo instante, voltou ao normal em 20 s; 150 pessoas por 8 min sem degradação.
+
+**Aplicado**: `DB_CONEXOES=25` (o banco aceita 60; cópias de teste junto devem usar no máximo 20); fila de 4 roteiros ao mesmo tempo (`ROTEIROS_SIMULTANEOS`, `fila.service.ts`); limite geral por sessão (300/min) com teto por IP de 3000/min (antes 300/min por IP barrava ~25 pessoas no mesmo wi-fi); id da conversa em memória por 2 min e perfil em paralelo (uma consulta a menos nas telas mais usadas); no máximo 12 arquivos grandes sendo tratados ao mesmo tempo (`ARQUIVOS_SIMULTANEOS`; 30 áudios de 12 MB juntos tinham levado a memória a 1,2 GB), o excedente recebe 503 "tente de novo"; teto de 50 mil pedidos de login em aberto; `requestTimeout` de 2 min.
+
+**Outros resultados**: 500 mensagens de WhatsApp no mesmo segundo respondidas em 43 s; 60 pedidos de roteiro juntos saem todos, o último em ~5 min (a fila de 4 dá ~13 roteiros por minuto); 3 roteiros com a IA real ao mesmo tempo ficaram prontos em 18, 22 e 37 s; 20 mil pedidos de login de 4 mil endereços não afetaram a memória; 6 mil conexões presas não derrubaram o atendimento.
+
+**Recomendações em aberto** (decisão do fundador): (1) pôr banco e servidor na mesma região, de preferência São Paulo: é o que mais aumenta a capacidade e deixa todas as telas mais rápidas; (2) conferir a cota da IA (Gemini) antes de subir a fila de roteiros; (3) servidor com 2 núcleos quando passar de ~400 pessoas simultâneas; (4) aviso por WhatsApp/push quando o roteiro fica pronto, para quem pegou fila.
