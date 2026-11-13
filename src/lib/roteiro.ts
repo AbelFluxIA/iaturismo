@@ -8,6 +8,14 @@ export interface Activity {
   travel: string;
   description: string;
   mapUrl: string;
+  // Linhas novas do roteiro (13/11/2026). Roteiros antigos não têm: ficam vazias.
+  hours?: string;      // 🕒 horário de funcionamento e tempo no local
+  cost?: string;       // 💰 custo
+  rain?: string;       // ☔ plano B se chover
+  tip?: string;        // 💡 curiosidade
+  event?: string;      // 🎫 evento (com a fonte)
+  alert?: string;      // ⚠️ alerta da própria parada
+  checked?: "ok" | "aviso"; // ✅ conferido no Google Maps / ⚠️ não deu para conferir
 }
 
 export interface Day {
@@ -44,6 +52,8 @@ export function parseItinerary(text: string): Day[] {
         travel: currentActivity.travel || "",
         description: descBuffer.join(" ").trim(),
         mapUrl: currentActivity.mapUrl || "",
+        hours: currentActivity.hours, cost: currentActivity.cost, rain: currentActivity.rain, tip: currentActivity.tip,
+        event: currentActivity.event, alert: currentActivity.alert, checked: currentActivity.checked,
       });
     }
     currentActivity = null;
@@ -61,7 +71,19 @@ export function parseItinerary(text: string): Day[] {
       days.push(currentDay);
       continue;
     }
-    if (inIntro || line.startsWith("⚠️")) continue;
+    if (inIntro) continue;
+    // Linhas com marca própria dentro de uma parada (o rótulo "Horário:", "Custo:" etc. sai)
+    if (currentActivity) {
+      const semRotulo = (t: string) => t.replace(/^[^\p{L}\d(]+/u, "").replace(/^(Hor[aá]rio|Custo|Se chover|Curiosidade|Evento|Conferido no Google Maps)\s*:\s*/i, "").trim();
+      if (line.startsWith("🕒")) { currentActivity.hours = semRotulo(line); continue; }
+      if (line.startsWith("💰")) { currentActivity.cost = semRotulo(line); continue; }
+      if (line.startsWith("☔")) { currentActivity.rain = semRotulo(line); continue; }
+      if (line.startsWith("💡")) { currentActivity.tip = [currentActivity.tip, semRotulo(line)].filter(Boolean).join(" "); continue; }
+      if (line.startsWith("🎫")) { currentActivity.event = semRotulo(line); continue; }
+      if (line.startsWith("✅")) { currentActivity.checked = "ok"; continue; }
+      if (line.startsWith("⚠️")) { if (/Confirme o funcionamento/i.test(line)) currentActivity.checked = "aviso"; else currentActivity.alert = [currentActivity.alert, semRotulo(line)].filter(Boolean).join(" "); continue; }
+    }
+    if (line.startsWith("⚠️")) continue;
     // Início de parada: "Manhã (09:00): Nome". A Sol às vezes escreve "Almoço (12:30)"
     // ou "Jantar (19:30)", e põe 🚗 na frente de um traslado: tudo isso é parada também.
     const pm = s.match(/^(Manh[aã]|Tarde|Noite|P[oô]r\s*do\s*Sol|Dia\s*Inteiro|Almo[cç]o|Jantar|Caf[eé](?:\s*da\s*manh[aã])?|Lanche|Madrugada)\s*\(([^)]+)\)[:\s-]+(.+)/i);

@@ -67,15 +67,31 @@ export interface DadosRoteiro {
   chegada: string | null;
   saida: string | null;
   pdfUrl: string | null;
+  avaliacoes?: Record<string, number>; // atividade → 1 (gostei) ou -1 (não gostei)
 }
 
 const cacheRoteiros = new Map<string, DadosRoteiro>();
+
+// Troca de atividade ou avaliação: atualiza o roteiro guardado e avisa as telas abertas
+export function atualizarRoteiroGuardado(id: string, mudanca: Partial<DadosRoteiro>) {
+  const chave = `id:${id}`;
+  const atual = cacheRoteiros.get(chave);
+  if (!atual) return;
+  cacheRoteiros.set(chave, { ...atual, ...mudanca });
+  window.dispatchEvent(new CustomEvent("sol-roteiro", { detail: chave }));
+}
 
 export function useRoteiro(id: string | null, codigo: string | null = null) {
   const { token, isDemo } = useClientAuth();
   const chave = id ? `id:${id}` : codigo ? `cod:${codigo}` : null;
   const [dados, setDados] = useState<DadosRoteiro | null>(chave ? cacheRoteiros.get(chave) ?? null : null);
   const [loading, setLoading] = useState(!!chave && !cacheRoteiros.has(chave));
+
+  useEffect(() => {
+    const ouvir = (e: Event) => { if ((e as CustomEvent).detail === chave && chave) setDados(cacheRoteiros.get(chave) ?? null); };
+    window.addEventListener("sol-roteiro", ouvir);
+    return () => window.removeEventListener("sol-roteiro", ouvir);
+  }, [chave]);
 
   useEffect(() => {
     if (!chave) { setDados(null); setLoading(false); return; }
@@ -99,7 +115,7 @@ export function useRoteiro(id: string | null, codigo: string | null = null) {
       const r = await fetch(`${API_URL}/api/app/roteiro?id=${encodeURIComponent(id ?? "")}`, { headers: { Authorization: `Bearer ${token}` } });
       const d = r.ok ? await r.json() : null;
       return d?.rawItinerary
-        ? { texto: d.rawItinerary, destino: d.destination ?? null, chegada: d.arrivalDate ?? null, saida: d.departureDate ?? null, pdfUrl: d.pdfUrl ?? null }
+        ? { texto: d.rawItinerary, destino: d.destination ?? null, chegada: d.arrivalDate ?? null, saida: d.departureDate ?? null, pdfUrl: d.pdfUrl ?? null, avaliacoes: d.avaliacoes && typeof d.avaliacoes === "object" ? d.avaliacoes : {} }
         : null;
     })()
       .then((d) => {

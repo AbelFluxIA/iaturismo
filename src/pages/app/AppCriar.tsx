@@ -7,6 +7,7 @@ import { Aviso, TopBar, btnPrimario, btnSecundario, cartao, formatarData } from 
 import { urlSegura } from "@/lib/utils";
 import { useSugestoes } from "@/lib/sugestoes";
 import { BuscaCidade } from "@/components/app/BuscaCidade";
+import { posicaoSePermitida } from "@/lib/geo";
 import { diasDaViagem, hojeISO, TIPOS_PASSEIO } from "@/lib/roteiro";
 
 // Criar roteiro pelo app: destino → dados → hospedagem → revisão → gerando.
@@ -31,10 +32,14 @@ interface Rascunho {
   custos: Custos;
   temHospedagem: "sim" | "nao" | null;
   hospedagem: string;
+  transporte?: Transporte | null; // como volta; sem resposta, o roteiro não supõe nada
 }
 
 // Tipos de roteiro (RA-ROT-11) e quem vai (RA-ROT-12)
 const TIPOS = TIPOS_PASSEIO;
+// Como a pessoa volta no último dia. A Sol não supõe: sem resposta, o roteiro vai até o horário de volta e pronto.
+type Transporte = "carro" | "aviao" | "onibus" | "local";
+const TRANSPORTES: [Transporte, string][] = [["carro", "De carro"], ["aviao", "De avião"], ["onibus", "De ônibus"], ["local", "Moro ou já estou na cidade"]];
 const QUEM: [QuemVai, string][] = [["sozinho", "Sozinho"], ["casal", "Casal"], ["família", "Família"]];
 const PETS = ["Cachorro", "Gato", "Outro"];
 const PORTES = ["Pequeno", "Médio", "Grande"];
@@ -194,7 +199,11 @@ export default function AppCriar() {
       tipos: r.tipos,
       custos: r.custos,
       hospedagem: pernoite && r.temHospedagem === "sim" ? r.hospedagem : undefined,
+      transporte: r.transporte ?? undefined,
+      // Sem hospedagem, o primeiro deslocamento do dia sai de onde a pessoa está (se ela já liberou a localização)
+      partida: undefined as { lat: number; lng: number } | undefined,
     };
+    if (!pedido.hospedagem) { const pos = await posicaoSePermitida().catch(() => null); if (pos) pedido.partida = { lat: pos.lat, lng: pos.lng }; }
     try {
       const res = await fetch(`${API_URL}/api/app/roteiros/criar`, {
         method: "POST",
@@ -346,6 +355,10 @@ export default function AppCriar() {
               <Link to="/app/guia" className="self-start font-bold text-sol-mar">Com a Guia Sol, até 7 dias sem pagar por dia</Link>
             </div>
           )}
+          <fieldset className="flex flex-col gap-2 border-0 p-0 m-0"><legend className={`${rotuloCampo} mb-2`}>Como você volta (opcional)</legend>
+            <div className="flex flex-wrap gap-2">{TRANSPORTES.map(([v, l]) => <Chip key={v} ativo={r.transporte === v} onClick={() => set({ transporte: r.transporte === v ? null : v })}>{l}</Chip>)}</div>
+            <span className="text-xs text-sol-texto2">{r.transporte === "aviao" ? "A Sol reserva o tempo de ir ao aeroporto antes do voo." : r.transporte === "onibus" ? "A Sol reserva o tempo de ir à rodoviária." : "A hora de volta é quando o seu passeio termina no último dia."}</span>
+          </fieldset>
           <fieldset className="flex flex-col gap-2 border-0 p-0 m-0"><legend className={`${rotuloCampo} mb-2`}>Quem vai com você</legend>
             <div className="flex flex-wrap gap-2">{QUEM.map(([v, l]) => <Chip key={v} ativo={r.quemVai === v} onClick={() => set({ quemVai: v })}>{l}</Chip>)}</div>
             {r.quemVai === "família" && ([["adultos", "Adultos", 1], ["criancas", "Crianças (até 12 anos)", 0]] as const).map(([k, rot, min]) => (
@@ -429,7 +442,7 @@ export default function AppCriar() {
   const linhas: [string, string, Etapa][] = [
     ["Destino", r.destino || "Escolha o destino", "inicio"],
     ["Chegada", `${formatarData(r.chegada, { weekday: "short", day: "2-digit", month: "2-digit" })}, ${r.horaChegada}`, "dados"],
-    ["Volta", `${formatarData(r.saida, { weekday: "short", day: "2-digit", month: "2-digit" })}, ${r.horaVolta}`, "dados"],
+    ["Volta", `${formatarData(r.saida, { weekday: "short", day: "2-digit", month: "2-digit" })}, ${r.horaVolta}${r.transporte ? ` · ${TRANSPORTES.find(([v]) => v === r.transporte)?.[1].toLowerCase()}` : ""}`, "dados"],
     ["Quem vai", textoQuemVai(r), "dados"],
     ["Tipos", r.tipos.join(", "), "dados"],
     ["Custos", CUSTOS.find(([v]) => v === r.custos)?.[1] ?? r.custos, "dados"],

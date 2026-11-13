@@ -302,6 +302,13 @@ function RoteiroDetalhe() {
                       <span className="flex-1 min-w-0 flex flex-col gap-px">
                         <span className={`text-[15px] font-bold leading-tight ${feita ? "line-through text-sol-texto2" : ""}`}>{act.name}</span>
                         {act.travel && <span className="text-xs text-sol-texto2 truncate">{act.travel}</span>}
+                        {(act.cost || act.checked === "ok") && (
+                          <span className="text-xs text-sol-texto2 truncate">
+                            {act.checked === "ok" && <span className="font-bold text-sol-ok">Conferido</span>}
+                            {act.checked === "ok" && act.cost ? " · " : ""}
+                            {act.cost ? act.cost.replace(/\s*\(estimado\)/i, "") : ""}
+                          </span>
+                        )}
                       </span>
                       <MiniFotoParada local={localDaParada(act)} cidade={destino ?? ""} />
                       <ChevronRight size={18} className="flex-none text-sol-texto2" />
