@@ -164,7 +164,7 @@ export default function AppCriar() {
   const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
   const valorTexto = reais(diasPagos * precoDia);
   const cota = gratis
-    ? "Roteiros grátis enquanto o app está em fase de teste."
+    ? "" // em fase de teste não aparece frase nenhuma (pedido do fundador em 14/11)
     : comGuia
       ? `Com a Guia: até ${regras?.guiaRoteirosSemana ?? 30} roteiros por semana, sem cobrança por dia.`
       : `Sem a Guia: ${regras?.roteirosGratisSemana ?? 2} roteiros grátis por semana, 1 dia cada. Cada dia a mais custa R$ ${(regras?.diaRoteiroPreco ?? 4.9).toFixed(2).replace(".", ",")}.`;
@@ -466,7 +466,7 @@ export default function AppCriar() {
           <input type="checkbox" checked={r.salvarPreferencia} onChange={(e) => set({ salvarPreferencia: e.target.checked })} className="w-5 h-5 accent-[#0B5F8A]" />
           <span className="text-sm font-semibold">Salvar tipos, custos e quem vai como preferência</span>
         </label>
-        <Aviso>{cota}</Aviso>
+        {cota && <Aviso>{cota}</Aviso>}
         <button type="button" disabled={r.destino.trim().length < 2 || r.saida < r.chegada || diasEntre(r.chegada, r.saida) > maxDias} onClick={gerar} className={btnPrimario}>
           <Sparkles size={18} /> {diasPagos > 0 ? `Pagar ${valorTexto} e gerar` : "Gerar roteiro"}
         </button>
@@ -555,7 +555,7 @@ function Inicio({ r, set, cota, irPara, rapido }: {
           <span className="flex-1 flex flex-col gap-0.5"><span className="text-base font-extrabold">Pedir conversando</span><span className="text-[13px] leading-snug text-sol-texto2">Escreva ou mande um áudio no chat e a Sol pergunta o que faltar.</span></span>
           <ChevronRight size={20} className="flex-none self-center text-sol-texto2" />
         </Link>
-        <p className="m-0 text-xs text-sol-texto2">{cota}</p>
+        {cota && <p className="m-0 text-xs text-sol-texto2">{cota}</p>}
       </div>
     </div>
   );
