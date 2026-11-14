@@ -370,7 +370,7 @@ Script SQL: `prisma/manual-sql/0004_avisos_da_guia.sql`. Excluir a conta apaga a
 
 ## Simulações de roteiro e PDF novo (2026-11-14) — pedido do fundador: "quero que esses roteiros sejam top"
 
-Foram gerados roteiros de verdade (IA e Google reais, na cópia de teste, com contas falsas apagadas no fim) em 12 cenários: família em João Pessoa, casal no Rio, negócios em São Paulo, segunda-feira em Campina Grande, meio dia em Salvador, aventura em Bonito-MS, casal com cachorro em Recife, cidade pequena (Bananeiras), 5 dias em Natal, Lisboa, bares em Belo Horizonte e Gramado. Um analisador automático (`pw/simular.mjs`) confere cada roteiro: dias e paradas, horário de funcionamento, tempo entre paradas, refeições, repetições, deslocamento, volta. Seis rodadas; a cada rodada, o que apareceu foi corrigido no código.
+Foram gerados roteiros de verdade (IA e Google reais, na cópia de teste, com contas falsas apagadas no fim) em 12 cenários: família em João Pessoa, casal no Rio, negócios em São Paulo, segunda-feira em Campina Grande, meio dia em Salvador, aventura em Bonito-MS, casal com cachorro em Recife, cidade pequena (Bananeiras), 5 dias em Natal, Lisboa, bares em Belo Horizonte e Gramado. Um analisador automático (`pw/simular.mjs`) confere cada roteiro: dias e paradas, horário de funcionamento, tempo entre paradas, refeições, repetições, deslocamento, volta. Oito rodadas; a cada rodada, o que apareceu foi corrigido no código.
 
 **O que foi achado e corrigido (bot)**
 - **Roteiro só com a saudação, sem nenhum dia**: a resposta da IA vem em pedaços e só o primeiro era lido. Agora junta todos; roteiro com menos dias do que as datas da viagem é gerado de novo; roteiro que vem repetido (4 dias para 2 datas) fica só com a primeira cópia; introdução repetida fica só com uma (`limparIntroducao`).
@@ -386,6 +386,9 @@ Foram gerados roteiros de verdade (IA e Google reais, na cópia de teste, com co
 - **Horário vazio de mais de 3 horas** no meio do dia, ou dia que acaba sem jantar (menos o último): a Sol pede um lugar para encaixar, confere no Google Maps e só deixa se estiver aberto; duas tentativas (`preencherVazios`).
 - **Tempo que não fecha**: se o tempo no local passa do que existe até a próxima parada, encurta até 30 min; mais que isso, a próxima parada vai para mais tarde, se couber (`fecharTempos`). Passeio de 4 horas não é encurtado.
 - **Volta de avião ou ônibus sem falar do aeroporto/rodoviária**: entra a parada "Ida para o aeroporto" (3 h antes do voo; 2 h antes do ônibus).
+- **Último dia**: parada que começa em cima ou depois da hora de voltar sai (avião: 3 h antes do voo; ônibus: 2 h antes) (`cortarDepoisDaVolta`).
+- **Trava de segurança**: os ajustes nunca podem mudar o número de dias do roteiro; se mudar, vale o texto de antes da conferência e o erro vai para os logs.
+- **Resultado**: 15 problemas graves em 12 roteiros na primeira rodada; nas últimas, 10 de 12 roteiros sem nenhum problema grave. A IA varia a cada geração, por isso as regras ficam no código, depois de gerar.
 - **Viagem de negócios**: quem decide quais paradas trocar agora é o código (pelo menos metade das paradas do horário comercial, fora refeições, precisa ser de negócios); a resposta da IA fora do formato é aproveitada (`acertarCabecalho`).
 - **Parada sem link do mapa** ganha um (nome + cidade).
 - As consultas ao Google ficam 3 minutos na memória do processo, só para a conferência não pagar a mesma consulta várias vezes seguidas. Nada do Google vai para o banco.
