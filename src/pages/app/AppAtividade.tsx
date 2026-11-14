@@ -97,7 +97,7 @@ export default function AppAtividade() {
       if (!r.ok || !j?.rawItinerary) { setAviso({ tom: "erro", texto: j?.error ?? "Não consegui trocar agora. Tente de novo." }); setTrocando("fechado"); return; }
       atualizarRoteiroGuardado(id, { texto: j.rawItinerary });
       setTrocando("fechado");
-      setAviso({ tom: "ok", texto: `Trocado por ${j.nova || "outra opção"}. O PDF antigo continua com a atividade anterior.` });
+      setAviso({ tom: "ok", texto: `Trocado por ${j.nova || "outra opção"}. O PDF do roteiro é refeito em uns 2 minutos.` });
       window.scrollTo(0, 0);
     } catch {
       setAviso({ tom: "erro", texto: "Sem conexão. Tente de novo." }); setTrocando("fechado");
