@@ -6,6 +6,7 @@ import { Aviso, TopBar, btnPrimario, btnSecundario, cartao } from "@/components/
 import { posicaoAtual } from "@/lib/geo";
 import { VERSAO_LOCALIZACAO, abrirAjustesLocalizacao, pedirPermissaoNativa, useLocalizacaoEmUso } from "@/lib/localizacao";
 import { ehNativo } from "@/lib/nativo";
+import AvisosNoCelular from "@/components/app/AvisosNoCelular";
 import { abrirAjustesDeLocalizacaoDoCelular, explicarSemPosicao, motivoSemPosicao, podeAbrirAjustesDoCelular, type MotivoSemPosicao } from "@/lib/gps";
 
 // Consentimento da localização durante a viagem (finalidades determinadas,
@@ -100,6 +101,7 @@ export default function AppLocalizacao() {
           </>
         )}
         </div>
+        <AvisosNoCelular compacto />
         <p className="m-0 text-[11px] text-sol-texto2">Texto provisório: a versão final, com o prazo de guarda dos dados, depende da revisão jurídica.</p>
       </div>
     </div>

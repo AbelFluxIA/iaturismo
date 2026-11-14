@@ -31,7 +31,8 @@ export default defineConfig(({ mode }) => ({
         // "Atualizar" não tinha quem trocar na primeira abertura do app)
         clientsClaim: true,
         // Passagem do app antigo (sem botão "Atualizar") para o atual
-        importScripts: ["/sol-sw-versao.js"],
+        // sol-push.js: notificações no celular (push) e o toque nelas
+        importScripts: ["/sol-sw-versao.js", "/sol-push.js"],
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
