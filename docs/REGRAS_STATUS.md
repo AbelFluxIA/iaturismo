@@ -356,3 +356,14 @@ Limites conhecidos: perfil de Negócios ainda mistura passeio turístico mais do
 **Não feito ainda**: notificação no celular com o app fechado (precisa de conta Firebase para o Android e de configuração de push para o PWA); resumo da manhã como mensagem; alertas oficiais do INMET (o endereço público não respondeu a partir deste servidor em 13/11).
 
 Script SQL: `prisma/manual-sql/0004_avisos_da_guia.sql`. Excluir a conta apaga avaliações e avisos da pessoa.
+
+## Pendências resolvidas e ajustes depois do roteiro de Foz (2026-11-14)
+
+- **Alerta oficial do INMET** (`inmet.service.ts`, fonte `apiprevmet3.inmet.gov.br/avisos/ativos`): vira aviso para quem está em viagem com a Guia na cidade atingida, com o texto de risco e instrução do próprio INMET. Sem alerta oficial, vale a regra de previsão (tempestade ou chuva forte).
+- **Resumo da manhã**: aviso "Bom dia! Seu dia em [cidade]" (tempo, primeira parada, eventos), criado só entre 7h e 11h59.
+- **Envio ao celular** (`enviarAvisosPendentes`, a cada 30 min, 8h–21h, até 3 por dia): agora **ligado**, separado da trava dos envios diários (`AVISOS_WHATSAPP=false` desliga). Quem ligou as notificações do app recebe por lá; quem não ligou recebe pelo WhatsApp se conversou nas últimas 24 h.
+- **Notificações do PWA (web push)**: `push.service.ts`, tabela `sol_push`, chaves `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` no `.env` do bot, `public/sol-push.js` no service worker, cartão "Avisos no celular" no Início (Guia) e liga/desliga em Localização. Funciona no Chrome do Android e no iPhone com o app na tela inicial (iOS 16.4+). **Não funciona no app Android das lojas** (precisa do Firebase). Testado até a notificação aparecer pelo service worker; a entrega real pelo Google/Apple falta confirmar num celular.
+- **PDF refeito depois de trocar atividade**: 90 s depois da última troca, em segundo plano; o link público `/r/código` continua o mesmo e passa a apontar para o PDF novo.
+- **Viagem de negócios**: segunda passada (`reforcarNegocios`) troca paradas turísticas do horário comercial por lugares de negócios, só em dia útil. Centro de convenções só entra com evento confirmado.
+- **Achados no roteiro de Foz do fundador (14/11) e corrigidos**: (1) a posição do celular só serve de ponto de partida se a pessoa já está a até 80 km do destino (saía "3900 min de carro de onde você está" para quem pediu de casa); (2) a parada precisa caber no horário escrito na linha 🕒: antes da última entrada e com 45 min antes de fechar (`cabeNoHorarioEscrito`; as Cataratas tinham ido para as 17h com última entrada às 16h); (3) voo passa a reservar 3 h, não 5 h; (4) quando o ponto do mapa de um parque grande dá uma distância absurda, fica a estimativa da IA.
+- **Cuidado com os testes antigos** `pw/atualizar.mjs` e `pw/transicao.mjs`: eles reescrevem `index.html` e apagam `dist` do projeto. Depois de rodar, conferir `git status` e restaurar.
