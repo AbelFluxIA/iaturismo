@@ -21,6 +21,9 @@ function formatar(texto: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
+    // Mensagens antigas vieram em Markdown ("**nome**", "*   item"): vira negrito e marcador, sem asterisco sobrando
+    .replace(/^[ \t]*[*-][ \t]+(?=\S)/gm, "• ")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<strong>$1</strong>")
     .replace(/\n/g, "<br/>");
 }
@@ -47,13 +50,13 @@ function limparUrl(bruta: string) {
   return url;
 }
 
-function classificar(url: string): Botao {
+function classificar(url: string, lugar?: string): Botao {
   const roteiro = url.match(/\/r\/([0-9a-f-]{8,})/i);
   if (roteiro) return { tipo: "interno", para: `/app/roteiro?codigo=${roteiro[1]}`, rotulo: "Abrir o roteiro no app", icone: "roteiro" };
   if (/\/mural\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/mural", rotulo: "Ver meu mural", icone: "mural" };
   if (/\/stats\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/creditos", rotulo: "Ver minha conta", icone: "conta" };
   if (/\.pdf(\?|$)/i.test(url) || /travel-pdfs/.test(url)) return { tipo: "externo", url, rotulo: "Baixar o PDF do roteiro", icone: "pdf" };
-  if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/.test(url)) return { tipo: "externo", url, rotulo: "Abrir no mapa", icone: "mapa" };
+  if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/.test(url)) return { tipo: "externo", url, rotulo: lugar ? `Mapa: ${lugar}` : "Abrir no mapa", icone: "mapa" };
   if (/abacatepay\.com/.test(url)) return { tipo: "externo", url, rotulo: "Pagar e liberar", icone: "pagar" };
   if (/wa\.me\/.*ref(%3A|:)/i.test(url)) return { tipo: "compartilhar", url, rotulo: "Compartilhar meu link de indicação", icone: "indicar" };
   let host = "link";
@@ -71,18 +74,47 @@ async function compartilhar(url: string) {
 // Fotos (do cliente, imagem para stories) aparecem como imagem na conversa
 const IMAGEM_RE = /\.(jpe?g|png|webp|gif)(\?|$)/i;
 
+// Nome do lugar de um link do mapa: o último nome em negrito escrito antes do link, na mesma linha
+// ("*Restaurante X*: ... localização aqui: LINK"); sem isso, o que está na busca do próprio link.
+// Com vários links na mesma resposta, cada botão diz de que lugar é (antes eram três "Abrir no mapa" iguais).
+function nomeDoLugar(antes: string, url: string): string | undefined {
+  const linha = antes.slice(antes.lastIndexOf("\n") + 1);
+  const negritos = [...linha.matchAll(/\*{1,2}(\S[^*\n]{1,59}?)\*{1,2}/g)].map((m) => m[1].trim()).filter((n) => !/:$/.test(n));
+  let nome = negritos.pop();
+  if (!nome) {
+    try { nome = new URL(url).searchParams.get("query")?.replace(/\+/g, " ").trim() || undefined; } catch { /* link curto: sem nome */ }
+  }
+  return nome ? (nome.length > 38 ? `${nome.slice(0, 37).trim()}…` : nome) : undefined;
+}
+
+// Frase que só apontava para o link ("Você pode ver a localização aqui:") perde o sentido quando o link vira botão
+const APONTA_PARA_O_LINK = /[ \t]*(?:(?:Você pode|Voce pode|Veja|Confira|Acesse|Abra|Olha|Segue|Aqui está)[^.!?\n:]{0,60}:|(?:Localização|Mapa|Link|Como chegar)[^.!?\n:]{0,20}:)[ \t]*$/i;
+
 function separar(conteudo: string) {
   const imagens: string[] = [];
-  const urls: string[] = [];
-  const semLinks = conteudo.replace(URL_RE, (bruta) => {
-    const url = limparUrl(bruta);
+  const botoes: Botao[] = [];
+  let semLinks = "";
+  let fim = 0;
+  for (const m of conteudo.matchAll(URL_RE)) {
+    const url = limparUrl(m[0]);
+    let antes = conteudo.slice(fim, m.index);
     // Só vira <img> se for foto nossa (armazenamento do Supabase); link de fora fica como link
-    (IMAGEM_RE.test(url) && /^https:\/\/[^/]+\.supabase\.co\//i.test(url) ? imagens : urls).push(url);
-    return bruta.slice(url.length); // devolve só a pontuação que não era do link
-  });
+    if (IMAGEM_RE.test(url) && /^https:\/\/[^/]+\.supabase\.co\//i.test(url)) imagens.push(url);
+    else {
+      const ehMapa = /google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/.test(url);
+      botoes.push(classificar(url, ehMapa ? nomeDoLugar(semLinks + antes, url) : undefined));
+      antes = antes.replace(APONTA_PARA_O_LINK, "");
+    }
+    semLinks += antes + m[0].slice(url.length); // devolve só a pontuação que não era do link
+    fim = (m.index ?? 0) + m[0].length;
+  }
+  semLinks += conteudo.slice(fim);
   let texto = semLinks.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   if (imagens.length > 0 && texto === "📷 Foto") texto = "";
-  return { texto, imagens, botoes: urls.map(classificar) };
+  // Dois botões de mapa sem nome ficam numerados
+  const semNome = botoes.filter((b) => b.rotulo === "Abrir no mapa");
+  if (semNome.length > 1) semNome.forEach((b, i) => { b.rotulo = `Abrir no mapa (${i + 1})`; });
+  return { texto, imagens, botoes };
 }
 
 const ICONES = { pdf: FileText, mapa: MapPin, link: ExternalLink, pagar: CreditCard, roteiro: MapIcon, mural: ImageIcon, conta: Gift, indicar: Share2 };

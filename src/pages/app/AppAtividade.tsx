@@ -7,7 +7,21 @@ import { FotoParada, localDaParada } from "@/components/app/FotoParada";
 import { atualizarRoteiroGuardado, useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
 import { Carregando, TopBar, Vazio, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
 import { queryDoMapa } from "@/lib/geo";
-import { chaveAtividade, parseItinerary, rotuloDia } from "@/lib/roteiro";
+import { chaveAtividade, horaInicio, parseItinerary, rotuloDia } from "@/lib/roteiro";
+
+// "11:00–00:00", "11:30–15:00, 18:00–23:00", "Fechado", "Aberto 24 horas" (horário de HOJE no Google Maps):
+// o lugar está aberto no minuto pedido? Devolve também a que horas abre depois dele. null = não deu para saber.
+function abertoNoHorario(horarioHoje: string, minuto: number): { aberto: boolean; abre: string | null } | null {
+  if (/24\s*h/i.test(horarioHoje)) return { aberto: true, abre: null };
+  const faixas = [...horarioHoje.matchAll(/(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/g)].map((m) => {
+    const de = Number(m[1]) * 60 + Number(m[2]); let ate = Number(m[3]) * 60 + Number(m[4]);
+    if (ate <= de) ate += 1440; // vira a meia-noite
+    return { de, ate, rotulo: `${m[1].padStart(2, "0")}:${m[2]}` };
+  });
+  if (!faixas.length) return /fechad/i.test(horarioHoje) ? { aberto: false, abre: null } : null;
+  if (faixas.some((f) => minuto >= f.de && minuto < f.ate)) return { aberto: true, abre: null };
+  return { aberto: false, abre: faixas.filter((f) => f.de > minuto).sort((x, y) => x.de - y.de)[0]?.rotulo ?? null };
+}
 
 // Detalhe de uma atividade do roteiro: horário, local, deslocamento e o que a
 // Sol escreveu sobre ela. /app/roteiro/atividade?id=VIAGEM&d=DIA&a=ATIVIDADE
@@ -24,6 +38,7 @@ export default function AppAtividade() {
   // Troca desta atividade por outra (Guia Sol) e "gostei / não gostei"
   const [trocando, setTrocando] = useState<"fechado" | "motivo" | "enviando">("fechado");
   const [aviso, setAviso] = useState<{ tom: "ok" | "erro"; texto: string } | null>(null);
+  const [motivoDaTroca, setMotivoDaTroca] = useState("");
   // Aberto agora, horário de hoje e nota: direto do Google Maps, na hora (não fica guardado)
   const [aoVivo, setAoVivo] = useState<{ fechadoDeVez: boolean; abertoAgora: boolean | null; horarioHoje: string | null; nota: number | null; avaliacoes: number | null; mapsUrl: string | null } | null>(null);
   const nomeDaAtividade = dados ? parseItinerary(dados.texto)[d]?.activities[a]?.name ?? "" : "";
@@ -88,9 +103,24 @@ export default function AppAtividade() {
       setAviso({ tom: "erro", texto: "Não consegui salvar sua avaliação. Tente de novo." });
     }
   }
+  // A parada é HOJE e, pelo horário de hoje no Google Maps, o lugar não está aberto na hora marcada?
+  const hora = horaInicio(atv);
+  const mHora = hora.match(/^(\d{1,2}):(\d{2})/);
+  const minutoDaParada = mHora ? Number(mHora[1]) * 60 + Number(mHora[2]) : null;
+  const hojeISO = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const ehHoje = !!chegada && new Date(Date.parse(`${chegada}T12:00:00Z`) + d * 86400000).toISOString().slice(0, 10) === hojeISO;
+  const hojeNoGoogle = ehHoje && minutoDaParada !== null && aoVivo?.horarioHoje ? abertoNoHorario(aoVivo.horarioHoje, minutoDaParada) : null;
+  const achouNoGoogle = !!aoVivo && (aoVivo.abertoAgora !== null || !!aoVivo.horarioHoje || aoVivo.nota !== null || aoVivo.fechadoDeVez);
+  // Fechado: de vez no Google; ou hoje fora do horário; ou o roteiro (ou o aviso da Guia) já dizia e o Google de agora não desmente
+  const fechadoNaHora = !!aoVivo?.fechadoDeVez || hojeNoGoogle?.aberto === false
+    || ((atv.checked === "fechado" || params.get("fechado") === "1") && hojeNoGoogle?.aberto !== true);
+  const avisoDeFechado = aoVivo?.fechadoDeVez ? "Este lugar consta como fechado no Google Maps."
+    : hojeNoGoogle?.aberto === false ? `Pelo Google Maps, este lugar não está aberto hoje às ${hora}${hojeNoGoogle.abre ? ` (abre às ${hojeNoGoogle.abre})` : ""}.`
+    : `Na conferência, este lugar constava como fechado às ${hora}.`;
+
   async function trocar(motivo: string) {
     if (!id) return;
-    setTrocando("enviando"); setAviso(null);
+    setTrocando("enviando"); setAviso(null); setMotivoDaTroca(motivo);
     try {
       const r = await fetch(`${API_URL}/api/app/roteiro/trocar`, { method: "POST", headers: cab, body: JSON.stringify({ id, dia: d, indice: a, nome: atv.name, motivo }) });
       const j = await r.json().catch(() => null);
@@ -133,12 +163,19 @@ export default function AppAtividade() {
           )}
         </dl>
 
-        {atv.checked === "ok" && (
+        {fechadoNaHora && (
+          <p role="alert" className="m-0 flex items-start gap-2 px-3.5 py-2.5 rounded-[14px] bg-sol-atencao border border-sol-atencao-borda text-sol-atencao-texto text-[13px] font-semibold">
+            <TriangleAlert size={18} className="flex-none mt-px" />
+            <span>{avisoDeFechado} {id && profile?.hasCompanion ? "Toque em Trocar: a Sol põe no lugar uma opção aberta nesse horário." : "Confirme antes de ir."}</span>
+          </p>
+        )}
+        {atv.checked === "ok" && !fechadoNaHora && (
           <p className="m-0 flex items-start gap-2 px-3.5 py-2.5 rounded-[14px] bg-sol-ok-claro text-sol-ok-texto text-[13px] font-semibold">
             <BadgeCheck size={18} className="flex-none mt-px" /> Conferido no Google Maps quando o roteiro foi gerado: o lugar existe e abre neste dia e horário.
           </p>
         )}
-        {atv.checked === "aviso" && (
+        {/* "Não consegui conferir" só quando o Google de agora também não tem o lugar (antes aparecia junto com a nota e o horário do próprio Google) */}
+        {atv.checked === "aviso" && !fechadoNaHora && !achouNoGoogle && (
           <p className="m-0 flex items-start gap-2 px-3.5 py-2.5 rounded-[14px] bg-sol-atencao border border-sol-atencao-borda text-sol-atencao-texto text-[13px] font-semibold">
             <TriangleAlert size={18} className="flex-none mt-px" /> Não consegui conferir este lugar no Google Maps. Confirme o funcionamento antes de ir.
           </p>
@@ -192,7 +229,7 @@ export default function AppAtividade() {
           )}
           {/* Trocar a atividade é da Guia Sol (RA-ROT-07): com a Guia, troca na hora, sem gerar tudo de novo */}
           {!id ? null : profile?.hasCompanion ? (
-            <button type="button" disabled={trocando === "enviando"} onClick={() => setTrocando(trocando === "motivo" ? "fechado" : "motivo")} className={btnSecundario}>
+            <button type="button" disabled={trocando === "enviando"} onClick={() => (fechadoNaHora ? trocar("fechado") : setTrocando(trocando === "motivo" ? "fechado" : "motivo"))} className={btnSecundario}>
               <RefreshCw size={18} className={trocando === "enviando" ? "animate-spin" : ""} /> {trocando === "enviando" ? "Trocando…" : "Trocar"}
             </button>
           ) : (
@@ -206,14 +243,14 @@ export default function AppAtividade() {
           <section className={`${cartao} flex flex-col gap-2 p-4`} aria-label="Por que trocar">
             <h2 className="m-0 text-[15px] font-extrabold">Por que você quer trocar?</h2>
             <div className="flex flex-wrap gap-2">
-              {([["ja-conheco", "Já conheço"], ["caro", "Achei caro"], ["nao-gosto", "Não é meu estilo"], ["longe", "Fica longe"], ["coberto", "Quero lugar coberto"], ["outro", "Só quero outra opção"]] as const).map(([v, rot]) => (
+              {([["fechado", "Vai estar fechado"], ["ja-conheco", "Já conheço"], ["caro", "Achei caro"], ["nao-gosto", "Não é meu estilo"], ["longe", "Fica longe"], ["coberto", "Quero lugar coberto"], ["outro", "Só quero outra opção"]] as const).map(([v, rot]) => (
                 <button key={v} type="button" onClick={() => trocar(v)} className="min-h-[44px] px-3.5 rounded-full border-[1.5px] border-sol-borda bg-white text-sm font-bold text-sol-fundo">{rot}</button>
               ))}
             </div>
             <span className="text-xs text-sol-texto2">A Sol põe outro lugar no mesmo horário e confere no Google Maps. Leva uns 20 segundos.</span>
           </section>
         )}
-        {trocando === "enviando" && <p role="status" className="m-0 text-sm text-sol-texto2">Procurando outra opção e conferindo no Google Maps…</p>}
+        {trocando === "enviando" && <p role="status" className="m-0 text-sm text-sol-texto2">{motivoDaTroca === "fechado" ? "Trocando porque o lugar vai estar fechado nesse horário. Procurando uma opção aberta e conferindo no Google Maps…" : "Procurando outra opção e conferindo no Google Maps…"}</p>}
 
         {id && (
           <div className={`${cartao} flex items-center gap-2 px-4 py-2.5`}>

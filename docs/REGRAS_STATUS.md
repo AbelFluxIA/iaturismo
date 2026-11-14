@@ -400,3 +400,21 @@ Foram gerados roteiros de verdade (IA e Google reais, na cópia de teste, com co
 **O que ainda aparece às vezes (limite conhecido)**
 - No fim da tarde (16h–17h) muita atração já fechou; quando a Sol não acha um lugar aberto para encaixar, o intervalo fica vazio em vez de mandar a pessoa a um lugar fechado.
 - Cidades pequenas têm menos lugares com horário cadastrado no Google: aparecem mais paradas com "Confirme o funcionamento antes de ir".
+
+## Relatos do David de 14/11 (4 áudios e 12 fotos) — corrigidos no mesmo dia
+
+Material na pasta "Bugs - Sol" do Drive. Teste que reproduz tudo: `pw/david3.mjs` (22 verificações, servidor, IA e Google de verdade).
+
+- **Trocar atividade que vai estar fechada** (áudios 1 e 2): o app perguntava "por que você quer trocar?" mesmo vindo do aviso de lugar fechado. Agora, quando o lugar consta fechado no horário da parada (pelo horário de hoje no Google Maps, pela conferência do roteiro ou pelo aviso da Guia), a tela diz isso ("não está aberto hoje às 10:15, abre às 11:00") e **Trocar já troca**, com o motivo "fechado" (a nova parada precisa estar aberta nesse dia e horário). Nos outros casos a pergunta continua, com a opção nova "Vai estar fechado".
+- **"Não consegui conferir este lugar no Google Maps"** aparecia junto com a nota e o horário do próprio Google. Agora só aparece quando o Google de agora também não tem o lugar.
+- **Aviso continuava depois da troca** (áudio 3): ao trocar a atividade, o aviso "não abre hoje" da parada que saiu é encerrado.
+- **Alerta de tempo sumia** (áudio 4): a notificação do alerta do INMET chegava, mas o Início escondia os avisos de clima quando havia viagem. Agora o Início mostra todos; a notificação abre `/app?aviso=a<id>` e esse aviso vem primeiro, já aberto. Com o app aberto no iPhone, o service worker pede ao app para trocar de tela (lá ele não consegue navegar a janela). O cartão de previsão de chuva some quando já há aviso de tempo da Guia.
+- **Avisos só com o título** no Início: o toque abre o texto e o link. Aparecem 3 títulos e "Ver mais".
+- **Evento que não existe**: a IA inventou o endereço da fonte (Sympla com número inventado, erro 404). Agora a fonte de cada evento é aberta pelo servidor e precisa responder e citar o evento (`fonteConfere`, em `eventos.service.ts`); sem isso o evento não entra, nem no roteiro nem nos avisos. O servidor só abre endereços públicos (nunca endereço interno).
+- **"Perto de você agora"** foi para o fim do Início.
+- **Conversa**: botões do mapa passam a ter o nome do lugar ("Mapa: Restaurante X"; antes eram vários "Abrir no mapa" iguais); a frase solta "veja a localização aqui:" sai; respostas em Markdown ("**nome**", "*   item") viram negrito e marcador, no app e no WhatsApp (`formato.ts`).
+- **Tela passando por baixo do relógio do iPhone** (app na tela inicial): faixa fixa com a cor do fundo na área da barra do topo (`index.css`). **Precisa ser conferido num iPhone de verdade**: não dá para simular essa barra nos testes.
+- **Foto de destino em colagem** (Bombinhas): colagem, imagem de satélite e afins não servem mais como foto; entra a primeira foto comum do artigo.
+- **"Roteiros grátis durante o teste"**: sim, é a mensagem de enquanto o app está em fase de teste (`DEMO_FREE_MODE`). O texto ficou "Roteiros grátis enquanto o app está em fase de teste."
+- **Captura de tela do botão de bugs não funciona no iPhone**: o botão é da Central de Bugs (projeto separado) e usa um recurso do navegador que o iPhone não oferece (`getDisplayMedia`). No iPhone, tirar o print normal e anexar a imagem. Ajuste a fazer na Central de Bugs: esconder o botão de captura onde não há suporte.
+- **Boa notícia nos registros**: a notificação do app (PWA) chegou no iPhone do David às 08:07 de 14/11. O envio pelo celular está confirmado em aparelho real.

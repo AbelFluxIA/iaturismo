@@ -159,6 +159,7 @@ export default function AppDashboard() {
   const { profile, profileLoading, name } = useClientAuth();
   const { viagens, atual } = useViagens();
   const localizacaoEmUso = useLocalizacaoEmUso();
+  const [temAvisoDeClima, setTemAvisoDeClima] = useState(false);
 
   if ((profileLoading && !profile) || viagens === null) return <Carregando />;
 
@@ -186,9 +187,10 @@ export default function AppDashboard() {
         )}
       </header>
 
-      {atual && <AlertaChuva viagem={atual} />}
-      {/* Comunicados da equipe e avisos da Guia (evento hoje, parada fechada) */}
-      <AvisosDaSol semClima={!!atual} />
+      {/* Com aviso de tempo da Guia (INMET, tempestade), o cartão de previsão de chuva não repete o assunto */}
+      {atual && !temAvisoDeClima && <AlertaChuva viagem={atual} />}
+      {/* Comunicados da equipe e avisos da Guia (alerta de tempo, evento hoje, parada fechada) */}
+      <AvisosDaSol aoCarregar={setTemAvisoDeClima} />
       <AvisosNoCelular />
 
       <nav aria-label="Atalhos" className="grid grid-cols-3 gap-2">
@@ -204,8 +206,6 @@ export default function AppDashboard() {
           </Link>
         ))}
       </nav>
-
-      <PertoDeVoce />
 
       {atual ? (
         <CartaoViagem viagem={atual} />
@@ -256,6 +256,9 @@ export default function AppDashboard() {
       <MuralDeViagens />
 
       <ParaOndeIr />
+
+      {/* Lugares perto de onde a pessoa está: no fim do Início (pedido de quem testou) */}
+      <PertoDeVoce />
     </div>
   );
 }

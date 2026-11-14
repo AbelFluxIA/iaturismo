@@ -164,7 +164,7 @@ export default function AppCriar() {
   const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
   const valorTexto = reais(diasPagos * precoDia);
   const cota = gratis
-    ? "Roteiros grátis durante o teste."
+    ? "Roteiros grátis enquanto o app está em fase de teste."
     : comGuia
       ? `Com a Guia: até ${regras?.guiaRoteirosSemana ?? 30} roteiros por semana, sem cobrança por dia.`
       : `Sem a Guia: ${regras?.roteirosGratisSemana ?? 2} roteiros grátis por semana, 1 dia cada. Cada dia a mais custa R$ ${(regras?.diaRoteiroPreco ?? 4.9).toFixed(2).replace(".", ",")}.`;

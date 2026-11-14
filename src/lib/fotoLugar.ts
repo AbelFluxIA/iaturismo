@@ -18,9 +18,10 @@ export const UFS: Record<string, string> = {
   RO: "Rondônia", RR: "Roraima", SC: "Santa Catarina", SP: "São Paulo", SE: "Sergipe", TO: "Tocantins",
 };
 
-const CHAVE = "sol_fotos_lugar_v1";
+const CHAVE = "sol_fotos_lugar_v2"; // v2: colagens deixaram de valer (14/11)
 const VALIDADE_MS = 30 * 24 * 60 * 60 * 1000;
-const NAO_E_FOTO = /\.svg$|bandeira|bras[aã]o|flag|coat|mapa|map[_ ]|locali[zs]a|locator|selo|logo/i;
+// Colagem de várias fotos (comum como imagem principal do artigo) fica cortada no cartão: também não serve
+const NAO_E_FOTO = /\.svg$|bandeira|bras[aã]o|flag|coat|mapa|map[_ ]|locali[zs]a|locator|selo|logo|colagem|collage|montagem|montage|mosaico|landsat|sat[eé]lite|satellite|\.(gif|ogv|webm|pdf|tiff?)$/i;
 
 const normalizar = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const semHtml = (s: string) => new DOMParser().parseFromString(s, "text/html").body.textContent?.trim() ?? "";
@@ -39,15 +40,18 @@ async function api(host: string, params: Record<string, string>) {
 
 async function buscar(nome: string, uf: string): Promise<FotoLugar | null> {
   const busca = await api("pt.wikipedia.org", {
-    action: "query", generator: "search", gsrsearch: `${nome} ${UFS[uf] ?? uf}`.trim(), gsrlimit: "1", prop: "pageimages", piprop: "name",
+    action: "query", generator: "search", gsrsearch: `${nome} ${UFS[uf] ?? uf}`.trim(), gsrlimit: "1", prop: "pageimages|images", piprop: "name", imlimit: "40",
   });
-  const pagina = Object.values(busca?.query?.pages ?? {})[0] as { title?: string; pageimage?: string } | undefined;
+  const pagina = Object.values(busca?.query?.pages ?? {})[0] as { title?: string; pageimage?: string; images?: { title?: string }[] } | undefined;
   // O artigo achado precisa ser do lugar pedido (ex.: "Conde (Paraíba)" para "Conde")
-  if (!pagina?.title || !pagina.pageimage || !normalizar(pagina.title).startsWith(normalizar(nome))) return null;
-  if (NAO_E_FOTO.test(pagina.pageimage)) return null;
+  if (!pagina?.title || !normalizar(pagina.title).startsWith(normalizar(nome))) return null;
+  // A foto principal; se ela não servir (colagem, bandeira, mapa), a primeira foto comum do artigo
+  const outras = (pagina.images ?? []).map((i) => (i.title ?? "").replace(/^[^:]+:/, "")).filter((n) => /\.(jpe?g|png|webp)$/i.test(n));
+  const escolhida = [pagina.pageimage, ...outras].find((n): n is string => !!n && !NAO_E_FOTO.test(n));
+  if (!escolhida) return null;
 
   const info = await api("commons.wikimedia.org", {
-    action: "query", titles: `File:${pagina.pageimage}`, prop: "imageinfo", iiprop: "url|extmetadata", iiurlwidth: "640",
+    action: "query", titles: `File:${escolhida}`, prop: "imageinfo", iiprop: "url|extmetadata", iiurlwidth: "640",
     iiextmetadatafilter: "Artist|LicenseShortName",
   });
   const arquivo = Object.values(info?.query?.pages ?? {})[0] as { imageinfo?: { thumburl?: string; descriptionurl?: string; extmetadata?: Record<string, { value: string }> }[] } | undefined;

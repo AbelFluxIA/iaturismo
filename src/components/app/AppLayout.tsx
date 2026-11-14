@@ -134,6 +134,16 @@ export default function AppLayout() {
     if (navRef.current) obs.observe(navRef.current);
     return () => obs.disconnect();
   }, [isDemo]);
+  // Toque numa notificação com o app já aberto: o service worker manda a tela a abrir (sempre dentro de /app)
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const ouvir = (e: MessageEvent) => {
+      const link = e.data?.solAbrir;
+      if (typeof link === "string" && link.startsWith("/app")) navigate(link);
+    };
+    navigator.serviceWorker.addEventListener("message", ouvir);
+    return () => navigator.serviceWorker.removeEventListener("message", ouvir);
+  }, [navigate]);
   const variaveis = { "--sol-topo": `${medidas.topo}px`, "--sol-nav": `${medidas.nav}px` } as CSSProperties;
 
   // Cadastro em etapas ainda não concluído (o perfil do bot novo traz "cadastro")

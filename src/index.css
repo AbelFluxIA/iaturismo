@@ -99,6 +99,23 @@
     font-family: "Playfair Display", Georgia, serif;
   }
 
+  /* iPhone com o app na tela inicial: ao rolar, o conteúdo passava por baixo do relógio e da bateria
+     (a barra do topo é transparente). Esta faixa fixa fica logo acima da página, na área da barra, com a
+     cor do fundo. Em navegador comum e no Android ela fica fora da tela e não muda nada. */
+  @media (display-mode: standalone) {
+    body::before {
+      content: "";
+      position: fixed;
+      top: -120px;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: #FBF7F0;
+      z-index: 2147483000;
+      pointer-events: none;
+    }
+  }
+
   /* App do cliente: títulos seguem a fonte do app (Figtree), não a serifada do painel.
      Classes como font-display continuam valendo (vêm depois, na camada de utilitários). */
   .font-corpo :where(h1, h2, h3, h4, h5, h6) {

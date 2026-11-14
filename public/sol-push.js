@@ -23,7 +23,11 @@ self.addEventListener("notificationclick", (evento) => {
     for (const c of abertas) {
       if (new URL(c.url).origin === self.location.origin && "focus" in c) {
         await c.focus();
-        if ("navigate" in c) { try { await c.navigate(link); } catch (e) { /* segue com a tela que estava */ } }
+        // Onde o service worker consegue navegar a janela (Android), navega; onde não consegue ou falha
+        // (iPhone), pede ao app aberto para trocar de tela por dentro.
+        let navegou = false;
+        if ("navigate" in c) { try { await c.navigate(link); navegou = true; } catch (e) { navegou = false; } }
+        if (!navegou) { try { c.postMessage({ solAbrir: link }); } catch (e) { /* segue com a tela que estava */ } }
         return;
       }
     }

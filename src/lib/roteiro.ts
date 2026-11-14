@@ -15,7 +15,7 @@ export interface Activity {
   tip?: string;        // 💡 curiosidade
   event?: string;      // 🎫 evento (com a fonte)
   alert?: string;      // ⚠️ alerta da própria parada
-  checked?: "ok" | "aviso"; // ✅ conferido no Google Maps / ⚠️ não deu para conferir
+  checked?: "ok" | "aviso" | "fechado"; // ✅ conferido no Google Maps / ⚠️ não deu para conferir / ⚠️ consta fechado nesse horário
 }
 
 export interface Day {
@@ -81,7 +81,7 @@ export function parseItinerary(text: string): Day[] {
       if (line.startsWith("💡")) { currentActivity.tip = [currentActivity.tip, semRotulo(line)].filter(Boolean).join(" "); continue; }
       if (line.startsWith("🎫")) { currentActivity.event = semRotulo(line); continue; }
       if (line.startsWith("✅")) { currentActivity.checked = "ok"; continue; }
-      if (line.startsWith("⚠️")) { if (/Confirme o funcionamento/i.test(line)) currentActivity.checked = "aviso"; else currentActivity.alert = [currentActivity.alert, semRotulo(line)].filter(Boolean).join(" "); continue; }
+      if (line.startsWith("⚠️")) { if (/Confirme o funcionamento/i.test(line)) currentActivity.checked = /fechad/i.test(line) ? "fechado" : "aviso"; else currentActivity.alert = [currentActivity.alert, semRotulo(line)].filter(Boolean).join(" "); continue; }
     }
     if (line.startsWith("⚠️")) continue;
     // Início de parada: "Manhã (09:00): Nome". A Sol às vezes escreve "Almoço (12:30)"
