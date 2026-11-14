@@ -208,32 +208,60 @@ export interface PrevisaoDia {
   min: number;
   chuva: number; // probabilidade máxima de chuva (%)
   codigo: number; // código WMO
+  restoDoDia?: boolean; // hoje: vale de agora até o fim do dia (o que já passou não conta)
 }
 
-const prevCache = new Map<string, Promise<PrevisaoDia[] | null>>();
+// A previsão envelhece: guardada por 20 minutos (antes ficava a mesma enquanto o app estivesse aberto)
+const VALIDADE_PREVISAO_MS = 20 * 60 * 1000;
+// Qual código de tempo é "pior" (para resumir várias horas num só)
+const gravidade = (c: number) => (c >= 95 ? 4 : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) ? 3 : c >= 3 ? 2 : c >= 1 ? 1 : 0);
+
+const prevCache = new Map<string, { em: number; p: Promise<PrevisaoDia[] | null> }>();
 
 export function previsao(c: Coord, dias = 7): Promise<PrevisaoDia[] | null> {
   const chave = `${c.lat.toFixed(2)},${c.lng.toFixed(2)},${dias}`;
-  if (!prevCache.has(chave)) {
-    prevCache.set(chave, (async () => {
+  const guardada = prevCache.get(chave);
+  if (!guardada || Date.now() - guardada.em > VALIDADE_PREVISAO_MS) {
+    prevCache.set(chave, { em: Date.now(), p: (async () => {
       try {
         const r = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lng}` +
-          `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&timezone=America%2FSao_Paulo&forecast_days=${dias}`
+          `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode` +
+          `&current=temperature_2m&hourly=temperature_2m,precipitation_probability,weathercode&forecast_hours=24` +
+          `&timezone=America%2FSao_Paulo&forecast_days=${dias}`
         );
         if (!r.ok) return null;
         const d = await r.json();
-        return (d.daily?.time ?? []).map((t: string, i: number) => ({
+        const lista: PrevisaoDia[] = (d.daily?.time ?? []).map((t: string, i: number) => ({
           data: t,
           max: Math.round(d.daily.temperature_2m_max[i]),
           min: Math.round(d.daily.temperature_2m_min[i]),
           chuva: d.daily.precipitation_probability_max[i] ?? 0,
           codigo: d.daily.weathercode[i] ?? 0,
         }));
+        // HOJE: o resumo do dia inteiro inclui o que já passou (choveu de madrugada e a linha de hoje dizia
+        // "chuva" o dia todo, enquanto as próximas horas não tinham chuva nenhuma). A linha de hoje passa a
+        // valer de agora até o fim do dia, pelas mesmas horas que a tela mostra em "Próximas horas".
+        const agora: string = typeof d.current?.time === "string" ? d.current.time : "";
+        const hoje = agora.slice(0, 10);
+        const k = lista.findIndex((x) => x.data === hoje);
+        const horas: string[] = d.hourly?.time ?? [];
+        const restantes = horas.map((t, i) => ({ t, i })).filter(({ t }) => t.slice(0, 10) === hoje && t.slice(0, 13) >= agora.slice(0, 13));
+        if (k >= 0 && restantes.length) {
+          const codigos = restantes.map(({ i }) => Number(d.hourly.weathercode?.[i] ?? 0));
+          lista[k] = {
+            ...lista[k],
+            max: Math.round(Math.max(...restantes.map(({ i }) => Number(d.hourly.temperature_2m?.[i] ?? -99)), Number(d.current?.temperature_2m ?? -99))),
+            chuva: Math.max(...restantes.map(({ i }) => Number(d.hourly.precipitation_probability?.[i] ?? 0))),
+            codigo: codigos.reduce((pior, x) => (gravidade(x) > gravidade(pior) || (gravidade(x) === gravidade(pior) && x > pior) ? x : pior), codigos[0]),
+            restoDoDia: true,
+          };
+        }
+        return lista;
       } catch { return null; }
-    })());
+    })() });
   }
-  return prevCache.get(chave)!;
+  return prevCache.get(chave)!.p;
 }
 
 export interface TempoAgora {
@@ -242,12 +270,13 @@ export interface TempoAgora {
   horas: { hora: string; temp: number; chuva: number; codigo: number }[]; // próximas 12 h
 }
 
-const agoraCache = new Map<string, Promise<TempoAgora | null>>();
+const agoraCache = new Map<string, { em: number; p: Promise<TempoAgora | null> }>();
 
 export function tempoAgora(c: Coord): Promise<TempoAgora | null> {
   const chave = `${c.lat.toFixed(2)},${c.lng.toFixed(2)}`;
-  if (!agoraCache.has(chave)) {
-    agoraCache.set(chave, (async () => {
+  const guardada = agoraCache.get(chave);
+  if (!guardada || Date.now() - guardada.em > VALIDADE_PREVISAO_MS) {
+    agoraCache.set(chave, { em: Date.now(), p: (async () => {
       try {
         const r = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lng}` +
@@ -266,9 +295,9 @@ export function tempoAgora(c: Coord): Promise<TempoAgora | null> {
           })),
         };
       } catch { return null; }
-    })());
+    })() });
   }
-  return agoraCache.get(chave)!;
+  return agoraCache.get(chave)!.p;
 }
 
 export function tipoDeTempo(codigo: number): "sol" | "nuvens" | "nublado" | "chuva" | "trovoada" {

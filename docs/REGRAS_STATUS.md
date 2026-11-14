@@ -418,3 +418,15 @@ Material na pasta "Bugs - Sol" do Drive. Teste que reproduz tudo: `pw/david3.mjs
 - **"Roteiros grátis durante o teste"**: sim, é a mensagem de enquanto o app está em fase de teste (`DEMO_FREE_MODE`). A frase foi retirada da tela de criar roteiro a pedido do fundador (14/11).
 - **Captura de tela do botão de bugs não funciona no iPhone**: o botão é da Central de Bugs (projeto separado) e usa um recurso do navegador que o iPhone não oferece (`getDisplayMedia`). No iPhone, tirar o print normal e anexar a imagem. Ajuste a fazer na Central de Bugs: esconder o botão de captura onde não há suporte.
 - **Boa notícia nos registros**: a notificação do app (PWA) chegou no iPhone do David às 08:07 de 14/11. O envio pelo celular está confirmado em aparelho real.
+
+## Segundo lote de relatos de 14/11 (alertas demais, evento já começado, previsão de hoje)
+
+- **Notificações demais** ("um alerta de manhã e outro à tarde é muito"). Regra nova de envio ao celular (`enviarAvisosDe`, em `avisos.service.ts`):
+  - de manhã sai **um resumo só** ("Bom dia! Seu dia em..."), que já fala do tempo, de alerta do INMET, de parada fechada e de quantos eventos há; os avisos de atenção daquele momento não saem em separado;
+  - **evento nunca notifica sozinho**: fica no resumo e na lista do app;
+  - depois do resumo, só notifica aviso de atenção ou urgente que surgir (alerta novo do INMET, parada que passou a constar fechada);
+  - teto de **2 por dia** (3 se houver aviso urgente); antes eram 3 de qualquer tipo;
+  - o que a pessoa **já viu na lista do app** não vira notificação (coluna `visto_app_em`, script `0006_aviso_visto_no_app.sql`).
+- **Evento das 8h avisado às 14h18**: aviso de evento só é criado para evento que ainda vai começar (pelo menos 30 min à frente; sem hora informada, só de manhã). Na lista do app, evento que começou há mais de 2 horas deixa de aparecer.
+- **Previsão do tempo, linha de hoje**: o resumo do dia inteiro incluía a madrugada (dizia "chuva" e as próximas horas não tinham chuva). A linha de hoje passa a valer **de agora até o fim do dia**, pelas mesmas horas da faixa "Próximas horas" (`previsao()` em `geo.ts`); vale também para o alerta de chuva do Início e para o tempo do dia no roteiro. A previsão guardada passa a valer 20 minutos (antes ficava a mesma enquanto o app estivesse aberto).
+- Testes: `pw/avisos-regra.mjs` (regras de envio, com telefones falsos e envio de mentira) e `pw/tempo-hoje.mjs`.

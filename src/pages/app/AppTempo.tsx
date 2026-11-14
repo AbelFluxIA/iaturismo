@@ -68,8 +68,9 @@ export default function AppTempo() {
           {(dias ?? []).map((d) => (
             <span key={d.data} className={`flex items-center gap-3 px-3.5 py-2.5 ${naViagem(d.data) ? "bg-sol-creme/50" : ""}`}>
               <IconeTempo codigo={d.codigo} size={20} className="flex-none text-sol-mar" />
-              <span className="flex-none w-16 text-sm font-bold">{formatarData(d.data, { weekday: "short", day: "2-digit" })}</span>
-              <span className="flex-1 text-sm">{descreverTempo(d)}</span>
+              <span className="flex-none w-16 text-sm font-bold">{d.restoDoDia ? "hoje" : formatarData(d.data, { weekday: "short", day: "2-digit" })}</span>
+              {/* Hoje vale de agora até o fim do dia: o que já passou (chuva da madrugada) não entra */}
+              <span className="flex-1 text-sm">{descreverTempo(d)}{d.restoDoDia && <span className="block text-xs text-sol-texto2">de agora até o fim do dia</span>}</span>
               <span className="flex-none text-xs text-sol-texto2">{d.min}°</span>
             </span>
           ))}
