@@ -5,7 +5,7 @@ import { cartao } from "@/components/app/ui";
 
 // Peças comuns do painel de administração (só a equipe abre estas telas).
 
-export type AbaAdmin = "geral" | "saude" | "usuarios" | "conversas" | "roteiros" | "logs" | "liberar";
+export type AbaAdmin = "geral" | "saude" | "usuarios" | "conversas" | "roteiros" | "comunicados" | "logs" | "liberar";
 
 // Busca uma rota do painel. caminho = null: não busca (ex.: nada escolhido ainda).
 // valido: confere o formato da resposta; resposta incompleta vira aviso de erro, nunca tela quebrada.

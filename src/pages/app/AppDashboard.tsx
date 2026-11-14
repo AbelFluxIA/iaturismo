@@ -8,6 +8,8 @@ import { IconeTempo } from "@/components/app/IconeTempo";
 import { useAlbum } from "@/components/app/Album";
 import { useCidade } from "@/lib/cidade";
 import { explicarSemPosicao } from "@/lib/gps";
+import AvisosDaSol from "@/components/app/AvisosDaSol";
+import PertoDeVoce from "@/components/app/PertoDeVoce";
 import { useLocalizacaoEmUso } from "@/lib/localizacao";
 import { geocode, previsao, tempoAgora, type PrevisaoDia, type TempoAgora } from "@/lib/geo";
 import { useSugestoes } from "@/lib/sugestoes";
@@ -184,6 +186,8 @@ export default function AppDashboard() {
       </header>
 
       {atual && <AlertaChuva viagem={atual} />}
+      {/* Comunicados da equipe e avisos da Guia (evento hoje, parada fechada) */}
+      <AvisosDaSol semClima={!!atual} />
 
       <nav aria-label="Atalhos" className="grid grid-cols-3 gap-2">
         {[
@@ -198,6 +202,8 @@ export default function AppDashboard() {
           </Link>
         ))}
       </nav>
+
+      <PertoDeVoce />
 
       {atual ? (
         <CartaoViagem viagem={atual} />

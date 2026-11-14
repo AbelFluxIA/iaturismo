@@ -8,13 +8,14 @@ import Usuarios from "./admin/Usuarios";
 import Conversas from "./admin/Conversas";
 import Roteiros from "./admin/Roteiros";
 import Logs from "./admin/Logs";
+import Comunicados from "./admin/Comunicados";
 import Liberar from "./admin/Liberar";
 
 // Painel de administração: só para os telefones em ADMIN_PHONES no servidor (a equipe).
 // Clientes nunca chegam aqui: o servidor recusa (403) e esta tela volta para o perfil.
 // A aba e o que está aberto ficam no endereço (?aba=usuarios&phone=...), então o
 // botão voltar do aparelho funciona e dá para mandar o link para outro admin.
-const ABAS: [AbaAdmin, string][] = [["geral", "Visão geral"], ["saude", "Saúde"], ["usuarios", "Usuários"], ["conversas", "Conversas"], ["roteiros", "Roteiros"], ["logs", "Logs"], ["liberar", "Liberar"]];
+const ABAS: [AbaAdmin, string][] = [["geral", "Visão geral"], ["saude", "Saúde"], ["usuarios", "Usuários"], ["conversas", "Conversas"], ["roteiros", "Roteiros"], ["comunicados", "Comunicados"], ["logs", "Logs"], ["liberar", "Liberar"]];
 
 export default function AppAdmin() {
   const { profile } = useClientAuth();
@@ -49,6 +50,7 @@ export default function AppAdmin() {
           : aba === "usuarios" ? <Usuarios phone={v("phone")} q={v("q")} ir={ir} />
           : aba === "conversas" ? <Conversas phone={v("phone")} q={v("q")} ir={ir} />
           : aba === "roteiros" ? <Roteiros id={v("id")} q={v("q")} ir={ir} />
+          : aba === "comunicados" ? <Comunicados />
           : aba === "logs" ? <Logs key={busca.toString()} inicial={{ nivel: v("nivel"), phone: v("phone"), etapa: v("etapa"), q: v("q") }} ir={ir} />
           : <Liberar inicial={v("phone")} />}
       </div>
