@@ -319,16 +319,20 @@ function RoteiroDetalhe() {
             </ol>
             {fotosLigadas && <p className="m-0 -mt-1 text-[11px] text-sol-texto2">Fotos dos locais: Google Maps</p>}
 
-            <div className="grid grid-cols-5 gap-1.5">
+            {/* O PDF do roteiro ficava só na aba Info e ninguém achava: agora tem botão aqui também */}
+            <div className={`grid gap-1.5 ${urlSegura(dados?.pdfUrl) ? "grid-cols-3" : "grid-cols-5"}`}>
               {[
+                ...(urlSegura(dados?.pdfUrl) ? [{ label: "PDF", Icon: Download, href: urlSegura(dados?.pdfUrl)! }] : []),
                 { label: "Checklist", Icon: ClipboardCheck, to: `/app/roteiro/checklist?id=${encodeURIComponent(chave ?? "")}` },
                 { label: "Rota", Icon: Route, onClick: () => trocarAba("mapa") },
                 { label: "Foto", Icon: Camera, onClick: () => trocarAba("album") },
                 { label: "Enviar", Icon: Share2, onClick: () => compartilharDia(destino, rotuloDia(chegada, di, dia.label), dia.activities.map((a) => `${horaInicio(a)} ${a.name}`), dados?.pdfUrl) },
                 // Editar só com a Guia (RA-ROT-07); sem ela, mostra o que muda com a Guia
                 { label: "Alterar", Icon: profile?.hasCompanion ? Pencil : Lock, to: profile?.hasCompanion ? `/app/chat?texto=${encodeURIComponent(`Quero alterar meu roteiro de ${destino ?? "viagem"}: `)}` : "/app/guia/comparar" },
-              ].map(({ label, Icon, to, onClick }) => {
+              ].map(({ label, Icon, to, onClick, href }: { label: string; Icon: typeof Download; to?: string; onClick?: () => void; href?: string }) => {
                 const classe = `${cartao} flex flex-col items-center justify-center gap-1 min-h-[60px] text-[12px] font-bold text-sol-fundo no-underline`;
+                // O PDF abre do mesmo jeito que o link da aba Info (link comum em nova aba)
+                if (href) return <a key={label} href={href} target="_blank" rel="noopener noreferrer" className={classe}><Icon size={20} />{label}</a>;
                 return to
                   ? <Link key={label} to={to} className={classe}><Icon size={20} />{label}</Link>
                   : <button key={label} type="button" onClick={onClick} className={classe}><Icon size={20} />{label}</button>;

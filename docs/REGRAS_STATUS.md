@@ -367,3 +367,33 @@ Script SQL: `prisma/manual-sql/0004_avisos_da_guia.sql`. Excluir a conta apaga a
 - **Viagem de negócios**: segunda passada (`reforcarNegocios`) troca paradas turísticas do horário comercial por lugares de negócios, só em dia útil. Centro de convenções só entra com evento confirmado.
 - **Achados no roteiro de Foz do fundador (14/11) e corrigidos**: (1) a posição do celular só serve de ponto de partida se a pessoa já está a até 80 km do destino (saía "3900 min de carro de onde você está" para quem pediu de casa); (2) a parada precisa caber no horário escrito na linha 🕒: antes da última entrada e com 45 min antes de fechar (`cabeNoHorarioEscrito`; as Cataratas tinham ido para as 17h com última entrada às 16h); (3) voo passa a reservar 3 h, não 5 h; (4) quando o ponto do mapa de um parque grande dá uma distância absurda, fica a estimativa da IA.
 - **Cuidado com os testes antigos** `pw/atualizar.mjs` e `pw/transicao.mjs`: eles reescrevem `index.html` e apagam `dist` do projeto. Depois de rodar, conferir `git status` e restaurar.
+
+## Simulações de roteiro e PDF novo (2026-11-14) — pedido do fundador: "quero que esses roteiros sejam top"
+
+Foram gerados roteiros de verdade (IA e Google reais, na cópia de teste, com contas falsas apagadas no fim) em 12 cenários: família em João Pessoa, casal no Rio, negócios em São Paulo, segunda-feira em Campina Grande, meio dia em Salvador, aventura em Bonito-MS, casal com cachorro em Recife, cidade pequena (Bananeiras), 5 dias em Natal, Lisboa, bares em Belo Horizonte e Gramado. Um analisador automático (`pw/simular.mjs`) confere cada roteiro: dias e paradas, horário de funcionamento, tempo entre paradas, refeições, repetições, deslocamento, volta. Seis rodadas; a cada rodada, o que apareceu foi corrigido no código.
+
+**O que foi achado e corrigido (bot)**
+- **Roteiro só com a saudação, sem nenhum dia**: a resposta da IA vem em pedaços e só o primeiro era lido. Agora junta todos; roteiro com menos dias do que as datas da viagem é gerado de novo; roteiro que vem repetido (4 dias para 2 datas) fica só com a primeira cópia; introdução repetida fica só com uma (`limparIntroducao`).
+- **Cidade errada**: "Bonito - MS" caía em Bonito, na Itália (clima e mapa errados). A busca da cidade agora respeita a sigla do estado ou o país (`geocodeDestination`).
+- **Paradas que não são programa** (check-in, check-out, tempo livre, retorno para casa) saem sempre (`tirarEnchimento`); se vier junto com uma refeição ou passeio ("Check-in e almoço em Copacabana"), fica o programa.
+- **Parada marcada para antes de abrir** (até 1 hora): a hora vai para a abertura (`ajustarAbertura`), inclusive depois de uma troca.
+- **Parada marcada para perto demais do fechamento** (menos de 45 min, ou depois da última entrada): a hora vai para mais cedo, até 2 horas, se couber depois da parada anterior (`ajustarFechamento`).
+- **Parada que continua fechada depois de duas tentativas de troca** sai do roteiro (se o dia ainda fica com 2 paradas); o encaixe de horário vazio tenta repor.
+- **Dia sem almoço**: se não há parada de comida entre 10h30 e 14h45 e existe pelo menos 1 hora livre nesse horário, entra um restaurante (conferido no Google Maps). Em viagem de negócios, a parada do almoço não é trocada por coworking.
+- **Evento com hora de início**: a parada não pode ser marcada para mais de 1h30 depois de o evento começar.
+- **Restaurante sem nome** ("almoço em restaurante local", "almoço em Copacabana"): antes o Google achava um restaurante qualquer e o roteiro dizia "Conferido". Agora é tratado como parada reprovada e trocado por um restaurante de verdade (`ehGenerico`).
+- **Mesmo lugar em dois dias** (mesmo restaurante nos dias 1 e 4): a segunda vez é trocada.
+- **Horário vazio de mais de 3 horas** no meio do dia, ou dia que acaba sem jantar (menos o último): a Sol pede um lugar para encaixar, confere no Google Maps e só deixa se estiver aberto; duas tentativas (`preencherVazios`).
+- **Tempo que não fecha**: se o tempo no local passa do que existe até a próxima parada, encurta até 30 min; mais que isso, a próxima parada vai para mais tarde, se couber (`fecharTempos`). Passeio de 4 horas não é encurtado.
+- **Volta de avião ou ônibus sem falar do aeroporto/rodoviária**: entra a parada "Ida para o aeroporto" (3 h antes do voo; 2 h antes do ônibus).
+- **Viagem de negócios**: quem decide quais paradas trocar agora é o código (pelo menos metade das paradas do horário comercial, fora refeições, precisa ser de negócios); a resposta da IA fora do formato é aproveitada (`acertarCabecalho`).
+- **Parada sem link do mapa** ganha um (nome + cidade).
+- As consultas ao Google ficam 3 minutos na memória do processo, só para a conferência não pagar a mesma consulta várias vezes seguidas. Nada do Google vai para o banco.
+
+**PDF do roteiro**
+- Agora é montado no próprio servidor (`pdf-local.service.ts`, biblioteca pdf-lib): capa, introdução, faixa de cada dia, paradas em linha do tempo com Funciona / Custo / Se chover / Curiosidade / Evento, selo "Conferido no Google Maps" e botão **"Abrir no Google Maps" clicável** em cada parada, rodapé com número de página. Antes (função antiga no Supabase) as linhas novas saíam como texto solto e os links do mapa vinham cortados e não abriam. A função antiga continua como reserva (`PDF_LOCAL=false` volta para ela).
+- **Onde fica no app**: Roteiros → abrir o roteiro → botão **PDF** logo abaixo das paradas do dia (novo) e também na aba Info → "Baixar o PDF do roteiro". Também chega na conversa (app e WhatsApp) quando o roteiro fica pronto.
+
+**O que ainda aparece às vezes (limite conhecido)**
+- No fim da tarde (16h–17h) muita atração já fechou; quando a Sol não acha um lugar aberto para encaixar, o intervalo fica vazio em vez de mandar a pessoa a um lugar fechado.
+- Cidades pequenas têm menos lugares com horário cadastrado no Google: aparecem mais paradas com "Confirme o funcionamento antes de ir".
