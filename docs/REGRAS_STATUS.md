@@ -338,3 +338,21 @@ O roteiro antigo (ex.: o de Blumenau do David em 10/11) inventava voo e aeroport
 Script SQL: `prisma/manual-sql/0003_roteiros_melhores.sql`. Medido em 13/11: roteiro de 1 dia pronto em ~30 s (antes ~18 s), com cerca de 10 consultas ao Google; no teste de Blumenau a conferência reprovou 2 restaurantes (um fechado, um fechado no horário) e trocou os dois.
 
 Limites conhecidos: perfil de Negócios ainda mistura passeio turístico mais do que deveria; o PDF não muda depois de uma troca; o custo é estimado pela IA (marcado "estimado").
+
+## Avisos da Guia Sol (2026-11-14) — fases 1 a 3 pedidas pelo fundador
+
+**Fase 1, no ar**
+- **Perto de você agora** (Início, só com a Guia; sem a Guia aparece com cadeado): até 6 lugares abertos, bem avaliados (nota 4+), a até 2,5 km, escolhidos pelo perfil (negócios: cafés, coworkings, centros de convenções; gastronomia: restaurantes, mercados; etc.) e pela hora do dia, sem repetir o que já está no roteiro. Vem do Google Maps na hora (`GET /api/app/perto`, `perto.service.ts`), não é guardado e mostra o crédito "Google Maps". Teto: 24 consultas por pessoa por dia.
+- **Comunicados da equipe**: aba Comunicados no painel (`/app/admin?aba=comunicados`): título, texto, importância (informação, atenção, urgente), cidade (vazio = todos), duração (6 h a 7 dias) e link https opcional. Aparece no Início de quem está na cidade agora ou tem roteiro para ela (da véspera até a volta); a pessoa dispensa com o X. Tabela `sol_comunicados`.
+
+**Fase 2, no ar**
+- **Eventos da cidade** com fonte: no roteiro (até 2 por roteiro) e como aviso "Hoje em [cidade]" para quem está em viagem com a Guia. Endereços de passagem da busca (vertexaisearch) são trocados pelo endereço real da fonte; sem fonte real, o evento não entra.
+- **A Sol sabe dos avisos na conversa** (app e WhatsApp): comunicados e avisos ativos entram no contexto.
+
+**Fase 3, parte no ar**
+- **Avisos automáticos** para quem está em viagem com a Guia (`avisos.service.ts`, tabela `sol_avisos`): tempestade ou chuva forte hoje (pela previsão do Open-Meteo), evento hoje, parada de hoje no roteiro que consta fechada no horário (horário desta semana no Google, já com feriado). São avaliados quando o app abre (no máximo 1 vez por hora por pessoa, em segundo plano) e aparecem no Início.
+- **Envio pelo WhatsApp** já escrito (a cada 30 min; no máximo 3 por dia; das 8h às 21h; só com conversa nas últimas 24 h, porque fora disso o WhatsApp exige mensagem modelo paga), mas **só roda quando os envios agendados forem ligados** (`DISABLE_DAILY_JOBS` ainda está `true` até o bot antigo ser desligado).
+
+**Não feito ainda**: notificação no celular com o app fechado (precisa de conta Firebase para o Android e de configuração de push para o PWA); resumo da manhã como mensagem; alertas oficiais do INMET (o endereço público não respondeu a partir deste servidor em 13/11).
+
+Script SQL: `prisma/manual-sql/0004_avisos_da_guia.sql`. Excluir a conta apaga avaliações e avisos da pessoa.
