@@ -18,7 +18,7 @@ Dois produtos:
 | **Roteiro** | Roteiro de viagem feito pela IA, conferido no Google Maps, com PDF | 2 grátis por semana (1 dia cada). Dia a mais: R$ 4,90 |
 | **Guia Sol** | Companhia durante a viagem: conversa sem aperto de limite, avisos, lugares perto, tradutor, trocar atividade, álbum | R$ 9,90 por dia ou R$ 29,90 por 30 dias |
 
-**Importante para a V2**: hoje o sistema está em **modo de teste grátis** (`DEMO_FREE_MODE`): ninguém é cobrado e a Guia pode ser ativada sem pagar. A cobrança por Pix está pronta, mas ainda não foi testada com um Pix de verdade, e o cartão não está habilitado na AbacatePay.
+**Importante para a V2**: o **Pix funciona de verdade**: em 13/11 um testador comprou a Guia de 30 dias (R$ 29,90) pelo app e o pagamento caiu em 34 segundos. Mas, conferido no servidor em 14/11, o **modo de teste grátis** (`DEMO_FREE_MODE`) **continua ligado**: os dias de roteiro não são cobrados e o limite semanal é o da Guia (30). Para cobrar de verdade (2 grátis por semana e R$ 4,90 por dia a mais) é preciso desligar esse modo. O cartão ainda não está habilitado na AbacatePay.
 
 ## 2. Conta, login e cadastro
 
@@ -55,7 +55,7 @@ Dois produtos:
 - Sem a Guia: **2 roteiros grátis por semana** (renova domingo, 21h), 1 dia grátis; **até 5 dias**, cada dia a mais R$ 4,90, pago antes de gerar.
 - Com a Guia: **30 roteiros por semana**, **até 7 dias**, sem cobrança por dia.
 - Dia de viagem: sair hoje e voltar amanhã conta **1 dia**.
-- Durante o modo de teste nada é cobrado.
+- Enquanto o modo de teste estiver ligado (estava em 14/11), os dias de roteiro não são cobrados.
 
 ### 3.3 O que o roteiro traz
 
@@ -104,7 +104,7 @@ Tempo para ficar pronto: 20 a 60 segundos (5 dias, até 2 minutos). Até 4 rotei
 
 | Funcionalidade | Situação | Observação |
 |---|---|---|
-| Ativação | No ar | Exige ter um roteiro. No modo de teste ativa sem pagar |
+| Ativação | No ar | Exige ter um roteiro. Compra por Pix funcionando; no modo de teste também dá para ativar sem pagar |
 | Conversa com a Guia | No ar | Até 100 mensagens por dia |
 | Perto de você agora | No ar | Até 6 lugares abertos, bem avaliados, a até 2,5 km, pelo perfil e pela hora. Fica no fim do Início |
 | Avisos automáticos | No ar | Alerta oficial do INMET, tempestade ou chuva forte pela previsão, evento de hoje, parada do roteiro que consta fechada |
@@ -166,9 +166,10 @@ Falta: alerta antifraude, selo Sol Original, convite passando pelas lojas. A reg
 
 | Funcionalidade | Situação | Observação |
 |---|---|---|
-| Pix dentro do app (QR Code e copia e cola) | Pronto, sem teste real | A tela libera sozinha quando o Pix cai |
+| Pix dentro do app (QR Code e copia e cola) | No ar | Primeiro Pix real em 13/11 (Guia 30 dias, R$ 29,90), liberado sozinho em 34 segundos |
 | Cartão (página da AbacatePay) | Depende de fora | Habilitar na conta AbacatePay |
-| Link de pagamento pelo WhatsApp | Pronto, sem teste real | |
+| Link de pagamento pelo WhatsApp | Pronto, sem pagamento real ainda | |
+| Cobrança do dia de roteiro (R$ 4,90) | Pronta, desligada | Só cobra com o modo de teste desligado |
 | Reembolso e tela "minhas compras" | Falta | |
 | Créditos antigos (`freeCredits`) | Em aberto | Decidir se viram roteiros grátis ou saem |
 
@@ -211,7 +212,7 @@ Toda consulta da equipe fica registrada. Existe também o painel antigo (/login)
 
 Dependem de você ou de terceiros:
 
-1. Desligar o modo de teste grátis e fazer um Pix de verdade.
+1. Desligar o modo de teste grátis (`DEMO_FREE_MODE`) para os roteiros passarem a ser cobrados. O Pix já foi usado de verdade.
 2. Habilitar cartão na AbacatePay.
 3. Desligar o bot antigo (libera os lembretes diários do WhatsApp).
 4. Projeto Firebase para notificação no Android nativo.
