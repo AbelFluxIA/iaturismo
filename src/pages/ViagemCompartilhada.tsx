@@ -27,7 +27,7 @@ export default function ViagemCompartilhada() {
     let vivo = true;
     (async () => {
       try {
-        const r = await fetch(`${API_URL}/api/publico/viagem/${encodeURIComponent(codigo ?? "")}`);
+        const r = await fetch(`${API_URL}/api/app/publico/viagem/${encodeURIComponent(codigo ?? "")}`);
         if (!vivo) return;
         if (r.status === 410) { setEstado("encerrado"); return; }
         if (r.status === 404) { setEstado("nao_achou"); return; }

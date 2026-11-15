@@ -89,7 +89,7 @@ function BotaoViagem({ url, codigo, rotulo, classe }: { url: string; codigo: str
     let vivo = true;
     (async () => {
       try {
-        const r = await fetch(`${API_URL}/api/publico/viagem/${codigo}`);
+        const r = await fetch(`${API_URL}/api/app/publico/viagem/${codigo}`);
         if (!vivo) return;
         if (r.status === 410 || r.status === 404) { setEncerrado(true); return; }
         const d = r.ok ? await r.json().catch(() => null) : null;
