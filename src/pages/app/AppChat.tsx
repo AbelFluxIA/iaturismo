@@ -36,7 +36,8 @@ type Icone = "pdf" | "mapa" | "link" | "pagar" | "roteiro" | "mural" | "conta" |
 type Botao =
   | { tipo: "interno"; para: string; rotulo: string; icone: Icone }
   | { tipo: "externo"; url: string; rotulo: string; icone: Icone }
-  | { tipo: "compartilhar"; url: string; rotulo: string; icone: Icone };
+  | { tipo: "compartilhar"; url: string; rotulo: string; icone: Icone }
+  | { tipo: "viagem"; url: string; codigo: string; rotulo: string; icone: Icone };
 
 const URL_RE = /https?:\/\/[^\s<>"]+/g;
 
@@ -53,7 +54,11 @@ function limparUrl(bruta: string) {
 function classificar(url: string, lugar?: string): Botao {
   const roteiro = url.match(/\/r\/([0-9a-f-]{8,})/i);
   if (roteiro) return { tipo: "interno", para: `/app/roteiro?codigo=${roteiro[1]}`, rotulo: "Abrir o roteiro no app", icone: "roteiro" };
-  if (/\/mural\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/mural", rotulo: "Ver meu mural", icone: "mural" };
+  // Link de UMA viagem (o que a pessoa compartilha) e o álbum dela dentro do app
+  const viagem = url.match(/\/viagem\/([\w-]{16,40})/);
+  if (viagem) return { tipo: "viagem", url, codigo: viagem[1], rotulo: "Compartilhar minha viagem", icone: "indicar" };
+  if (/\/app\/mural\b/.test(url)) return { tipo: "interno", para: "/app/mural", rotulo: "Ver meu álbum", icone: "mural" };
+  if (/\/mural\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/mural", rotulo: "Ver meu álbum", icone: "mural" };
   if (/\/stats\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/creditos", rotulo: "Ver minha conta", icone: "conta" };
   if (/\.pdf(\?|$)/i.test(url) || /travel-pdfs/.test(url)) return { tipo: "externo", url, rotulo: "Baixar o PDF do roteiro", icone: "pdf" };
   if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/.test(url)) return { tipo: "externo", url, rotulo: lugar ? `Mapa: ${lugar}` : "Abrir no mapa", icone: "mapa" };
@@ -69,6 +74,52 @@ async function compartilhar(url: string) {
     if (navigator.share) { await navigator.share({ text: "Monte seu roteiro com a Sol ☀️", url }); return; }
   } catch { /* cancelou ou não suportado: copia */ }
   try { await navigator.clipboard.writeText(url); alert("Link copiado."); } catch { window.open(url, "_blank", "noopener"); }
+}
+
+// Compartilhar a viagem: manda a imagem personalizada junto com o link quando o celular
+// aceita arquivo; senão, só o link. A imagem é buscada antes do toque (o celular só abre
+// a tela de compartilhar se for logo depois do toque). Link vencido ou desligado: o botão
+// leva ao Álbum, onde a pessoa cria outro.
+function BotaoViagem({ url, codigo, rotulo, classe }: { url: string; codigo: string; rotulo: string; classe: string }) {
+  const navigate = useNavigate();
+  const [encerrado, setEncerrado] = useState(false);
+  const dados = useRef<{ titulo?: string; imagem?: File }>({});
+
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch(`${API_URL}/api/publico/viagem/${codigo}`);
+        if (!vivo) return;
+        if (r.status === 410 || r.status === 404) { setEncerrado(true); return; }
+        const d = r.ok ? await r.json().catch(() => null) : null;
+        if (!vivo || !d) return;
+        dados.current.titulo = typeof d.titulo === "string" ? d.titulo : undefined;
+        if (typeof d.capa === "string" && /^https:\/\//.test(d.capa)) {
+          const b = await (await fetch(d.capa)).blob();
+          if (vivo && b.type.startsWith("image/")) dados.current.imagem = new File([b], "minha-viagem.jpg", { type: b.type });
+        }
+      } catch { /* sem internet: compartilha só o link */ }
+    })();
+    return () => { vivo = false; };
+  }, [codigo]);
+
+  async function tocar() {
+    if (encerrado) { navigate("/app/mural"); return; }
+    const { titulo, imagem } = dados.current;
+    const texto = titulo ? `${titulo} ☀️` : "Minha viagem com a Sol ☀️";
+    try {
+      if (imagem && navigator.canShare?.({ files: [imagem] })) { await navigator.share({ files: [imagem], text: `${texto} ${url}` }); return; }
+      if (navigator.share) { await navigator.share({ text: texto, url }); return; }
+    } catch (e) { if ((e as Error)?.name === "AbortError") return; /* não suportado: copia */ }
+    try { await navigator.clipboard.writeText(url); alert("Link da viagem copiado."); } catch { window.open(url, "_blank", "noopener"); }
+  }
+
+  return (
+    <button type="button" onClick={tocar} className={`${classe} bg-white border-[1.5px] border-sol-borda text-sol-fundo`}>
+      <Share2 size={18} /> {encerrado ? "Link vencido: criar outro no Álbum" : rotulo}
+    </button>
+  );
 }
 
 // Fotos (do cliente, imagem para stories) aparecem como imagem na conversa
@@ -134,6 +185,7 @@ function Botoes({ botoes }: { botoes: Botao[] }) {
             </button>
           );
         }
+        if (b.tipo === "viagem") return <BotaoViagem key={i} url={b.url} codigo={b.codigo} rotulo={b.rotulo} classe={classe} />;
         if (b.tipo === "compartilhar") {
           return (
             <button key={i} type="button" onClick={() => compartilhar(b.url)} className={`${classe} bg-white border-[1.5px] border-sol-borda text-sol-fundo`}>

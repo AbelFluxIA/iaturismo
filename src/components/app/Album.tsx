@@ -15,11 +15,15 @@ export interface Foto {
   data: string;
 }
 
+// Link secreto de UMA viagem (RA-FOT-05): vale 7 dias e o dono pode desligar
+export interface LinkViagem { codigo: string; url: string; expiraEm: string }
+
 export interface GrupoAlbum {
   titulo: string;
   inicio: string;
   fim: string;
   fotos: Foto[];
+  link?: LinkViagem | null;
 }
 
 export type MotivoBloqueio = "sem_guia" | "sem_viagem" | "viagem_encerrada";

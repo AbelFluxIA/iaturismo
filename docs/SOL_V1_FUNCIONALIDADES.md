@@ -141,7 +141,8 @@ Tempo para ficar pronto: 20 a 60 segundos (5 dias, até 2 minutos). Até 4 rotei
 | Avisos (só o título, toque abre) | No ar | |
 | Cartão da viagem | No ar | Atual, próxima, última, nunca viajou |
 | Previsão do tempo | No ar | Agora, próximas horas e 7 dias. A linha de hoje vale de agora até o fim do dia. Fonte: Open-Meteo |
-| Mural de viagens e álbum | No ar | Fotos por viagem, com marca d'água; link público do mural. Falta validade do link, compra sem marca e votação |
+| Álbum de fotos por viagem | No ar | Fotos por viagem, com marca d'água. Só a pessoa vê o álbum inteiro. Falta compra sem marca e votação |
+| Compartilhar uma viagem | No ar | Link secreto de UMA viagem (fotos e imagem personalizada), vale 7 dias e a pessoa pode desligar. Não existe link do álbum inteiro. Na conversa, depois da imagem personalizada, o botão é "Compartilhar minha viagem" |
 | Atualização do app | No ar | Avisa quando há versão nova. Falta versão mínima e tela de manutenção |
 | Tela de erro com saída | No ar | "Tentar de novo" e "Voltar ao início"; o erro vai sozinho para a equipe |
 | Botão de relatar bug | No ar | É da Central de Bugs (projeto separado). No iPhone a captura de tela não funciona; anexa-se o print |
@@ -159,6 +160,8 @@ Tempo para ficar pronto: 20 a 60 segundos (5 dias, até 2 minutos). Até 4 rotei
 ## 8. Indicação de amigos
 
 No ar: link e QR Code de convite; o convidado ganha 1 dia de Guia; conta como convertido quem se cadastra pelo link e faz o primeiro roteiro com data futura. Patamares: 3 convertidos = 1 dia de Guia, 10 = 3 dias, 25 = Embaixador. O crédito vale 30 dias, até 3 dias por viagem e 5 por mês.
+
+A página pública de uma viagem compartilhada leva ao convite de quem compartilhou ("Quero o meu também").
 
 Falta: alerta antifraude, selo Sol Original, convite passando pelas lojas. A regra antiga de crédito por pagamento ainda existe no fluxo do WhatsApp.
 

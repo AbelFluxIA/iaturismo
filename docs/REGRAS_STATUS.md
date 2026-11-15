@@ -194,7 +194,7 @@ Contagem feita por script sobre as linhas abaixo; as 141 regras do documento est
 | RA-FOT-02 30 dias grátis e prorrogação | 🔒 | Depende de pagamentos. |
 | RA-FOT-03 Limite do álbum | 🔒 | DEF-65. |
 | RA-FOT-04 Marca d'água; compra sem marca | 🟡 | Marca d'água ✅; compra não. |
-| RA-FOT-05 Link por viagem, 7 dias | 🟡 | Mural por link ✅; validade de 7 dias e desativar não. |
+| RA-FOT-05 Link por viagem, 7 dias | ✅ | Link secreto por viagem, 7 dias, o dono desliga; link do mural inteiro extinto (15/11). |
 | RA-FOT-06 a RA-FOT-08 Votação por local | ⬜ | |
 | RA-FOT-09 Votação do mês fora do MVP | ✅ | |
 | RA-FOT-10 Viagens passadas com álbum | ✅ | |
@@ -430,3 +430,16 @@ Material na pasta "Bugs - Sol" do Drive. Teste que reproduz tudo: `pw/david3.mjs
 - **Evento das 8h avisado às 14h18**: aviso de evento só é criado para evento que ainda vai começar (pelo menos 30 min à frente; sem hora informada, só de manhã). Na lista do app, evento que começou há mais de 2 horas deixa de aparecer.
 - **Previsão do tempo, linha de hoje**: o resumo do dia inteiro incluía a madrugada (dizia "chuva" e as próximas horas não tinham chuva). A linha de hoje passa a valer **de agora até o fim do dia**, pelas mesmas horas da faixa "Próximas horas" (`previsao()` em `geo.ts`); vale também para o alerta de chuva do Início e para o tempo do dia no roteiro. A previsão guardada passa a valer 20 minutos (antes ficava a mesma enquanto o app estivesse aberto).
 - Testes: `pw/avisos-regra.mjs` (regras de envio, com telefones falsos e envio de mentira) e `pw/tempo-hoje.mjs`.
+
+## Compartilhar é por viagem (15/11) — RA-FOT-05
+
+Pedido do dono do produto: depois da imagem personalizada a pessoa compartilha **a viagem** (não o link de indicação da Sol) e nunca o mural inteiro.
+
+- **Link por viagem**: tabela `sol_viagens_link` (script `0007_link_por_viagem.sql`), serviço `viagem-link.service.ts`. Código secreto, vale **7 dias**, o dono desliga; pedir de novo devolve o link que ainda vale. A viagem é um período (do roteiro ou do grupo de fotos do álbum); ao abrir, entram só as fotos do álbum que caem nesse período.
+- Rotas: `POST /api/app/viagem/link` (`inicio` do grupo do álbum ou `itineraryId`), `POST /api/app/viagem/link/desativar`, `GET /api/publico/viagem/:codigo` (sem login; 404 não existe, 410 vencido ou desligado). A resposta pública traz só primeiro nome, destino, fotos daquela viagem, imagem personalizada e o código de convite.
+- **App**: página pública `/viagem/código` (`ViagemCompartilhada.tsx`) com "Quero o meu também" levando a `/convite/CÓDIGO`; no Álbum, cada viagem tem "Compartilhar esta viagem", "Copiar link" e "Desligar link"; na conversa, o botão "Compartilhar minha viagem" manda a imagem personalizada junto com o link (link vencido vira "criar outro no Álbum").
+- **Link do mural inteiro extinto**: álbum e perfil não devolvem mais o código do mural; `/mural/código` só abre para a equipe logada no painel (para os outros, aviso). A mensagem "Mural atualizado" virou "Foto no álbum da viagem" apontando para o Álbum do app. As funções `mural_publico` e `mural_fotos_publicas` continuam no banco (uso da equipe).
+- **Mensagem depois da imagem personalizada** (app e WhatsApp): saiu "Compartilhar meu link de indicação" (`wa.me ... ref:`), entrou o link da viagem (`buildTripShareMessage`).
+- **Imagem personalizada**: rodapé com a logo oficial (`src/assets/sol-brand.png`, a mesma da marca d'água) no lugar do emoji de sol. Imagens já geradas não mudam (uma por roteiro).
+- Excluir a conta apaga também os links de viagem e a imagem personalizada do armazenamento.
+- Testes: `pw/viagem-link.mjs` (servidor, 30 verificações) e `pw/viagem-ui.mjs` (iPhone 13 e Pixel 7).

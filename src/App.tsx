@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import MuralGallery from "./pages/MuralGallery";
+import ViagemCompartilhada from "./pages/ViagemCompartilhada";
 import ItineraryPage from "./pages/ItineraryPage";
 import StatsPage from "./pages/StatsPage";
 import Login from "./pages/Login";
@@ -84,6 +85,21 @@ const RoteiroCompartilhado = () => {
   return <ItineraryPage />;
 };
 
+// O link do mural inteiro deixou de existir (RA-FOT-05: compartilhar é por viagem).
+// O endereço antigo só abre para a equipe, que entra pelo painel; para os outros, um aviso.
+const MuralAntigo = () => {
+  const { session, loading } = useAuth();
+  if (loading) return null;
+  if (session) return <MuralGallery />;
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-6 bg-sol-areia font-corpo text-sol-fundo text-center">
+      <img src="/sol-mark.png" alt="Sol" className="w-16 h-16 object-contain" />
+      <h1 className="m-0 font-display font-extrabold text-[22px] leading-tight">Este link não está mais ativo</h1>
+      <p className="m-0 max-w-[320px] text-[15px] leading-snug text-sol-texto2">Agora cada viagem tem o seu próprio link. Peça um link novo para quem compartilhou com você.</p>
+    </div>
+  );
+};
+
 const Layout = () => (
   <>
     <ScrollRestoration />
@@ -115,7 +131,11 @@ const router = createBrowserRouter([
       },
       {
         path: "/mural/:shareCode",
-        element: <MuralGallery />,
+        element: <MuralAntigo />,
+      },
+      {
+        path: "/viagem/:codigo",
+        element: <ViagemCompartilhada />,
       },
       {
         path: "/r/:shareCode",
