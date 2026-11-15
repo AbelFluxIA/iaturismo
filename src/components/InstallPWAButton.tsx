@@ -1,106 +1,46 @@
 import { useEffect, useState } from "react";
-import { Download, Share, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useLocation } from "react-router-dom";
+import { Download, X } from "lucide-react";
+import { Instalar } from "@/components/Instalar";
+import { useInstalacao } from "@/lib/instalar";
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
-
+// Cartão que oferece instalar o app (some por 7 dias quando a pessoa fecha). O botão é o
+// mesmo "Instalar o app" das outras telas: um toque no Android, passo a passo no iPhone.
 const DISMISS_KEY = "pwa-install-dismissed-at";
-const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function InstallPWAButton() {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showIosHint, setShowIosHint] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const { instalado, instalouAgora } = useInstalacao();
+  const [fechado, setFechado] = useState(true);
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // iOS
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-
-    if (isStandalone) return;
-
-    const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) || 0);
-    if (dismissedAt && Date.now() - dismissedAt < DISMISS_TTL_MS) return;
-
-    const ua = window.navigator.userAgent;
-    const isIos = /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS/.test(ua);
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-      setVisible(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    if (isIos) {
-      // iOS Safari não dispara beforeinstallprompt — mostrar dica manual
-      setShowIosHint(true);
-      setVisible(true);
-    }
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    let quando = 0;
+    try { quando = Number(localStorage.getItem(DISMISS_KEY) || 0); } catch { /* sem armazenamento */ }
+    setFechado(!!quando && Date.now() - quando < DISMISS_TTL_MS);
   }, []);
 
-  const handleInstall = async () => {
-    if (!deferred) return;
-    await deferred.prompt();
-    const choice = await deferred.userChoice;
-    if (choice.outcome === "accepted" || choice.outcome === "dismissed") {
-      setDeferred(null);
-      setVisible(false);
-    }
-  };
+  function fechar() {
+    try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* sem armazenamento */ }
+    setFechado(true);
+  }
 
-  const dismiss = () => {
-    localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    setVisible(false);
-  };
-
-  if (!visible) return null;
+  // A tela de entrada já tem o botão "Instalar o app": o cartão por cima só atrapalharia
+  if (fechado || instalado || instalouAgora || /^\/app\/entrar/.test(pathname)) return null;
 
   return (
-    <div className="fixed top-[max(12px,env(safe-area-inset-top))] left-4 right-4 z-[60] mx-auto max-w-md rounded-2xl border border-border bg-card p-4 shadow-lg">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-          <Download className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold text-foreground">
-            Instalar o app Sol
-          </h3>
-          {showIosHint ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              No iPhone, toque em <Share className="inline h-3.5 w-3.5" /> Compartilhar
-              e depois em <strong>"Adicionar à Tela de Início"</strong>.
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Acesse mais rápido instalando o app no seu dispositivo.
-            </p>
-          )}
-          {!showIosHint && (
-            <Button
-              size="sm"
-              className="mt-3"
-              onClick={handleInstall}
-            >
-              Instalar agora
-            </Button>
-          )}
-        </div>
-        <button
-          onClick={dismiss}
-          aria-label="Fechar"
-          className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
+    <div className="fixed top-[max(12px,env(safe-area-inset-top))] left-4 right-4 z-[60] mx-auto max-w-md flex items-center gap-3 rounded-2xl border border-sol-linha bg-white p-3 shadow-lg font-corpo text-sol-fundo">
+      <img src="/sol-mark.png" alt="" className="flex-none w-10 h-10 object-contain" />
+      <div className="flex-1 min-w-0">
+        <strong className="block text-sm leading-tight">Instale o app Sol</strong>
+        <span className="block text-xs text-sol-texto2">Abre direto pelo ícone, sem procurar o site.</span>
       </div>
+      <Instalar>
+        {(instalar) => (
+          <button type="button" onClick={instalar} className="flex-none flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-sol-mar text-white text-sm font-bold"><Download size={16} /> Instalar</button>
+        )}
+      </Instalar>
+      <button type="button" onClick={fechar} aria-label="Fechar" className="flex-none w-9 h-11 -mr-1.5 flex items-center justify-center text-sol-texto2"><X size={18} /></button>
     </div>
   );
 }

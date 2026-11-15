@@ -443,3 +443,15 @@ Pedido do dono do produto: depois da imagem personalizada a pessoa compartilha *
 - **Imagem personalizada**: rodapé com a logo oficial (`src/assets/sol-brand.png`, a mesma da marca d'água) no lugar do emoji de sol. Imagens já geradas não mudam (uma por roteiro).
 - Excluir a conta apaga também os links de viagem e a imagem personalizada do armazenamento.
 - Testes: `pw/viagem-link.mjs` (servidor, 30 verificações) e `pw/viagem-ui.mjs` (iPhone 13 e Pixel 7).
+
+## Botão "Instalar o app" (15/11)
+
+Pedido do dono do produto: instalar o PWA por um botão, sem a pessoa precisar procurar no navegador (enquanto o app não está nas lojas).
+
+- `src/lib/instalar.ts` guarda o convite de instalação do navegador (`beforeinstallprompt`) desde a abertura da página; `src/components/Instalar.tsx` traz o botão e o passo a passo.
+- **Android (Chrome, Edge, Samsung)**: um toque abre a confirmação do próprio celular. Sem o convite do navegador (Firefox etc.): passo a passo do menu.
+- **iPhone**: a Apple não deixa site nenhum instalar sozinho; o botão abre o passo a passo (Compartilhar → Adicionar à Tela de Início → Adicionar).
+- **Navegador de dentro de outro app** (Instagram, Facebook, TikTok): dali não instala; o botão manda copiar o endereço e abrir no Safari/Chrome.
+- Onde aparece: tela de entrada (abaixo de "Entrar com meu WhatsApp"), Perfil e o cartão no topo das outras páginas (fecha por 7 dias). Some com o app instalado e no app nativo.
+- **Convite no iPhone**: o app instalado não enxerga o que o Safari guardou; por isso, quem chegou por link de convite não vê o botão na entrada (entra primeiro, o convite é gravado no servidor, e instala depois pelo Perfil). Pelo mesmo motivo, no iPhone quem entra no Safari e instala depois precisa entrar de novo no app instalado.
+- Teste: `pw/instalar-ui.mjs`.

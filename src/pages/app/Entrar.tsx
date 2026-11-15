@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, ClipboardPaste, MessageCircle } from "lucide-react";
+import { ChevronLeft, ClipboardPaste, Download, MessageCircle } from "lucide-react";
+import { Instalar } from "@/components/Instalar";
+import { aparelho } from "@/lib/instalar";
+import { conviteGuardado } from "@/lib/convite";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, btnPrimario, btnSecundario } from "@/components/app/ui";
 
@@ -165,6 +168,15 @@ export default function Entrar() {
               <button type="button" onClick={() => setStep("whatsapp")} className={btnPrimario}>
                 Entrar com meu WhatsApp
               </button>
+              {/* No iPhone o app instalado não enxerga o que ficou guardado no Safari: quem chegou
+                  por convite entra primeiro (para o convite valer) e instala depois, pelo Perfil. */}
+              {!(conviteGuardado() && aparelho() === "iphone") && (
+                <Instalar>
+                  {(instalar, rotulo) => (
+                    <button type="button" onClick={instalar} className={btnSecundario}><Download size={18} /> {rotulo}</button>
+                  )}
+                </Instalar>
+              )}
             </div>
           </>
         )}

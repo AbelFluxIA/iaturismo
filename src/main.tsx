@@ -4,8 +4,10 @@ import "./index.css";
 import { iniciarAtualizacao } from "./lib/atualizacao";
 import { ehNativo } from "./lib/nativo";
 import { iniciarCapturaDeErros } from "./lib/erros";
+import { iniciarInstalacao } from "./lib/instalar";
 
 iniciarCapturaDeErros();
+iniciarInstalacao(); // guarda o convite de instalação do navegador para o botão "Instalar o app"
 
 // Endereços antigos da Vercel apontam para outro banco: o oficial é painel.tripsol.com.br
 // (a Vercel já redireciona no servidor; isto cobre o PWA instalado com service worker antigo)

@@ -143,6 +143,7 @@ Tempo para ficar pronto: 20 a 60 segundos (5 dias, até 2 minutos). Até 4 rotei
 | Previsão do tempo | No ar | Agora, próximas horas e 7 dias. A linha de hoje vale de agora até o fim do dia. Fonte: Open-Meteo |
 | Álbum de fotos por viagem | No ar | Fotos por viagem, com marca d'água. Só a pessoa vê o álbum inteiro. Falta compra sem marca e votação |
 | Compartilhar uma viagem | No ar | Link secreto de UMA viagem (fotos e imagem personalizada), vale 7 dias e a pessoa pode desligar. Não existe link do álbum inteiro. Na conversa, depois da imagem personalizada, o botão é "Compartilhar minha viagem" |
+| Instalar o app (PWA) | No ar | Botão "Instalar o app" na tela de entrada, no Perfil e num cartão nas outras páginas. Android: um toque. iPhone: a Apple não permite instalar sozinho, o botão abre o passo a passo (3 toques). Aberto por dentro do Instagram etc.: manda abrir no Safari/Chrome |
 | Atualização do app | No ar | Avisa quando há versão nova. Falta versão mínima e tela de manutenção |
 | Tela de erro com saída | No ar | "Tentar de novo" e "Voltar ao início"; o erro vai sozinho para a equipe |
 | Botão de relatar bug | No ar | É da Central de Bugs (projeto separado). No iPhone a captura de tela não funciona; anexa-se o print |

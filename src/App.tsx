@@ -104,6 +104,7 @@ const Layout = () => (
   <>
     <ScrollRestoration />
     <Outlet />
+    <InstallPWAButton />
   </>
 );
 
@@ -220,7 +221,6 @@ const App = () => (
       <Toaster />
       <Sonner />
       <RouterProvider router={router} />
-      <InstallPWAButton />
       <AvisoAtualizacao />
     </TooltipProvider>
   </QueryClientProvider>

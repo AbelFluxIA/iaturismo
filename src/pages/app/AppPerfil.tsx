@@ -5,6 +5,7 @@ import { procurarAtualizacao, versaoDoApp } from "@/lib/atualizacao";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { LinhaMenu, Selo, TopBar, mascararTelefone } from "@/components/app/ui";
+import { Instalar } from "@/components/Instalar";
 import { lerPreferencias } from "@/pages/app/AppCriar";
 
 const SOL_WHATSAPP = import.meta.env.VITE_SOL_PHONE as string | undefined;
@@ -129,6 +130,7 @@ export default function AppPerfil() {
           <LinhaMenu titulo="Configurações e notificações" emBreve />
           <LinhaMenu titulo="Privacidade e dados" emBreve />
           {SOL_WHATSAPP && <LinhaMenu href={`https://wa.me/${SOL_WHATSAPP}`} titulo="Falar com a Sol no WhatsApp" />}
+          <Instalar>{(instalar, rotulo) => <LinhaMenu onClick={instalar} titulo={rotulo} detalhe="Abre direto pelo ícone" />}</Instalar>
           <LinhaMenu to="/app/chat" titulo="Ajuda e suporte" detalhe="Pergunte à Sol" />
           {profile?.admin && <LinhaMenu to="/app/admin" titulo="Administração" selo="interno" />}
           <LinhaMenu to="/app/perfil/excluir" titulo="Excluir minha conta" tom="perigo" />
