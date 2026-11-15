@@ -32,6 +32,9 @@ export function dentroDeOutroApp(): boolean {
   if (/Instagram|FBAN|FBAV|FB_IAB|Line\/|TikTok|musical_ly|Snapchat|; wv\)/i.test(ua())) return true;
   return aparelho() === "iphone" && !/Safari\//.test(ua());
 }
+// Navegadores do Android que entregam a instalação direta (o Firefox não entrega). O Chrome só
+// libera depois de um toque na página e de uns 30 segundos nela (regra dele, web.dev/articles/install-criteria).
+export const androidComInstalacaoDireta = () => aparelho() === "android" && !dentroDeOutroApp() && !/Firefox\//.test(ua());
 export const safariDoIphone = () => aparelho() === "iphone" && !dentroDeOutroApp() && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua());
 
 export function jaInstalado(): boolean {

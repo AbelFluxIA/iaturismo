@@ -449,7 +449,7 @@ Pedido do dono do produto: depois da imagem personalizada a pessoa compartilha *
 Pedido do dono do produto: instalar o PWA por um botão, sem a pessoa precisar procurar no navegador (enquanto o app não está nas lojas).
 
 - `src/lib/instalar.ts` guarda o convite de instalação do navegador (`beforeinstallprompt`) desde a abertura da página; `src/components/Instalar.tsx` traz o botão e o passo a passo.
-- **Android (Chrome, Edge, Samsung)**: um toque abre a confirmação do próprio celular. Sem o convite do navegador (Firefox etc.): passo a passo do menu.
+- **Android (Chrome, Edge, Samsung)**: um toque abre a confirmação do próprio celular. O Chrome só libera isso depois de um toque na página e de uns 30 segundos nela (regra dele, web.dev/articles/install-criteria, conferida em 15/11); se a pessoa tocar antes, a janela mostra "Preparando a instalação" e vira "Instalar agora" sozinha quando o Chrome libera, com o caminho pelo menu logo abaixo. Firefox: só o passo a passo do menu.
 - **iPhone**: a Apple não deixa site nenhum instalar sozinho; o botão abre o passo a passo (Compartilhar → Adicionar à Tela de Início → Adicionar).
 - **Navegador de dentro de outro app** (Instagram, Facebook, TikTok): dali não instala; o botão manda copiar o endereço e abrir no Safari/Chrome.
 - Onde aparece: tela de entrada (abaixo de "Entrar com meu WhatsApp"), Perfil e o cartão no topo das outras páginas (fecha por 7 dias). Some com o app instalado e no app nativo.

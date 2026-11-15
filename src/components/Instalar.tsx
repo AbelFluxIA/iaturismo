@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Download, MoreVertical, PlusSquare, Share, X } from "lucide-react";
-import { aparelho, dentroDeOutroApp, instalarComUmToque, safariDoIphone, useInstalacao } from "@/lib/instalar";
+import { androidComInstalacaoDireta, aparelho, dentroDeOutroApp, instalarComUmToque, safariDoIphone, useInstalacao } from "@/lib/instalar";
 
 // Botão "Instalar o app": no Android instala com um toque (o celular só pede a confirmação);
 // onde o navegador não deixa (iPhone, navegador de dentro de outro app), abre o passo a passo
@@ -20,6 +20,7 @@ const icone = "inline-block align-[-3px] mx-0.5";
 
 export function ComoInstalar({ fechar }: { fechar: () => void }) {
   const [copiado, setCopiado] = useState(false);
+  const { umToque } = useInstalacao();
   const ap = aparelho();
   const outroApp = dentroDeOutroApp();
   const navegador = ap === "iphone" ? "Safari" : "Chrome";
@@ -58,11 +59,24 @@ export function ComoInstalar({ fechar }: { fechar: () => void }) {
             <p className="m-0 text-[13px] leading-snug text-sol-texto2">Depois, abra a Sol pelo ícone novo e entre com o seu WhatsApp.</p>
           </>
         ) : ap === "android" ? (
-          <ol className="m-0 p-0 list-none flex flex-col gap-3">
-            <Passo n={1}>Toque nos três pontinhos <MoreVertical size={18} className={icone} aria-hidden /> do navegador, no canto de cima.</Passo>
-            <Passo n={2}>Toque em <strong>Instalar app</strong> (ou <strong>Adicionar à tela inicial</strong>).</Passo>
-            <Passo n={3}>Confirme em <strong>Instalar</strong>. O ícone da Sol aparece junto dos seus apps.</Passo>
-          </ol>
+          <>
+            {/* O Chrome só libera a instalação direta depois de uns 30 segundos na página: quando
+                libera, o botão aparece aqui e a pessoa não precisa mexer no menu */}
+            {umToque ? (
+              <button type="button" onClick={async () => { await instalarComUmToque(); fechar(); }} className="flex items-center justify-center gap-2 min-h-[52px] px-4 rounded-[14px] bg-sol-mar text-white text-[16px] font-bold"><Download size={18} /> Instalar agora</button>
+            ) : androidComInstalacaoDireta() ? (
+              <p role="status" className="m-0 flex items-center gap-2.5 p-3 rounded-xl bg-sol-areia text-[14px] leading-snug">
+                <span className="flex-none animate-spin rounded-full h-5 w-5 border-b-2 border-sol-mar" aria-hidden />
+                Preparando a instalação. O botão <strong>Instalar agora</strong> aparece aqui em alguns segundos.
+              </p>
+            ) : null}
+            <p className="m-0 text-[14px] leading-snug text-sol-texto2">{umToque ? "Ou, se preferir, pelo menu do navegador:" : androidComInstalacaoDireta() ? "Não quer esperar? Faça pelo menu do navegador:" : "Faça pelo menu do navegador:"}</p>
+            <ol className="m-0 p-0 list-none flex flex-col gap-3">
+              <Passo n={1}>Toque nos três pontinhos <MoreVertical size={18} className={icone} aria-hidden /> do navegador, no canto de cima.</Passo>
+              <Passo n={2}>Toque em <strong>Instalar app</strong> (ou <strong>Adicionar à tela inicial</strong>).</Passo>
+              <Passo n={3}>Confirme em <strong>Instalar</strong>. O ícone da Sol aparece junto dos seus apps.</Passo>
+            </ol>
+          </>
         ) : (
           <ol className="m-0 p-0 list-none flex flex-col gap-3">
             <Passo n={1}>No Chrome ou no Edge, clique no ícone de instalar <Download size={18} className={icone} aria-hidden /> no fim da barra de endereço.</Passo>
