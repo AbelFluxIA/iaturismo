@@ -455,3 +455,11 @@ Pedido do dono do produto: instalar o PWA por um botão, sem a pessoa precisar p
 - Onde aparece: tela de entrada (abaixo de "Entrar com meu WhatsApp"), Perfil e o cartão no topo das outras páginas (fecha por 7 dias). Some com o app instalado e no app nativo.
 - **Convite no iPhone**: o app instalado não enxerga o que o Safari guardou; por isso, quem chegou por link de convite não vê o botão na entrada (entra primeiro, o convite é gravado no servidor, e instala depois pelo Perfil). Pelo mesmo motivo, no iPhone quem entra no Safari e instala depois precisa entrar de novo no app instalado.
 - Teste: `pw/instalar-ui.mjs`.
+
+## Versão para a Google Play (20/11)
+
+- **Alvo Android 16 (API 36)**: exigido pelo Google Play para app novo desde 31/08/2026 (developer.android.com/google/play/requirements/target-sdk, conferido em 20/11). `android/variables.gradle` em 36; `capacitor.config.ts` com `adjustMarginsForEdgeToEdge: 'auto'` e `MainActivity` pintando as faixas do relógio e dos botões na cor do app (no Android 15+ o app é desenhado por baixo delas). **Ainda não conferido em celular de verdade.**
+- **Arquivo da loja (.aab) assinado**: `cd android && ./gradlew bundleRelease` → `app/build/outputs/bundle/release/app-release.aab`. A chave de envio fica fora do repositório, em `/root/sol-chaves/` (`sol-upload.jks` + `keystore.properties`); sem ela o build de loja sai sem assinatura. Guardar cópia da pasta em lugar seguro.
+- A cada envio novo à loja, subir `versionCode` em `android/app/build.gradle` (o primeiro é 1).
+- Pontos que a revisão do Google vai cobrar: declaração e vídeo da **localização em segundo plano** (`ACCESS_BACKGROUND_LOCATION`), política de privacidade publicada, exclusão de conta (já existe no app), conta de teste para o revisor (`5500999990001`).
+- Conta **pessoal** criada depois de 13/11/2023: teste fechado com 12 pessoas por 14 dias antes de liberar produção (support.google.com/googleplay/android-developer/answer/14151465). Conta de **organização** pede número D-U-N-S.

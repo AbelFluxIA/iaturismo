@@ -16,8 +16,24 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Assinatura da versão das lojas: a chave de envio fica FORA do repositório
+    // (/root/sol-chaves/keystore.properties). Sem o arquivo, só a versão de teste é gerada.
+    def chaves = new Properties()
+    def arquivoChaves = file(System.getenv('SOL_KEYSTORE_PROPERTIES') ?: '/root/sol-chaves/keystore.properties')
+    if (arquivoChaves.exists()) arquivoChaves.withInputStream { chaves.load(it) }
+    signingConfigs {
+        release {
+            if (chaves['storeFile']) {
+                storeFile file(chaves['storeFile'])
+                storePassword chaves['storePassword']
+                keyAlias chaves['keyAlias']
+                keyPassword chaves['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (chaves['storeFile']) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
