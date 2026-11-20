@@ -458,6 +458,7 @@ Pedido do dono do produto: instalar o PWA por um botão, sem a pessoa precisar p
 
 ## Versão para a Google Play (20/11)
 
+- **Mínimo Android 7 (API 24)**: a Proteção Automática do Google Play recusa pacote com mínimo 23 (erro no envio de 20/11).
 - **Alvo Android 16 (API 36)**: exigido pelo Google Play para app novo desde 31/08/2026 (developer.android.com/google/play/requirements/target-sdk, conferido em 20/11). `android/variables.gradle` em 36; `capacitor.config.ts` com `adjustMarginsForEdgeToEdge: 'auto'` e `MainActivity` pintando as faixas do relógio e dos botões na cor do app (no Android 15+ o app é desenhado por baixo delas). **Ainda não conferido em celular de verdade.**
 - **Arquivo da loja (.aab) assinado**: `cd android && ./gradlew bundleRelease` → `app/build/outputs/bundle/release/app-release.aab`. A chave de envio fica fora do repositório, em `/root/sol-chaves/` (`sol-upload.jks` + `keystore.properties`); sem ela o build de loja sai sem assinatura. Guardar cópia da pasta em lugar seguro.
 - A cada envio novo à loja, subir `versionCode` em `android/app/build.gradle` (o primeiro é 1).
