@@ -57,6 +57,7 @@ function classificar(url: string, lugar?: string): Botao {
   // Link de UMA viagem (o que a pessoa compartilha) e o álbum dela dentro do app
   const viagem = url.match(/\/viagem\/([\w-]{16,40})/);
   if (viagem) return { tipo: "viagem", url, codigo: viagem[1], rotulo: "Compartilhar minha viagem", icone: "indicar" };
+  if (/\/app\/guia\b/.test(url)) return { tipo: "interno", para: "/app/guia?renovar=1", rotulo: "Ver as opções da Guia Sol", icone: "conta" };
   if (/\/app\/mural\b/.test(url)) return { tipo: "interno", para: "/app/mural", rotulo: "Ver meu álbum", icone: "mural" };
   if (/\/mural\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/mural", rotulo: "Ver meu álbum", icone: "mural" };
   if (/\/stats\/[\w-]+/.test(url)) return { tipo: "interno", para: "/app/creditos", rotulo: "Ver minha conta", icone: "conta" };
@@ -589,7 +590,7 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
           <h1 className="m-0 font-display font-extrabold text-[22px]">{guiaAtiva ? "Guia Sol" : "Sol"}</h1>
           {guiaAtiva ? (
             <span className="flex items-center gap-1.5 text-[13px] font-bold text-sol-ok">
-              <span className="w-2 h-2 rounded-full bg-sol-ok" />Ativa na sua viagem
+              <span className="w-2 h-2 rounded-full bg-sol-ok" />{profile?.guia?.ate ? `Ativa até ${profile.guia.ate.slice(8, 10)}/${profile.guia.ate.slice(5, 7)}` : "Ativa na sua viagem"}
             </span>
           ) : (
             <span className="text-[13px] font-semibold text-sol-texto2">A mesma conversa do seu WhatsApp · grátis</span>

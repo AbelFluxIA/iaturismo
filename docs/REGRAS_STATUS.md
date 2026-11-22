@@ -138,7 +138,7 @@ Contagem feita por script sobre as linhas abaixo; as 141 regras do documento est
 | RA-GUI-01 Planos por dia e por mês | 🔒 | Preços no servidor e na tela ✅; cobrança depende de pagamentos. |
 | RA-GUI-02 Regras do plano mensal | 🔒 | TODO-21. |
 | RA-GUI-03 Ativação só com roteiro e pagamento | 🟡 | Exige roteiro ✅; modo teste ativa sem pagamento. |
-| RA-GUI-04 Aviso antes de terminar e estender | ⬜ | |
+| RA-GUI-04 Aviso antes de terminar e estender | ✅ | Avisa a 3 dias, na véspera e no último dia; ao terminar pergunta se quer manter; Guia com prazo comprado não desliga com o fim da viagem (22/11). |
 | RA-GUI-05 Uso justo: 100 mensagens e 50 fotos | 🟡 | 100 mensagens ✅; fotos não. |
 | RA-GUI-06 Recursos só da Guia | 🟡 | Tradutor, editar e atalhos ✅; offline e alertas não. |
 | RA-GUI-07 Sem roteiro: oferta | ✅ | |
@@ -464,3 +464,17 @@ Pedido do dono do produto: instalar o PWA por um botão, sem a pessoa precisar p
 - A cada envio novo à loja, subir `versionCode` em `android/app/build.gradle` (o primeiro é 1).
 - Pontos que a revisão do Google vai cobrar: declaração e vídeo da **localização em segundo plano** (`ACCESS_BACKGROUND_LOCATION`), política de privacidade publicada, exclusão de conta (já existe no app), conta de teste para o revisor (`5500999990001`).
 - Conta **pessoal** criada depois de 13/11/2023: teste fechado com 12 pessoas por 14 dias antes de liberar produção (support.google.com/googleplay/android-developer/answer/14151465). Conta de **organização** pede número D-U-N-S.
+
+## Prazo da Guia Sol comprada (22/11) — RA-GUI-04 e TODO-21
+
+Relato do dono do produto: a Guia de 30 dias paga em 13/11 (R$ 29,90) ficou ativa poucos dias. Causa: o prazo estava gravado certo (`sol_cadastro.guia_ate` = 12/12), mas a rotina da meia-noite "desliga a Guia 1 dia depois do fim da viagem" (`deactivateExpiredCompanions`) não olhava o prazo e desligou em 16/11 00:00. Quem rodou foi o **servidor antigo (EasyPanel)**, que ainda executa as rotinas diárias no mesmo banco.
+
+Decisão (resolve o TODO-21, plano mensal): **Guia comprada vale até o último dia do prazo, com ou sem viagem em andamento.** "Desliga 1 dia depois do fim da viagem" fica só para Guia sem prazo (ligada pela equipe ou grátis no período de teste).
+
+- `guia-prazo.service.ts`, de 10 em 10 minutos (`manterGuiasNoPrazo`): religa quem tem prazo valendo e está com a Guia desligada (protege também contra o servidor antigo); cria avisos a **3 dias, na véspera e no último dia** (este, depois do meio-dia); no dia seguinte ao fim, desliga, grava `guia_terminou_em` (script `0008_guia_terminou_em.sql`), cria o aviso "Sua Guia Sol terminou" e deixa a pergunta na conversa com link para renovar.
+- `deactivateExpiredCompanions` pula quem tem prazo valendo. `limparPrazoGuia(phone, true)` (ativar grátis no teste, link antigo do WhatsApp) não apaga mais prazo comprado; só o painel da equipe zera o prazo.
+- Renovar antes do fim soma no fim do prazo (`liberarGuia`). Avisos de tipo `guia` vão ao celular (push ou WhatsApp) também para quem já ficou sem a Guia.
+- `/api/app/perfil` devolve `guia: { ativa, ate, diasRestantes, terminouEm }`.
+- **App**: cartão `PrazoDaGuia` no Início ("termina em 3 dias / amanhã / hoje" com Renovar e Agora não; "terminou em dd/mm, quer manter ativa?" com Assinar de novo e Agora não); `/app/guia?renovar=1` mostra as opções com a Guia ainda ativa; cartão e conversa da Guia mostram "até dd/mm"; quem já tem roteiro (mesmo de viagem passada) pode assinar; na conversa, o link vira o botão "Ver as opções da Guia Sol".
+- Pendente: desligar o servidor antigo (enquanto ele roda, uma Guia com prazo pode ficar até 10 minutos desligada depois da meia-noite).
+- Testes: `pw/guia-prazo.mjs` (26 verificações) e `pw/guia-prazo-ui.mjs` (iPhone 13 e Pixel 7).

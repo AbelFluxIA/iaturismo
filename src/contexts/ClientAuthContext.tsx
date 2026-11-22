@@ -47,6 +47,8 @@ export interface ClientProfile {
   admin?: boolean; // telefone em ADMIN_PHONES: vê a tela de administração
   hasPaid: boolean;
   hasCompanion: boolean;
+  // Prazo da Guia comprada: ativa até quando, dias que faltam e, se acabou, quando acabou
+  guia?: { ativa: boolean; ate: string | null; diasRestantes: number | null; terminouEm: string | null };
   freeCredits: number;
   referralCode: string | null;
   referralStats: {

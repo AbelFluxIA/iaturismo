@@ -120,6 +120,8 @@ Tempo para ficar pronto: 20 a 60 segundos (5 dias, até 2 minutos). Até 4 rotei
 | Notificação no app Android nativo | Depende de fora | Precisa de um projeto Firebase |
 | Lembretes diários antigos do WhatsApp (checklist da véspera, pesquisa pós-viagem, lembrete de inatividade) | Escritos, desligados neste servidor | Voltam quando o bot antigo for desligado |
 
+**Prazo da Guia comprada:** vale até o último dia (1 dia, vários dias ou 30 dias), com ou sem viagem em andamento. Avisa a 3 dias, na véspera e no último dia; quando termina, pergunta se a pessoa quer manter e oferece assinar de novo. Renovar antes do fim soma no fim do prazo.
+
 ## 5. Conversa com a Sol (grátis)
 
 | Funcionalidade | Situação | Observação |

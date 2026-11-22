@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AppChat from "@/pages/app/AppChat";
 import { CalendarClock, Camera, Check, CloudRain, MapPin, MessageCircle, Plus, Search, UtensilsCrossed } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
-import { Aviso, Carregando, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
+import { Aviso, Carregando, btnPrimario, btnSecundario, cartao, formatarData } from "@/components/app/ui";
 import { nomeCurto } from "@/lib/roteiro";
 
 // Aba Guia Sol: com a Guia ativa abre a conversa; sem ela, mostra a oferta.
@@ -22,8 +22,11 @@ export default function AppGuia() {
   const { viagens, atual } = useViagens();
   const navigate = useNavigate();
   const [estado, setEstado] = useState<{ carregando: boolean; pagar?: string; erro?: string }>({ carregando: false });
+  const [params] = useSearchParams();
 
-  if (profile?.hasCompanion) return <AppChat modo="guia" />;
+  // "?renovar=1": quem está com a Guia ativa vê a oferta para comprar mais dias (soma no fim do prazo)
+  const renovar = params.get("renovar") === "1";
+  if (profile?.hasCompanion && !renovar) return <AppChat modo="guia" />;
   if ((profileLoading && !profile) || viagens === null) return <Carregando />;
 
   async function ativar() {
@@ -64,7 +67,10 @@ export default function AppGuia() {
   const regras = profile?.regras;
   const preco = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 
-  const semViagem = !atual;
+  // RA-GUI-03: a Guia pede um roteiro gerado. Quem já tem roteiro (mesmo de viagem passada) pode renovar.
+  const semViagem = !atual && !(viagens ?? []).length;
+  const guia = profile?.guia;
+  const ativa = !!profile?.hasCompanion;
 
   return (
     <div className="flex flex-col gap-3 px-5 pt-7">
@@ -87,6 +93,13 @@ export default function AppGuia() {
         ))}
       </ul>
 
+      {ativa && guia?.ate && (
+        <Aviso tom="ok">Sua Guia Sol está ativa até <strong>{formatarData(guia.ate)}</strong>. O que você comprar agora começa a valer depois desse dia.</Aviso>
+      )}
+      {!ativa && guia?.terminouEm && (
+        <Aviso>Sua Guia Sol terminou em <strong>{formatarData(guia.terminouEm)}</strong>. Você pode assinar de novo quando quiser.</Aviso>
+      )}
+
       {semViagem ? (
         <>
           <Aviso>A Guia Sol acompanha um roteiro seu. Para ativar, crie um roteiro primeiro.</Aviso>
@@ -95,13 +108,13 @@ export default function AppGuia() {
       ) : (
         <>
           <button type="button" disabled={estado.carregando} onClick={() => comprar("guia_dia")} className={`${btnPrimario} justify-between`}>
-            <span>Guia Sol por 1 dia</span><span className="font-extrabold">{preco(regras?.guiaPrecoDia ?? 9.9)}</span>
+            <span>{ativa ? "Mais 1 dia de Guia Sol" : "Guia Sol por 1 dia"}</span><span className="font-extrabold">{preco(regras?.guiaPrecoDia ?? 9.9)}</span>
           </button>
           <button type="button" disabled={estado.carregando} onClick={() => comprar("guia_mes")} className={`${btnPrimario} !bg-sol-sun !text-sol-fundo justify-between`}>
-            <span>Guia Sol por 30 dias</span><span className="font-extrabold">{preco(regras?.guiaPrecoMes ?? 29.9)}</span>
+            <span>{ativa ? "Mais 30 dias de Guia Sol" : "Guia Sol por 30 dias"}</span><span className="font-extrabold">{preco(regras?.guiaPrecoMes ?? 29.9)}</span>
           </button>
           <p className="m-0 text-xs text-sol-texto2 text-center">Pix na hora, direto aqui no app. Também dá para pagar com cartão.</p>
-          {profile?.ofertas?.gratisDuranteTeste && (
+          {profile?.ofertas?.gratisDuranteTeste && !ativa && (
             <button type="button" disabled={estado.carregando} onClick={ativar} className={btnSecundario}>
               <Check size={18} strokeWidth={2.6} /> Ativar grátis (período de teste)
             </button>
@@ -110,6 +123,7 @@ export default function AppGuia() {
       )}
       {estado.erro && <p role="status" className="m-0 text-sm text-sol-sos">{estado.erro}</p>}
 
+      {ativa && <Link to="/app/guia" className={`${btnSecundario} no-underline`}>Voltar para a Guia</Link>}
       <Link to="/app/guia/comparar" className={`${btnSecundario} no-underline`}>Com e sem a Guia Sol</Link>
       <Link to="/app/chat" className={`${btnSecundario} no-underline`}>
         <MessageCircle size={18} /> Conversar com a Sol

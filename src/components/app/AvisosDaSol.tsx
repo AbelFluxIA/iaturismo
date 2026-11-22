@@ -44,7 +44,8 @@ export default function AvisosDaSol({ aoCarregar }: { aoCarregar?: (temClima: bo
         const r = await fetch(`${API_URL}/api/app/avisos?cidade=${encodeURIComponent(cidadeDaSessao())}`, { headers: { Authorization: `Bearer ${token}` } });
         const d = r.ok ? await r.json().catch(() => null) : null;
         // Resposta incompleta não pode quebrar o Início: só entram avisos com título e texto
-        const lista: Aviso[] = Array.isArray(d?.avisos) ? d.avisos.filter((a: Aviso) => a && typeof a.id === "string" && typeof a.titulo === "string" && typeof a.texto === "string") : [];
+        // Os avisos de prazo da Guia ("termina em 3 dias", "terminou") têm cartão próprio no Início (PrazoDaGuia)
+        const lista: Aviso[] = Array.isArray(d?.avisos) ? d.avisos.filter((a: Aviso) => a && typeof a.id === "string" && typeof a.titulo === "string" && typeof a.texto === "string" && a.tipo !== "guia") : [];
         if (!vivo.current) return;
         setAvisos(lista);
         avisar.current?.(lista.some((a) => a.tipo === "clima"));

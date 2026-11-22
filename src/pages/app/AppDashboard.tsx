@@ -9,6 +9,7 @@ import { useAlbum } from "@/components/app/Album";
 import { useCidade } from "@/lib/cidade";
 import { explicarSemPosicao } from "@/lib/gps";
 import AvisosDaSol from "@/components/app/AvisosDaSol";
+import PrazoDaGuia from "@/components/app/PrazoDaGuia";
 import PertoDeVoce from "@/components/app/PertoDeVoce";
 import AvisosNoCelular from "@/components/app/AvisosNoCelular";
 import { useLocalizacaoEmUso } from "@/lib/localizacao";
@@ -190,6 +191,7 @@ export default function AppDashboard() {
       {/* Com aviso de tempo da Guia (INMET, tempestade), o cartão de previsão de chuva não repete o assunto */}
       {atual && !temAvisoDeClima && <AlertaChuva viagem={atual} />}
       {/* Comunicados da equipe e avisos da Guia (alerta de tempo, evento hoje, parada fechada) */}
+      <PrazoDaGuia />
       <AvisosDaSol aoCarregar={setTemAvisoDeClima} />
       <AvisosNoCelular />
 
@@ -247,7 +249,7 @@ export default function AppDashboard() {
           <MessageCircle size={22} className="flex-none" />
           <span className="flex-1 flex flex-col">
             <span className="text-[16px] font-extrabold leading-tight">{guiaAtiva ? "Guia Sol ativa" : "Contratar Guia Sol"}</span>
-            <span className="text-[13px] font-semibold">{guiaAtiva ? "Falar com a Guia" : profile?.ofertas?.guiaPreco ?? "Uma guia em tempo real na viagem"}</span>
+            <span className="text-[13px] font-semibold">{guiaAtiva ? (profile?.guia?.ate ? `Até ${formatarData(profile.guia.ate)} · Falar com a Guia` : "Falar com a Guia") : profile?.guia?.terminouEm ? `Terminou em ${formatarData(profile.guia.terminouEm)} · Assinar de novo` : profile?.ofertas?.guiaPreco ?? "Uma guia em tempo real na viagem"}</span>
           </span>
           <ChevronRight size={20} className="flex-none" />
         </Link>
