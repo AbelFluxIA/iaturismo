@@ -499,3 +499,28 @@ Pacote `Sol_Paginas_para_a_Fluxv2` (Instituto Agilizar, 22/11). Respostas e dive
 - **Guia respondendo pela cidade do último roteiro.** O app manda a posição do celular junto com cada mensagem (só se a pessoa já liberou a localização; não aparece na conversa). A Guia recebe "onde o cliente está agora" e, se for outra cidade, responde por ela. Fora das datas do roteiro e sem posição, ela pergunta a cidade antes de indicar lugares. A posição fica 3 horas na memória do servidor.
 - **"Perto de você" com Oktoberfest.** Saem locais de evento, centros de convenção, festas de época (pelo nome) e hospedagem.
 - Teste: `pw/bugs2511.mjs` (IA e Google de verdade, contas falsas).
+
+## Rodada de testes de 25/11 (26 roteiros reais e 103 mensagens à Guia) e o que foi corrigido
+
+Três frentes com contas falsas na cópia de teste: roteiros, conversa com a Guia e telas do app. Achados e correções:
+
+**Roteiros**
+- Dia com buraco (bate-volta, segunda-feira): o encaixe de horário vazio agora vale depois da chegada, de manhã quando a primeira parada começa tarde, no último dia até 1 hora antes da volta, e a partir de 2 horas livres (eram 3). Jantar só é dispensado se já há refeição à noite.
+- Paradas fora de ordem depois de um reparo e período errado ("Manhã (19:00)"): `ordenarEAcertarPeriodos` reordena o dia por hora e acerta Manhã/Tarde/Noite.
+- Econômico ainda com refeição cara: o teste vale também para lugar que o Google não acha e para as paradas de encaixe; refeição é reconhecida também pelo comentário; "restaurantes populares" saiu do texto (a IA indicava o restaurante subsidiado de R$ 3).
+- Selo "Conferido no Google Maps" em coisa que não é lugar ("Almoço perto do hotel", "Explorar os bares..."): esses nomes voltam para a troca por um lugar de verdade; "últimas compras" e "retorno ao hostel" saem como enchimento.
+- Parada com "Terça a domingo" numa segunda: `fechadoNoDiaEscrito` lê os dias da semana escritos na linha do horário.
+- Cartão-postal forçado atrapalhando (Cristo em dia de tempestade, "Obelisco" no lugar da Recoleta): só entra o que a IA marca como consenso, nunca em dia com tempestade na previsão, e respeita viagem já feita.
+- Shopping como passeio saiu das opções de encaixe. Tempestade: o texto para a pessoa não usa mais "PROIBIDO" nem números técnicos.
+- Ficou para depois: interesses fora da ordem de prioridade, trajetos em zigue-zague depois de trocas, referências a paradas retiradas na linha do trajeto, eventos com fonte duvidosa.
+
+**Guia**
+- Via só um pedaço do roteiro (2.500 caracteres): agora recebe o roteiro inteiro resumido, com HOJE e AMANHÃ marcados.
+- Dizia que a Guia não estava ativa para quem pagou: o prazo entra no contexto; o texto de preço foi corrigido (R$ 9,90 por dia ou R$ 29,90 por 30 dias, valendo com ou sem viagem).
+- Renovar pela conversa: responde com a data e o caminho para comprar mais dias; viagem encerrada não bloqueia assinar de novo.
+- Emergência e saúde: 190, 192 e 193 na primeira linha, o que fazer em assalto, sem indicar dose de remédio e sem mudar de assunto; banho de mar nunca é dito "seguro".
+- Busca de lugares: sabe a cidade e as coordenadas de onde a pessoa está, a hora e o orçamento; não abre mais com "que legal que você está em <cidade errada>".
+- "Já visitei" marcado à toa: só quando a mensagem fala de algo feito, e sem repetir.
+- Contexto interno e coordenadas não são mais entregues a quem pede "modo debug". Temperatura da conversa de 1,2 para 0,9.
+- Trocar parada pela conversa: a Guia explica o caminho no app (não há troca pela conversa).
+- Testes: `pw/rodada-unit.mjs`, `pw/rodada2.mjs`, `pw/bugs2511.mjs`; relatórios e roteiros gerados em `scratchpad/rodada/`.
