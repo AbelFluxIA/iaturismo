@@ -524,3 +524,11 @@ Três frentes com contas falsas na cópia de teste: roteiros, conversa com a Gui
 - Contexto interno e coordenadas não são mais entregues a quem pede "modo debug". Temperatura da conversa de 1,2 para 0,9.
 - Trocar parada pela conversa: a Guia explica o caminho no app (não há troca pela conversa).
 - Testes: `pw/rodada-unit.mjs`, `pw/rodada2.mjs`, `pw/bugs2511.mjs`; relatórios e roteiros gerados em `scratchpad/rodada/`.
+
+## Os 4 itens que tinham ficado da rodada de 25/11
+
+- **Interesses fora da ordem.** `garantirInteresses` (verificacao.service): os dois primeiros interesses do pedido precisam ter pelo menos uma parada (reconhecida por palavras do nome e do comentário). O que ficou sem nenhuma entra no lugar de uma parada de passeio comum, antes da conferência. Não vale para viagem de negócios. Gravado em `configuracao.interessesIncluidosDepois`.
+- **Zigue-zague.** Restaurante a mais de 6 km da parada anterior e da próxima, quando as duas estão mais perto uma da outra, é trocado por um perto (`conferir`, estado `longe`). A troca de parada (`trocarAtividade`) pede outra opção quando a primeira fica bem mais longe que a original e fica com a melhor. A linha do trajeto passa a citar a parada anterior de verdade (`acertarReferenciasDeTrajeto`).
+- **Trocar parada pela conversa.** A Guia ganhou a ferramenta `trocar_parada` (nome da parada, dia e o que a pessoa quer no lugar), que usa o mesmo serviço do botão Trocar do app. Pedido ambíguo: ela pergunta qual parada. Tirar sem repor e mudar horário continuam só no app.
+- **Evento com fonte duvidosa.** A página da fonte precisa citar a data do evento (várias formas de escrever), e link com código de cara inventada é recusado (`fonteConfere`).
+- Testes: `pw/quatro-unit.mjs` e `pw/quatro.mjs` (IA e Google de verdade).
