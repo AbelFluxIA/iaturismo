@@ -48,7 +48,7 @@ function idade(nasc: string) {
 }
 
 export default function AppCadastro() {
-  const { profile, profileLoading, token, phone, name, isDemo, refreshProfile } = useClientAuth();
+  const { profile, profileLoading, token, phone, name, isDemo, refreshProfile, logout } = useClientAuth();
   const navigate = useNavigate();
   const [etapa, setEtapa] = useState<Etapa>("dados");
   const [nome, setNome] = useState(name || profile?.name || "");
@@ -256,6 +256,11 @@ export default function AppCadastro() {
             </div>
             <div className="mt-auto pt-8">
               <Link to="/app/seguranca" className={`${btnPrimario} w-full no-underline`}>Ir para Segurança</Link>
+              <p className="mt-4 mb-0 text-[13px] leading-snug text-sol-texto2 text-center">
+                A data de nascimento está errada?{" "}
+                <a href={paginaSol("suporte")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Fale com o suporte</a> para corrigir.
+              </p>
+              <button type="button" onClick={() => { logout(); navigate("/app/entrar", { replace: true }); }} className={`${btnSecundario} w-full mt-3`}>Sair</button>
             </div>
           </>
         )}

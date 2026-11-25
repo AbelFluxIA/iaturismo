@@ -52,6 +52,7 @@ export default function AppPerfil() {
   }
 
   function sair() {
+    if (!window.confirm("Sair deste aparelho? Os contatos de emergência e as marcações guardadas neste celular serão apagados. Seus roteiros e fotos continuam na sua conta.")) return;
     logout();
     navigate("/app/entrar", { replace: true });
   }

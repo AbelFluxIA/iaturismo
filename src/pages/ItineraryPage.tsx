@@ -565,12 +565,13 @@ export default function ItineraryPage() {
   // Load itinerary
   useEffect(() => {
     if (!shareCode) return;
-    supabase
-      .from("generated_itineraries")
-      .select("destination,traveler_name,pdf_url,text_content")
-      .eq("share_code", shareCode)
-      .maybeSingle()
-      .then(async ({ data, error }) => {
+    // Leitura pela função pública do banco (devolve só o roteiro daquele código). A tabela é fechada para
+    // quem não é da equipe: lendo direto dela, o link abria "não encontrado" para qualquer visitante.
+    (supabase as any)
+      .rpc("roteiro_publico", { codigo: shareCode })
+      .then(async ({ data: linhas, error }: { data: unknown; error: unknown }) => {
+        const linha = (Array.isArray(linhas) ? linhas[0] : linhas) as { destination?: string | null; pdf_url?: string | null; text_content?: string | null } | null;
+        const data = linha ? { destination: linha.destination ?? "", traveler_name: "", pdf_url: linha.pdf_url ?? null, text_content: linha.text_content ?? "" } : null;
         if (error || !data?.text_content) { setNotFound(true); setLoading(false); return; }
         setItinerary(data as Itinerary);
         setParsed(parseItinerary(data.text_content));
@@ -650,7 +651,7 @@ export default function ItineraryPage() {
               <h1 className="text-xl font-bold leading-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
                 {itinerary.destination}
               </h1>
-              <p className="text-xs opacity-60 mt-0.5">Para {itinerary.traveler_name}</p>
+              {itinerary.traveler_name && <p className="text-xs opacity-60 mt-0.5">Para {itinerary.traveler_name}</p>}
             </div>
             {/* Botão de compartilhar */}
             <button
@@ -870,7 +871,7 @@ export default function ItineraryPage() {
         {/* Footer personalizado — CTA de conversão */}
         <footer className={`text-center py-8 px-4 mt-2 border-t ${cardBorder}`}>
           <p className={`text-sm font-semibold ${textMain} mb-1`}>
-            Este roteiro é personalizado para {itinerary.traveler_name}.
+            {itinerary.traveler_name ? `Este roteiro é personalizado para ${itinerary.traveler_name}.` : "Este roteiro foi montado sob medida pela Sol."}
           </p>
           <p className={`text-sm ${textMid} mb-5`}>Quer o seu? 👇</p>
           <a

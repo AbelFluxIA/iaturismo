@@ -69,7 +69,7 @@ interface ClientAuthState {
   profileLoading: boolean;
   isDemo: boolean;
   login: (token: string, phone: string, name: string) => void;
-  logout: () => void;
+  logout: (opcoes?: { expirou?: boolean }) => void;
   refreshProfile: () => Promise<void>;
 }
 
@@ -99,12 +99,16 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
     setName(newName);
   };
 
-  const logout = () => {
-    // Apaga tudo que é da pessoa (sessão, feitas, checklist, contatos de emergência...):
-    // num celular emprestado, quem entra depois não vê nada de quem saiu
+  const logout = (opcoes?: { expirou?: boolean }) => {
+    // Sair: apaga tudo que é da pessoa (sessão, feitas, checklist, contatos de emergência...):
+    // num celular emprestado, quem entra depois não vê nada de quem saiu.
+    // Sessão que VENCEU (a pessoa não pediu para sair): os contatos de emergência e a mensagem de socorro
+    // ficam no aparelho (só existem nele) e a tela de entrada explica o que houve.
+    const MANTER = ["sol_contatos_emergencia", "sol_mensagem_socorro"];
     try {
-      for (const k of Object.keys(localStorage)) if (k.startsWith("sol_")) localStorage.removeItem(k);
+      for (const k of Object.keys(localStorage)) if (k.startsWith("sol_") && !(opcoes?.expirou && MANTER.includes(k))) localStorage.removeItem(k);
       sessionStorage.clear();
+      if (opcoes?.expirou) sessionStorage.setItem("sol_sessao_expirou", "1");
     } catch { /* sem armazenamento */ }
     setToken(null);
     setPhone(null);
@@ -121,7 +125,7 @@ export function ClientAuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_URL}/api/app/perfil`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 401) { logout(); return; }
+      if (res.status === 401) { logout({ expirou: true }); return; }
       if (!res.ok) return;
       const data = await res.json();
       setProfile(data);

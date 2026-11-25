@@ -33,7 +33,7 @@ function TradutorBloqueado() {
       <div className="flex flex-col items-center text-center gap-3 px-6 pt-8">
         <span className="w-[72px] h-[72px] rounded-[22px] bg-sol-creme flex items-center justify-center"><Lock size={32} /></span>
         <h2 className="m-0 font-display font-extrabold text-[22px] leading-tight">O tradutor faz parte da Guia Sol</h2>
-        <p className="m-0 max-w-[300px] text-sm leading-snug text-sol-texto2">Com a Guia ativa você traduz por texto e voz e cria salas de conversa traduzida, cada um no seu celular.</p>
+        <p className="m-0 max-w-[300px] text-sm leading-snug text-sol-texto2">Com a Guia ativa você traduz por texto e voz.</p>
         <Link to="/app/guia/comparar" className={`${btnPrimario} w-full no-underline mt-2`}>Ver o que muda com a Guia Sol</Link>
         <div className={`${cartao} w-full flex items-center gap-3 p-4 text-left opacity-80`} aria-disabled="true">
           <QrCode size={24} className="flex-none" />

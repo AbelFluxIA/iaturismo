@@ -532,3 +532,20 @@ Três frentes com contas falsas na cópia de teste: roteiros, conversa com a Gui
 - **Trocar parada pela conversa.** A Guia ganhou a ferramenta `trocar_parada` (nome da parada, dia e o que a pessoa quer no lugar), que usa o mesmo serviço do botão Trocar do app. Pedido ambíguo: ela pergunta qual parada. Tirar sem repor e mudar horário continuam só no app.
 - **Evento com fonte duvidosa.** A página da fonte precisa citar a data do evento (várias formas de escrever), e link com código de cara inventada é recusado (`fonteConfere`).
 - Testes: `pw/quatro-unit.mjs` e `pw/quatro.mjs` (IA e Google de verdade).
+
+## Teste de telas de 25/11 (iPhone 13, Pixel 7, iPhone SE, computador) e o que foi corrigido
+
+Nenhum erro de JavaScript em nenhuma tela. Corrigido:
+
+- **Álbum travado por outra viagem planejada**: `estadoDoAlbum` passa a usar a viagem em andamento hoje (depois a próxima, depois a última).
+- **Viagem fantasma** (destino "asdfgh"): o servidor recusa destino que não existe no mapa, e o perfil não devolve roteiro sem texto.
+- **Sessão vencida apagava os contatos de emergência**: agora eles ficam no aparelho e a tela de entrada explica; "Sair deste aparelho" pede confirmação.
+- **Termos e maioridade só na tela**: `barreiraDeConta` no servidor (criar roteiro e pagar); data de nascimento de menor não é trocada pela própria pessoa (409); a tela "Conta restrita" ganhou "Fale com o suporte" e "Sair"; mensagem do SOS sem nome virou "Uma pessoa precisa de ajuda".
+- **Link público do roteiro (`/r/código`) não abria para visitante**: a página lia a tabela direto (fechada para quem não é da equipe); agora usa a função `roteiro_publico`.
+- **Compartilhar viagem depois de apagar foto** dava 404: o servidor acha o grupo mesmo com o início antigo.
+- **Datas**: data passada e volta antes da chegada avisadas já na tela de dados; ano além de 2 anos recusado no servidor.
+- **Textos**: comparação com e sem a Guia sem roteiro offline, salas e regenerar; sem "também dá para pagar com cartão"; sem "texto provisório" (links para Termos e Política); "X de Y grátis disponíveis"; página 404 em português levando ao app; nome do app "Sol: Sua viagem inteligente" no título e no ícone instalado.
+- **Pagamento**: servidor fora do ar mostra aviso em vez de girar para sempre. Limite de troca com a mensagem certa (por minuto e por dia).
+- Teste: `pw/telas-fix.mjs`. Os testes antigos que pedem roteiro precisam registrar o aceite dos termos na conta falsa (a regra agora vale no servidor).
+
+**Ficou para decidir ou para depois**: "2 dias" no cabeçalho contra "Dia 1 de 3" nas abas (a conta de dias do preço não é a das datas); estado perdido ao recarregar no meio do cadastro e da geração; falha do servidor mostrada como lista vazia no Álbum e em Roteiros; mapa escondendo parada atrás da barra e lento; textos de "grátis durante o teste" (dependem de desligar o modo de teste); "hoje" pelo relógio do celular em vez do horário de Brasília; texto em 200%; alvos de toque menores que 44 px.

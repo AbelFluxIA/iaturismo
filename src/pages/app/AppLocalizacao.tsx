@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { paginaSol } from "@/lib/paginas";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
@@ -102,7 +103,7 @@ export default function AppLocalizacao() {
         )}
         </div>
         <AvisosNoCelular compacto />
-        <p className="m-0 text-[11px] text-sol-texto2">Texto provisório: a versão final, com o prazo de guarda dos dados, depende da revisão jurídica.</p>
+        <p className="m-0 text-xs text-sol-texto2">Como usamos e por quanto tempo guardamos a localização: <a href={paginaSol("privacidade")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Política de Privacidade</a>.</p>
       </div>
     </div>
   );

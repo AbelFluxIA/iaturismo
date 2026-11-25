@@ -15,13 +15,11 @@ export default function AppGuiaComparar() {
       r ? `${r.roteirosGratisSemana} grátis por semana, 1 dia cada. ${reais(r.diaRoteiroPreco)} por dia a mais. Até ${r.maxDiasSemGuia} dias` : "-",
       r ? `${r.guiaRoteirosSemana} por semana, até ${r.maxDiasComGuia} dias, sem cobrança por dia` : "-",
     ],
-    ["Editar o roteiro", "Só com a Guia", "Sim, sem gastar roteiro"],
-    ["Regenerar", "Usa 1 roteiro grátis. Sem grátis, não regenera", "Sim"],
+    ["Trocar paradas do roteiro", "Só com a Guia", "Sim, no app ou pela conversa"],
     ["Alertas", "Só Severos", "Todos os níveis, Avisos perdidos e alertas no destino"],
-    ["Tradutor", "Só para entrar na sala de outra pessoa", "Tradutor e criar salas"],
+    ["Tradutor", "Não", "Texto e voz"],
     ["Conversa com a Sol", r ? `${r.chatMensagensDia} mensagens por dia e 1 imagem por viagem` : "-", "Conversa aprofundada"],
     ["Tempo real, verificar, por perto, reorganizar", "Não", "Sim"],
-    ["Roteiro offline", "Não", "Sim, baixa todos os dados da viagem"],
   ];
   return (
     <div className="flex flex-col">

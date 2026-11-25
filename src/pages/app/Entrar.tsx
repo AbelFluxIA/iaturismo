@@ -37,7 +37,9 @@ export default function Entrar() {
   // Veio de um link protegido (ex.: /r/código)? Volta para lá depois de entrar
   const estadoRota = useLocation().state as { de?: string; aviso?: string } | null;
   const de = estadoRota?.de;
-  const avisoEntrada = estadoRota?.aviso;
+  // Sessão que venceu sozinha: explica, em vez de só jogar a pessoa na tela de entrada
+  const [sessaoExpirou] = useState(() => { try { const v = sessionStorage.getItem("sol_sessao_expirou") === "1"; if (v) sessionStorage.removeItem("sol_sessao_expirou"); return v; } catch { return false; } });
+  const avisoEntrada = estadoRota?.aviso ?? (sessaoExpirou ? "Sua sessão expirou. Entre de novo com o seu WhatsApp: seus roteiros e seus contatos de emergência continuam guardados." : undefined);
   const destino = de && de.startsWith("/app") ? de : "/app";
 
   const digitos = phone.replace(/\D/g, "");

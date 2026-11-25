@@ -236,7 +236,7 @@ export default function AppDashboard() {
         <div className="flex items-center gap-3">
           <span className="flex-1 text-[14px] leading-snug">
             {profile?.cota
-              ? <><strong>{Math.min(profile.cota.usados, profile.cota.limite)} de {profile.cota.limite} {guiaAtiva ? "roteiros" : "grátis"}</strong> · renova domingo, 21h{gratis ? <span className="block text-xs text-sol-texto2">Durante o teste, sem cobrança</span> : null}</>
+              ? <><strong>{Math.max(0, profile.cota.limite - profile.cota.usados)} de {profile.cota.limite} {guiaAtiva ? "roteiros" : "grátis"} disponíveis</strong> · renova domingo, 21h{gratis ? <span className="block text-xs text-sol-texto2">Durante o teste, sem cobrança</span> : null}</>
               : gratis
                 ? <><strong>Roteiros grátis</strong> durante o teste</>
                 : regras

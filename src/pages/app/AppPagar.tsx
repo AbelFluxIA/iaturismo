@@ -35,9 +35,14 @@ export default function AppPagar() {
     try {
       const r = await fetch(`${API_URL}/api/app/pagamento/${ref}`, { headers: cab });
       if (r.status === 404) { setErro("Não achei este pagamento."); return; }
-      if (r.ok) { const d = await r.json().catch(() => null); if (d?.ref && d.tipo) setP(d); else setErro("Não consegui carregar este pagamento."); }
-    } catch { /* tenta de novo no próximo ciclo */ }
+      if (r.ok) { falhas.current = 0; const d = await r.json().catch(() => null); if (d?.ref && d.tipo) { setP(d); setErro(null); } else setErro("Não consegui carregar este pagamento."); }
+      else falhou();
+    } catch { falhou(); }
   }
+  // Servidor com erro ou sem internet: depois de 2 tentativas a tela avisa (antes ficava só girando, sem voltar);
+  // a consulta continua sozinha e o aviso some quando voltar a responder
+  const falhas = useRef(0);
+  function falhou() { if (++falhas.current >= 2) setErro("Não consegui carregar o pagamento. Confira a internet: a tela tenta de novo sozinha."); }
   useEffect(() => {
     consultar();
     const id = window.setInterval(() => { setAgora(Date.now()); if (document.visibilityState === "visible") consultar(); }, 4000);

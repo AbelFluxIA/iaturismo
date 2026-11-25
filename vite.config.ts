@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
         // O app instalado é o do cliente (/app); o painel segue no navegador.
-        name: "Sol · sua viagem pela Paraíba",
+        name: "Sol: Sua viagem inteligente",
         short_name: "Sol",
         description: "Roteiro, mapa, álbum e segurança da sua viagem, com a Sol.",
         theme_color: "#0E2F45",

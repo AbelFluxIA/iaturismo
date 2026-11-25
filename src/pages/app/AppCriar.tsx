@@ -309,6 +309,8 @@ export default function AppCriar() {
       r.destino.trim().length < 2 ? "Escreva o destino." : "",
       !r.chegada || !r.saida ? "Escolha a data de chegada e a de volta." : "",
       r.chegada && r.saida && r.saida < r.chegada ? "A volta não pode ser antes da chegada." : "",
+      r.chegada && r.chegada < new Date(Date.now() - 86400000).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) ? "A data de chegada já passou. Escolha uma data a partir de hoje." : "",
+      r.chegada && r.chegada === r.saida && r.horaChegada && r.horaVolta && r.horaVolta <= r.horaChegada ? "No mesmo dia, a hora da volta precisa ser depois da hora da chegada." : "",
       r.tipos.length === 0 ? "Marque pelo menos um tipo de roteiro." : "",
       dias > maxDias ? `O roteiro pode ter até ${maxDias} dias${comGuia ? "" : " sem a Guia Sol"} (você escolheu ${dias}). Encurte as datas.` : "",
     ].filter(Boolean);

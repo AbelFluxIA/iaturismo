@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CloudRain, MapPin, MessageSquare, Pencil, Phone, Plus, Shield, Trash2, X } from "lucide-react";
+import { paginaSol } from "@/lib/paginas";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { TopBar, TituloSecao, btnPrimario, btnSecundario, cartao } from "@/components/app/ui";
@@ -32,7 +33,7 @@ const mascarar = (t: string) => { const d = soDigitos(t); return d.length >= 10 
 export default function AppSeguranca() {
   const { profile, name, token, isDemo, refreshProfile } = useClientAuth();
   const { atual } = useViagens();
-  const nome = (name || profile?.name || "Uma pessoa").split(" ")[0];
+  const nome = (name || profile?.name || "").trim().split(" ")[0] || "Uma pessoa"; // sem nome: "Uma pessoa precisa de ajuda" (antes saía "Uma precisa de ajuda")
   const padraoMsg = `${nome} precisa de ajuda. Localização: [link]. Ligue ou chame ajuda. Enviado pela Sol.`;
   const [contatos, setContatos] = useState<Contato[]>(() => ler(CHAVE_CONTATOS, []));
   const [mensagem, setMensagem] = useState<string>(() => ler(CHAVE_MENSAGEM, padraoMsg));
@@ -196,7 +197,7 @@ function AceiteSOS({ aceitar, cancelar }: { aceitar: () => void; cancelar: () =>
         <p className={`${cartao} m-0 p-4 text-sm leading-snug`}>
           Ao usar o SOS, você autoriza a Sol a preparar uma mensagem de socorro, com a sua localização atual, para os seus contatos de emergência. A Sol não é um serviço de emergência e não garante atendimento. Em risco imediato, ligue 190, 192 ou 193. Nesta versão, o SOS aciona apenas números do Brasil.
         </p>
-        <p className="m-0 text-xs text-sol-texto2">Texto provisório, em revisão jurídica.</p>
+        <p className="m-0 text-xs text-sol-texto2">Regras completas nos <a href={paginaSol("termos")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Termos de Uso</a> (Segurança e SOS).</p>
         <button type="button" onClick={aceitar} className="flex items-center justify-center min-h-[52px] rounded-[14px] bg-sol-sos text-white text-base font-extrabold">Aceitar e ativar o SOS</button>
         <button type="button" onClick={cancelar} className={btnSecundario}>Agora não</button>
         <p className="m-0 text-xs text-sol-texto2 text-center">Sem o aceite, 190 e 193 continuam em Telefones úteis.</p>

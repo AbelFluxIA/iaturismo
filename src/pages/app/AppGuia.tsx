@@ -113,7 +113,7 @@ export default function AppGuia() {
           <button type="button" disabled={estado.carregando} onClick={() => comprar("guia_mes")} className={`${btnPrimario} !bg-sol-sun !text-sol-fundo justify-between`}>
             <span>{ativa ? "Mais 30 dias de Guia Sol" : "Guia Sol por 30 dias"}</span><span className="font-extrabold">{preco(regras?.guiaPrecoMes ?? 29.9)}</span>
           </button>
-          <p className="m-0 text-xs text-sol-texto2 text-center">Pix na hora, direto aqui no app. Também dá para pagar com cartão.</p>
+          <p className="m-0 text-xs text-sol-texto2 text-center">Pix na hora, direto aqui no app.</p>
           {profile?.ofertas?.gratisDuranteTeste && !ativa && (
             <button type="button" disabled={estado.carregando} onClick={ativar} className={btnSecundario}>
               <Check size={18} strokeWidth={2.6} /> Ativar grátis (período de teste)
