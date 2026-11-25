@@ -6,6 +6,7 @@ import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { useViagens } from "@/contexts/ViagensContext";
 import { LinhaMenu, Selo, TopBar, mascararTelefone } from "@/components/app/ui";
 import { Instalar } from "@/components/Instalar";
+import { paginaSol } from "@/lib/paginas";
 import { lerPreferencias } from "@/pages/app/AppCriar";
 
 const SOL_WHATSAPP = import.meta.env.VITE_SOL_PHONE as string | undefined;
@@ -128,7 +129,9 @@ export default function AppPerfil() {
           <LinhaMenu to="/app/seguranca" titulo="Segurança e contatos de emergência" />
           <LinhaMenu to="/app/localizacao" titulo="Localização durante a viagem" detalhe={profile?.consentimentos?.localizacao_viagem?.aceito ? "Ligada" : "Desligada"} />
           <LinhaMenu titulo="Configurações e notificações" emBreve />
-          <LinhaMenu titulo="Privacidade e dados" emBreve />
+          <LinhaMenu href={paginaSol("privacidade")} titulo="Política de Privacidade" />
+          <LinhaMenu href={paginaSol("termos")} titulo="Termos de Uso" />
+          <LinhaMenu href={paginaSol("suporte")} titulo="Suporte e contatos" />
           {SOL_WHATSAPP && <LinhaMenu href={`https://wa.me/${SOL_WHATSAPP}`} titulo="Falar com a Sol no WhatsApp" />}
           <Instalar>{(instalar, rotulo) => <LinhaMenu onClick={instalar} titulo={rotulo} detalhe="Abre direto pelo ícone" />}</Instalar>
           <LinhaMenu to="/app/chat" titulo="Ajuda e suporte" detalhe="Pergunte à Sol" />

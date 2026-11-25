@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, Camera, ChevronRight, ClipboardCheck, Gift, Languages, Lock, MapPin, MessageCircle, Navigation, Plus, Route, X } from "lucide-react";
 import { useClientAuth } from "@/contexts/ClientAuthContext";
 import { useFeitas, useRoteiro, useViagens } from "@/contexts/ViagensContext";
-import { BotaoSOS, Carregando, btnSecundario, cartao, formatarData } from "@/components/app/ui";
+import { BotaoSOS, Carregando, btnSecundario, cartao, formatarData, Aviso } from "@/components/app/ui";
 import { IconeTempo } from "@/components/app/IconeTempo";
 import { useAlbum } from "@/components/app/Album";
 import { useCidade } from "@/lib/cidade";
@@ -161,6 +161,10 @@ export default function AppDashboard() {
   const { viagens, atual } = useViagens();
   const localizacaoEmUso = useLocalizacaoEmUso();
   const [temAvisoDeClima, setTemAvisoDeClima] = useState(false);
+  // Entrar durante a espera cancela o pedido de exclusão: avisa uma vez
+  const [exclusaoCancelada] = useState(() => {
+    try { const v = sessionStorage.getItem("sol_exclusao_cancelada") === "1"; if (v) sessionStorage.removeItem("sol_exclusao_cancelada"); return v; } catch { return false; }
+  });
 
   if ((profileLoading && !profile) || viagens === null) return <Carregando />;
 
@@ -191,6 +195,7 @@ export default function AppDashboard() {
       {/* Com aviso de tempo da Guia (INMET, tempestade), o cartão de previsão de chuva não repete o assunto */}
       {atual && !temAvisoDeClima && <AlertaChuva viagem={atual} />}
       {/* Comunicados da equipe e avisos da Guia (alerta de tempo, evento hoje, parada fechada) */}
+      {exclusaoCancelada && <Aviso tom="ok">Seu pedido de exclusão da conta foi <strong>cancelado</strong>, porque você entrou de novo. Sua conta continua como estava.</Aviso>}
       <PrazoDaGuia />
       <AvisosDaSol aoCarregar={setTemAvisoDeClima} />
       <AvisosNoCelular />

@@ -11,13 +11,14 @@ import { conviteGuardado, limparConvite } from "@/lib/convite";
 import { DESTINOS } from "@/lib/destinos";
 import { TIPOS_PASSEIO, hojeISO } from "@/lib/roteiro";
 import { BuscaCidade } from "@/components/app/BuscaCidade";
+import { paginaSol, VERSAO_DOS_TEXTOS } from "@/lib/paginas";
 
 // Cadastro em etapas depois do código (RA-CAD-04 e RA-CAD-05):
 // WhatsApp e dados → Termos → Data de nascimento → Localização → Gostos →
 // Viagem em mente → Lugares que quer conhecer → Concluído (guia para o 1º roteiro).
-// Textos dos termos são o resumo provisório do protótipo, até a revisão jurídica.
+// A tela mostra um resumo; os textos completos são as páginas públicas /sol/termos e /sol/privacidade.
 
-export const VERSAO_TERMOS = "termos-rascunho-1";
+export const VERSAO_TERMOS = VERSAO_DOS_TEXTOS; // a versão dos textos publicados em /sol/termos e /sol/privacidade
 type Etapa = "dados" | "termos" | "recusa" | "nascimento" | "menor" | "localizacao" | "gostos" | "viagem" | "lugares" | "concluido";
 const ETAPAS: Etapa[] = ["dados", "termos", "nascimento", "localizacao", "gostos", "viagem", "lugares"];
 const chip = (ativo: boolean) =>
@@ -162,7 +163,11 @@ export default function AppCadastro() {
             <ul className={`${cartao} mt-4 mb-0 p-4 pl-8 flex flex-col gap-2.5 text-[15px] leading-snug list-disc`}>
               {RESUMO_TERMOS.map((t) => <li key={t}>{t}</li>)}
             </ul>
-            <p className="mt-2 mb-0 text-xs text-sol-texto2">Os textos completos dos termos e da política de privacidade estão em revisão jurídica.</p>
+            <p className="mt-2 mb-0 text-[13px] text-sol-texto2">
+              Leia os textos completos:{" "}
+              <a href={paginaSol("termos")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Termos de Uso</a> e{" "}
+              <a href={paginaSol("privacidade")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Política de Privacidade</a>.
+            </p>
             <label className="mt-4 flex items-start gap-3 min-h-[44px]">
               <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-1 w-5 h-5 accent-[#0B5F8A]" />
               <span className="text-[15px] font-semibold">Li e aceito os termos e a política de privacidade</span>

@@ -4,6 +4,7 @@ import { ChevronLeft, ClipboardPaste, Download, MessageCircle } from "lucide-rea
 import { Instalar } from "@/components/Instalar";
 import { aparelho } from "@/lib/instalar";
 import { conviteGuardado } from "@/lib/convite";
+import { paginaSol } from "@/lib/paginas";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Aviso, btnPrimario, btnSecundario } from "@/components/app/ui";
 
@@ -85,6 +86,8 @@ export default function Entrar() {
       if (!res.ok) { setError(data.error || "Código incorreto."); return; }
       try { localStorage.removeItem(CHAVE_PEDIDO); } catch { /* ok */ }
       login(data.token, data.phone, data.name);
+      // Entrar durante os 7 dias de espera cancela o pedido de exclusão da conta: o Início avisa
+      if (data.exclusaoCancelada) { try { sessionStorage.setItem("sol_exclusao_cancelada", "1"); } catch { /* sem armazenamento */ } }
       navigate(destino, { replace: true });
     } catch {
       setError("Sem conexão. Tente de novo.");
@@ -128,6 +131,8 @@ export default function Entrar() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Código incorreto."); return; }
       login(data.token, data.phone, data.name);
+      // Entrar durante os 7 dias de espera cancela o pedido de exclusão da conta: o Início avisa
+      if (data.exclusaoCancelada) { try { sessionStorage.setItem("sol_exclusao_cancelada", "1"); } catch { /* sem armazenamento */ } }
       navigate(destino, { replace: true });
     } catch {
       setError("Sem conexão. Tente de novo.");
@@ -168,6 +173,12 @@ export default function Entrar() {
               <button type="button" onClick={() => setStep("whatsapp")} className={btnPrimario}>
                 Entrar com meu WhatsApp
               </button>
+              <p className="m-0 text-center text-xs leading-snug text-sol-texto2">
+                Ao entrar, você concorda com os{" "}
+                <a href={paginaSol("termos")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Termos de Uso</a> e a{" "}
+                <a href={paginaSol("privacidade")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Política de Privacidade</a>.{" "}
+                <a href={paginaSol("suporte")} target="_blank" rel="noopener noreferrer" className="font-bold text-sol-mar underline">Suporte</a>
+              </p>
               {/* No iPhone o app instalado não enxerga o que ficou guardado no Safari: quem chegou
                   por convite entra primeiro (para o convite valer) e instala depois, pelo Perfil. */}
               {!(conviteGuardado() && aparelho() === "iphone") && (

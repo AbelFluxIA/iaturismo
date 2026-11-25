@@ -33,8 +33,11 @@ export default defineConfig(({ mode }) => ({
         // Passagem do app antigo (sem botão "Atualizar") para o atual
         // sol-push.js: notificações no celular (push) e o toque nelas
         importScripts: ["/sol-sw-versao.js", "/sol-push.js"],
-        navigateFallbackDenylist: [/^\/~oauth/],
+        // /sol/...: páginas públicas (privacidade, termos, suporte, excluir conta) são arquivos próprios, não telas do app
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/sol\//],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // As páginas públicas não ficam guardadas no aparelho: valem sempre as do servidor
+        globIgnores: ["sol/**"],
         runtimeCaching: [
           {
             // Só arquivos públicos (fotos, PDFs); nunca dados de /rest ou /auth

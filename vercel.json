@@ -39,6 +39,22 @@
       "destination": "https://sol-api.2-24-73-122.sslip.io/api/app/:path*"
     },
     {
+      "source": "/sol/privacidade",
+      "destination": "/sol/privacidade.html"
+    },
+    {
+      "source": "/sol/termos",
+      "destination": "/sol/termos.html"
+    },
+    {
+      "source": "/sol/suporte",
+      "destination": "/sol/suporte.html"
+    },
+    {
+      "source": "/sol/excluir-conta",
+      "destination": "/sol/excluir-conta.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
