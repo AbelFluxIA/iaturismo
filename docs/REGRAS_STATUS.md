@@ -478,3 +478,15 @@ Decisão (resolve o TODO-21, plano mensal): **Guia comprada vale até o último 
 - **App**: cartão `PrazoDaGuia` no Início ("termina em 3 dias / amanhã / hoje" com Renovar e Agora não; "terminou em dd/mm, quer manter ativa?" com Assinar de novo e Agora não); `/app/guia?renovar=1` mostra as opções com a Guia ainda ativa; cartão e conversa da Guia mostram "até dd/mm"; quem já tem roteiro (mesmo de viagem passada) pode assinar; na conversa, o link vira o botão "Ver as opções da Guia Sol".
 - Pendente: desligar o servidor antigo (enquanto ele roda, uma Guia com prazo pode ficar até 10 minutos desligada depois da meia-noite).
 - Testes: `pw/guia-prazo.mjs` (26 verificações) e `pw/guia-prazo-ui.mjs` (iPhone 13 e Pixel 7).
+
+## Páginas públicas e exclusão com espera (25/11) — RA-WEB, RA-EXC, RA-CAD-03
+
+Pacote `Sol_Paginas_para_a_Fluxv2` (Instituto Agilizar, 22/11). Respostas e divergências completas em `docs/GOOGLE_PLAY_RESPOSTAS_DA_FLUX.md`.
+
+- **Páginas** em `public/sol/*.html` (privacidade, termos, suporte, excluir-conta), servidas em `painel.tripsol.com.br/sol/<nome>` (regras no `vercel.json`; fora do cache do PWA). São os modelos recebidos com o WhatsApp preenchido; as poucas mudanças de texto estão listadas no documento de respostas. O endereço oficial `tripsol.com.br/sol/...` depende de uma regra no projeto do site principal, que não está neste servidor.
+- **Exclusão com 7 dias de espera** (`exclusao.service.ts`, tabela `sol_exclusoes`, script `0009`): pedido pelo app (`POST /api/app/conta/excluir`) ou pela página (`/api/app/publico/exclusao/{pedido,validar,confirmar}`); entrar cancela; sessão anterior ao pedido deixa de valer; rotina de hora em hora apaga as vencidas; conta do revisor nunca é apagada.
+- **Código da exclusão**: pedido pela pessoa no WhatsApp (mesmo mecanismo do login, com finalidade própria); não há envio para número digitado nem SMS.
+- **RA-CAD-03**: 5 códigos errados bloqueiam o número por 5 horas (em memória; reiniciar o servidor libera).
+- **App**: Perfil com Política de Privacidade, Termos de Uso e Suporte; tela de entrada e etapa de termos do cadastro ligam para os textos; versão aceita no cadastro `1.0-2026-11-22`.
+- Testes: `pw/exclusao.mjs` (35 verificações, WhatsApp simulado) e `pw/paginas-ui.mjs`.
+- **Pendências grandes para a loja**: cobrança do Google no Android (hoje só Pix), "Apagar meus dados", denunciar, localização em segundo plano na política, relatórios de erro sem telefone, conta do revisor com roteiro e Guia.
