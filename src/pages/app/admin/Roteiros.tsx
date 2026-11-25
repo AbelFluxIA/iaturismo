@@ -5,7 +5,50 @@ import { urlSegura } from "@/lib/utils";
 import { Busca, Estado, Etiqueta, dataHora, fone, useAdmin, type AbaAdmin } from "./comum";
 
 interface Item { id: string; destino: string | null; chegada: string | null; saida: string | null; dias: number; status: string; criado_em: string; pdf: boolean; tem_texto: boolean; phone: string; nome: string | null }
-interface Detalhe { id: string; destino: string | null; chegada: string | null; saida: string | null; dias: number; status: string; criadoEm: string; pdfUrl: string | null; texto: string | null; phone: string; nome: string | null }
+// O que foi usado para montar o roteiro (gravado desde 25/11; roteiros antigos trazem só o perfil)
+interface Configuracao {
+  geradoEm?: string; canal?: string; orcamento?: string | null; interesses?: string[]; grupo?: string | null; hospedagem?: string | null; transporte?: string | null;
+  horaChegada?: string | null; horaSaida?: string | null; origem?: string | null; gostosDoCadastro?: string[]; roteirosAnterioresNoDestino?: number; eventosNasDatas?: number;
+  partiuDeOndeEstava?: boolean; modelo?: string; cartoesPostais?: string[]; cartaoPostalIncluido?: string | null;
+  conferencia?: { paradas?: number; ok?: number; trocadas?: number; reprovadas?: string[] }; ajustes?: { tiradas?: string[]; horarios?: string[]; tempos?: string[] };
+}
+function Linha({ rotulo, valor }: { rotulo: string; valor: string | number | null | undefined }) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  return <div className="flex gap-2 text-[13px] leading-snug"><span className="flex-none w-[136px] text-sol-texto2">{rotulo}</span><span className="flex-1 min-w-0 break-words font-semibold">{valor}</span></div>;
+}
+function ConfiguracoesUsadas({ r }: { r: Detalhe }) {
+  const c = r.configuracao;
+  if (!c && !r.perfil) return null;
+  const lista = (v?: string[]) => (v && v.length ? v.join(", ") : null);
+  return (
+    <section aria-label="Configurações usadas" className={`${cartao} flex flex-col gap-1.5 p-4`}>
+      <h3 className="m-0 text-[15px] font-extrabold">Configurações usadas para gerar</h3>
+      <Linha rotulo="Perfil enviado à IA" valor={r.perfil} />
+      <Linha rotulo="Grupo" valor={c?.grupo ?? r.grupo} />
+      {c ? (
+        <>
+          <Linha rotulo="Orçamento" valor={c.orcamento} />
+          <Linha rotulo="Interesses" valor={lista(c.interesses)} />
+          <Linha rotulo="Hospedagem" valor={c.hospedagem} />
+          <Linha rotulo="Chegada e saída" valor={[c.horaChegada, c.horaSaida].filter(Boolean).join(" a ") || null} />
+          <Linha rotulo="Vem de" valor={[c.origem, c.transporte].filter(Boolean).join(" · ") || null} />
+          <Linha rotulo="Gostos do cadastro" valor={lista(c.gostosDoCadastro)} />
+          <Linha rotulo="Pedido por" valor={c.canal === "app" ? "app" : c.canal === "whatsapp" ? "WhatsApp" : c.canal} />
+          <Linha rotulo="Cartões-postais" valor={lista(c.cartoesPostais)} />
+          <Linha rotulo="Incluído depois" valor={c.cartaoPostalIncluido ? `${c.cartaoPostalIncluido} (tinha ficado de fora)` : null} />
+          <Linha rotulo="Conferência Google" valor={c.conferencia ? `${c.conferencia.ok ?? 0} de ${c.conferencia.paradas ?? 0} paradas aprovadas, ${c.conferencia.trocadas ?? 0} trocadas` : null} />
+          <Linha rotulo="Reprovadas antes" valor={lista(c.conferencia?.reprovadas)} />
+          <Linha rotulo="Viagens anteriores" valor={c.roteirosAnterioresNoDestino ? `${c.roteirosAnterioresNoDestino} lugares de viagem já feita a este destino` : null} />
+          <Linha rotulo="Eventos nas datas" valor={c.eventosNasDatas ?? null} />
+          <Linha rotulo="Tiradas" valor={lista(c.ajustes?.tiradas)} />
+          <Linha rotulo="Modelo" valor={c.modelo} />
+        </>
+      ) : <p className="m-0 text-xs text-sol-texto2">Roteiro anterior a 25/11: só o perfil ficou guardado.</p>}
+    </section>
+  );
+}
+
+interface Detalhe { id: string; destino: string | null; chegada: string | null; saida: string | null; dias: number; status: string; criadoEm: string; pdfUrl: string | null; texto: string | null; configuracao?: Configuracao | null; perfil?: string | null; grupo?: string | null; phone: string; nome: string | null }
 const STATUS: Record<string, ["ok" | "aviso" | "info" | "erro", string]> = { sent: ["ok", "entregue"], generated: ["ok", "gerado"], paid: ["aviso", "pago, falta gerar"], pending: ["aviso", "não concluído"] };
 const FILTROS: [string, string][] = [["", "Todos"], ["sent", "Entregues"], ["pending", "Não concluídos"], ["paid", "Pagos sem gerar"]];
 
@@ -65,6 +108,7 @@ function Um({ id, ir }: { id: string; ir: (aba: AbaAdmin, extra?: Record<string,
               {pdf && <a href={pdf} target="_blank" rel="noopener noreferrer" className="min-h-[40px] px-3 flex items-center rounded-xl bg-sol-mar text-white text-sm font-bold no-underline">Abrir PDF</a>}
             </div>
           </section>
+          <ConfiguracoesUsadas r={r} />
           <section className={`${cartao} p-4`}>
             {r.texto ? <pre className="m-0 text-[13px] leading-relaxed whitespace-pre-wrap break-words font-corpo">{r.texto}</pre> : <p className="m-0 text-sm text-sol-texto2">Este roteiro não tem texto (a geração não terminou).</p>}
           </section>

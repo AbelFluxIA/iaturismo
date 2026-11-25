@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, Camera, CreditCard, ExternalLink, FileText, Gift, Image as ImageIcon, Map as MapIcon, MapPin, Mic, Share2, Trash2 } from "lucide-react";
 import { useClientAuth, API_URL } from "@/contexts/ClientAuthContext";
 import { Carregando } from "@/components/app/ui";
-import { posicaoAtual } from "@/lib/geo";
+import { posicaoAtual, posicaoSePermitida } from "@/lib/geo";
 import { DEMO_RESPOSTA_CHAT } from "@/lib/demo";
 
 interface Message {
@@ -550,7 +550,10 @@ export default function AppChat({ modo = "sol" }: { modo?: "sol" | "guia" }) {
         if (res.status === 404) res = null; // bot antigo: manda como mensagem comum
       }
       if (!res) {
-        res = await fetch(`${API_URL}/api/app/chat`, { method: "POST", headers, body: JSON.stringify({ message: text }) });
+        // A posição do celular vai junto (sem aparecer na conversa), só se a pessoa já liberou a localização:
+        // a Sol responde sobre onde a pessoa ESTÁ, não sobre a cidade do último roteiro
+        const posicao = /^\[LOCALIZAÇÃO:/.test(text) ? null : await Promise.race([posicaoSePermitida().catch(() => null), new Promise<null>((ok) => setTimeout(() => ok(null), 2500))]);
+        res = await fetch(`${API_URL}/api/app/chat`, { method: "POST", headers, body: JSON.stringify({ message: text, ...(posicao ? { posicao } : {}) }) });
       }
       const data = await res.json();
       await mostrarResposta(res, data.reply ?? "Tive um problema. Tenta de novo?");

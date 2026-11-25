@@ -490,3 +490,12 @@ Pacote `Sol_Paginas_para_a_Fluxv2` (Instituto Agilizar, 22/11). Respostas e dive
 - **App**: Perfil com Política de Privacidade, Termos de Uso e Suporte; tela de entrada e etapa de termos do cadastro ligam para os textos; versão aceita no cadastro `1.0-2026-11-22`.
 - Testes: `pw/exclusao.mjs` (35 verificações, WhatsApp simulado) e `pw/paginas-ui.mjs`.
 - **Pendências grandes para a loja**: cobrança do Google no Android (hoje só Pix), "Apagar meus dados", denunciar, localização em segundo plano na política, relatórios de erro sem telefone, conta do revisor com roteiro e Guia.
+
+## Relatos de 22 a 25/11: Foz sem Cataratas, econômico caro, Guia na cidade errada
+
+- **Foz sem as Cataratas.** Causa: tudo o que estava num roteiro anterior do mesmo destino ia para a IA como "já fez, NÃO repita", mesmo que a viagem nunca tivesse acontecido. Agora só conta roteiro de viagem **que já passou**, com a instrução de variar o secundário e manter os cartões-postais (`roteiro-contexto.service.ts`). Além disso, `garantirImperdiveis` (verificacao.service) pergunta à IA os até 3 cartões-postais do destino (guardado 24 h) e, se o principal ficou de fora, ele entra no lugar de uma parada de passeio comum, antes da conferência do Google. Não vale para viagem de negócios.
+- **Econômico com restaurante caro.** Regra do texto reforçada (refeição até R$ 45, sem rodízio, steakhouse, bistrô) e conferência nova: refeição com nível de preço caro no Google, custo escrito acima de R$ 60 ou nome que já diz o preço é trocada (`caroParaEconomico`). Ingresso de atração não entra nessa conta.
+- **Configurações de cada roteiro.** Coluna `Itinerary.configuracao` (script `0010`): orçamento, interesses, grupo, horários, origem, hospedagem, gostos do cadastro, cartões-postais, o que a conferência reprovou e trocou. Aparece no painel de administração, em Roteiros → abrir um roteiro.
+- **Guia respondendo pela cidade do último roteiro.** O app manda a posição do celular junto com cada mensagem (só se a pessoa já liberou a localização; não aparece na conversa). A Guia recebe "onde o cliente está agora" e, se for outra cidade, responde por ela. Fora das datas do roteiro e sem posição, ela pergunta a cidade antes de indicar lugares. A posição fica 3 horas na memória do servidor.
+- **"Perto de você" com Oktoberfest.** Saem locais de evento, centros de convenção, festas de época (pelo nome) e hospedagem.
+- Teste: `pw/bugs2511.mjs` (IA e Google de verdade, contas falsas).
