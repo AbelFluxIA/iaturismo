@@ -549,3 +549,14 @@ Nenhum erro de JavaScript em nenhuma tela. Corrigido:
 - Teste: `pw/telas-fix.mjs`. Os testes antigos que pedem roteiro precisam registrar o aceite dos termos na conta falsa (a regra agora vale no servidor).
 
 **Ficou para decidir ou para depois**: "2 dias" no cabeçalho contra "Dia 1 de 3" nas abas (a conta de dias do preço não é a das datas); estado perdido ao recarregar no meio do cadastro e da geração; falha do servidor mostrada como lista vazia no Álbum e em Roteiros; mapa escondendo parada atrás da barra e lento; textos de "grátis durante o teste" (dependem de desligar o modo de teste); "hoje" pelo relógio do celular em vez do horário de Brasília; texto em 200%; alvos de toque menores que 44 px.
+
+## Pacote do Instituto Agilizar de 25/11 (TODO-467, 468, 469 e textos 1.1)
+
+Respostas completas em `docs/RESPOSTAS_DA_FLUX_2026-11-26.md`.
+
+- **Registros de acesso, 6 meses (TODO-467):** tabela `sol_acessos` (script `0011`), `acessos.service.ts`. Grava IP (informado pelo site; `via` guarda o endereço da conexão), data e hora, um registro por conta e IP por hora, em toda chamada autenticada e na entrada. Excluir a conta tira o telefone e mantém o registro. Limpeza diária aos 6 meses. Antes disso o servidor não guardava IP.
+- **Compras, 5 anos (TODO-468):** a exclusão mantém valor, data, meio e identificador, marca `conta_excluida_em` e tira o conteúdo do pedido. Limpeza diária aos 5 anos da data do pagamento. O telefone continua no registro (como no texto 1.1 da privacidade); decisão pendente com o David.
+- **Menor de 13 anos (TODO-469):** `/api/app/cadastro` recusa, apaga a conta na hora e limita a 3 datas em 24 h (servidor por referência anônima da conta, app por aparelho). 13 a 17 continua como conta restrita; o fluxo do responsável (RA-MEN-02 a 05) não existe.
+- **Páginas 1.1:** montadas em `docs/paginas-legais-v1.1/` (não publicadas; aguardam a liberação do David e do advogado). Para publicar: copiar para `public/sol/`.
+- **Conta do revisor:** cadastro, termos, Guia ligada e roteiro de 5 dias (gerar outro na semana do envio).
+- Teste: `pw/legais.mjs`.
