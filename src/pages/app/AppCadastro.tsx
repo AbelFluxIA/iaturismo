@@ -105,6 +105,33 @@ export default function AppCadastro() {
     if (concluindo) limparConvite();
   }
 
+  // Data de nascimento (TODO-469): menor de 13 anos não conclui o cadastro. O servidor apaga a conta na hora e
+  // responde com o aviso; o app sai da conta. No máximo 3 datas recusadas por aparelho em 24 horas (a contagem
+  // fica fora das chaves "sol_", para sobreviver à saída da conta).
+  const CHAVE_IDADE = "idade_tentativas";
+  const recusasNoAparelho = (): number[] => { try { return (JSON.parse(localStorage.getItem(CHAVE_IDADE) || "[]") as number[]).filter((t) => Date.now() - t < 24 * 3600_000); } catch { return []; } };
+  async function enviarNascimento() {
+    setErro(null);
+    if (recusasNoAparelho().length >= 3) { setErro("Muitas tentativas com datas diferentes. Tente de novo amanhã ou fale com o suporte da Sol."); return; }
+    setOcupado(true);
+    try {
+      const r = await fetch(`${API_URL}/api/app/cadastro`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ nascimento }) });
+      const d = await r.json().catch(() => ({}));
+      if (d?.bloqueioIdade) {
+        if (r.status === 403) {
+          try { localStorage.setItem(CHAVE_IDADE, JSON.stringify([...recusasNoAparelho(), Date.now()])); } catch { /* sem armazenamento */ }
+          logout();
+          navigate("/app/entrar", { replace: true, state: { aviso: d.error ?? "Você ainda não pode usar a Sol." } });
+          return;
+        }
+        setErro(d.error ?? "Tente de novo amanhã.");
+        return;
+      }
+      if (!r.ok) { setErro(d?.error ?? "Não consegui salvar agora. Tente de novo."); return; }
+      setEtapa(idade(nascimento) < 18 ? "menor" : "localizacao");
+    } catch { setErro("Não consegui salvar agora. Tente de novo."); } finally { setOcupado(false); }
+  }
+
   async function passo(acao: () => Promise<void>, proxima: Etapa) {
     setErro(null);
     setOcupado(true);
@@ -237,7 +264,7 @@ export default function AppCadastro() {
               <button
                 type="button"
                 disabled={ocupado || !nascValido}
-                onClick={() => passo(() => enviar("/api/app/cadastro", { nascimento }), idade(nascimento) < 18 ? "menor" : "localizacao")}
+                onClick={enviarNascimento}
                 className={`${btnPrimario} w-full`}
               >
                 Continuar
